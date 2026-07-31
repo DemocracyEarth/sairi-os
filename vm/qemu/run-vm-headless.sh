@@ -280,7 +280,12 @@ if [ "$ARCH" = arm64 ]; then
 			|| true)"
 	fi
 
-	[ -n "$FIRMWARE_CODE" ] ||
+	# As with the missing-QEMU case above: a dry run reports the gap and keeps printing
+	# the plan. A real boot still stops here.
+	if [ -z "$FIRMWARE_CODE" ] && [ "$DRY_RUN" -eq 1 ]; then
+		warn "no aarch64 UEFI firmware found; this dry run continues, a real boot would stop"
+		warn "install it with: brew install qemu | sudo apt-get install -y qemu-efi-aarch64"
+	elif [ -z "$FIRMWARE_CODE" ]; then
 		die "no aarch64 UEFI firmware found." \
 			"" \
 			"  macOS          brew install qemu" \
@@ -290,6 +295,7 @@ if [ "$ARCH" = arm64 ]; then
 			"" \
 			"Or point at it directly with --firmware PATH." \
 			"run-vm.sh lists every path that was searched."
+	fi
 
 	FIRMWARE_VARS_TEMPLATE="$(find_first \
 		/opt/homebrew/share/qemu/edk2-arm-vars.fd \
