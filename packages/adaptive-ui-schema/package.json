@@ -14,7 +14,9 @@
     "./schema/sairi-ui.schema.json": "./src/schema/sairi-ui.schema.json"
   },
   "scripts": {
-    "build": "tsc --build",
+    "build": "node scripts/build-validator.mjs && tsc --build && mkdir -p dist/generated && cp src/generated/sairi-ui-validator.js src/generated/sairi-ui-validator.d.ts dist/generated/",
+    "build:validator": "node scripts/build-validator.mjs",
+    "check:validator": "node scripts/build-validator.mjs --check",
     "clean": "rm -rf dist *.tsbuildinfo"
   },
   "dependencies": {

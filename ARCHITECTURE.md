@@ -241,6 +241,12 @@ The v0 catalog, with where each component's content comes from:
 Adding a component is a security review, not a UI change: it widens what an
 agent can put on a user's screen. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
+The validator that runs in the shell is **precompiled** into eval-free JavaScript
+at build time, because the shell's Content Security Policy forbids the runtime
+code generation AJV normally uses. A test regenerates it and fails if it has
+drifted from the schema. See
+[ADR 0009](docs/adr/0009-precompiled-schema-validator.md).
+
 ## OpenClaw integration
 
 OpenClaw is an upstream pinned runtime dependency reached only through the agent

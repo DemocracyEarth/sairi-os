@@ -6,3 +6,6 @@ vm/out/
 vm/.cache/
 *.tsbuildinfo
 CHANGELOG.md
+
+# Generated: a precompiled AJV validator, checked by a staleness test.
+packages/adaptive-ui-schema/src/generated/sairi-ui-validator.js

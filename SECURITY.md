@@ -92,6 +92,11 @@ catalog of sixteen components, validated against a JSON Schema with
   the model asks for the view, it does not supply the contents.
 - `permission-request` is cross-checked against the broker. A request id the
   broker does not recognise renders as an error, never as an approvable prompt.
+- The shell ships a Content Security Policy of `script-src 'self'` with **no**
+  `'unsafe-eval'`. To make that possible the SairiUI validator is precompiled at
+  build time rather than compiled by AJV at runtime, and the generator asserts
+  the output contains no `new Function`, `eval(` or `require(`. See
+  [ADR 0009](docs/adr/0009-precompiled-schema-validator.md).
 
 The alternative — a model returning React or HTML — would make every successful
 prompt injection equivalent to code execution in the user's shell. See

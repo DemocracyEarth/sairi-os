@@ -266,3 +266,31 @@ describe('safe error state', () => {
     expect(validateSairiUI(error).ok).toBe(true);
   });
 });
+
+describe('precompiled validator', () => {
+  it('is in step with the schema', async () => {
+    const { readFile } = await import('node:fs/promises');
+    const { fileURLToPath } = await import('node:url');
+    const { generate } = await import('../scripts/build-validator.mjs');
+    const path = fileURLToPath(new URL('./generated/sairi-ui-validator.js', import.meta.url));
+    const onDisk = await readFile(path, 'utf8');
+    expect(
+      onDisk,
+      'The precompiled SairiUI validator is stale. Run:\n' +
+        '  npm run build:validator -w @sairios/adaptive-ui-schema',
+    ).toBe(generate());
+  });
+
+  it('contains no runtime code generation', async () => {
+    const { readFile } = await import('node:fs/promises');
+    const { fileURLToPath } = await import('node:url');
+    const path = fileURLToPath(new URL('./generated/sairi-ui-validator.js', import.meta.url));
+    const code = await readFile(path, 'utf8');
+    // The shell's Content Security Policy is `script-src 'self'` with no
+    // 'unsafe-eval'. Any of these would make the shell fail to mount, and would
+    // undo the reason the validator is precompiled at all.
+    expect(code).not.toContain('new Function');
+    expect(code).not.toContain('eval(');
+    expect(code).not.toContain('require(');
+  });
+});

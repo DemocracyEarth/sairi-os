@@ -26,7 +26,7 @@ subsystems.
 - [x] Restricted markdown renderer that never emits HTML
 - [x] Three seeded demo contexts, one per type
 - [x] End-to-end test of the full flow in mock mode against the real services
-- [x] 196 tests, none requiring a credential or the network
+- [x] 198 tests, none requiring a credential or the network
 
 ### Built but NOT verified
 

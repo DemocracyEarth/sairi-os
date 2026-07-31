@@ -1,7 +1,7 @@
-import { Ajv2020, type ErrorObject, type ValidateFunction } from 'ajv/dist/2020.js';
-import addFormatsModule from 'ajv-formats';
+import type { ErrorObject } from 'ajv/dist/2020.js';
 import { ok, type Result } from '@sairios/shared';
 import sairiUiSchema from './schema/sairi-ui.schema.json' with { type: 'json' };
+import precompiled from './generated/sairi-ui-validator.js';
 import { COMPONENT_TYPES, type SairiUIDocument } from './types.js';
 
 /**
@@ -11,16 +11,19 @@ import { COMPONENT_TYPES, type SairiUIDocument } from './types.js';
  *   - the document must match the schema exactly (`additionalProperties: false`);
  *   - unknown component types are rejected by name, with a readable message;
  *   - a rejected document never partially renders — the caller shows an error state.
+ *
+ * The validator is PRECOMPILED rather than built at runtime. AJV compiles a
+ * schema by calling `new Function`, which the shell's `script-src 'self'`
+ * Content Security Policy refuses — so the shell would fail to mount, and the
+ * renderer's copy of this check would be lost. Relaxing the policy to
+ * `'unsafe-eval'` was the alternative and was rejected: this product's headline
+ * property is that an agent cannot execute code in the user's environment.
+ *
+ * See scripts/build-validator.mjs. A test regenerates the artefact and fails if
+ * it no longer matches the schema.
  */
 
-// See the note in @sairios/context-schema/validate.ts: ajv-formats' CJS export
-// is the plugin function, but its typings describe a namespace.
-const addFormats = addFormatsModule as unknown as (ajv: Ajv2020) => void;
-
-const ajv = new Ajv2020({ allErrors: true, strict: false });
-addFormats(ajv);
-
-const validator: ValidateFunction = ajv.compile(sairiUiSchema);
+const validator = precompiled;
 
 export interface UiValidationFailure {
   /** Machine-readable reason, used by the shell to pick an error presentation. */

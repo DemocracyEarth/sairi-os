@@ -71,6 +71,17 @@ decision. Leave it.
 Rejection is **whole-document**. Never partially render a document that failed
 validation.
 
+The shell's validator is precompiled (`scripts/build-validator.mjs`), because
+the shell's Content Security Policy forbids the runtime code generation AJV
+normally uses. If you change the SairiUI schema, regenerate it:
+
+```bash
+npm run build:validator -w @sairios/adaptive-ui-schema
+```
+
+Never add `'unsafe-eval'` to the shell's policy to avoid that step. See
+[ADR 0009](docs/adr/0009-precompiled-schema-validator.md).
+
 ### 5. Preserve the security boundaries
 
 - Every privileged action goes through the permission broker. No exceptions, no
@@ -208,3 +219,4 @@ examples/                      Reference payloads — tested, not decorative
 | `packages/context-schema/src/crystallize.ts`                  | Allow-list sanitizer; a leak here escapes with a shared template |
 | `packages/context-schema/src/lifecycle.ts`                    | The single source of lifecycle truth                             |
 | `packages/ui-components/src/markdown.tsx`                     | Renders untrusted markdown without HTML                          |
+| `apps/shell/vite.config.ts`                                   | Injects the production Content Security Policy                   |
