@@ -1,0 +1,760 @@
+#cloud-config
+#
+# SairiOS v0 first-boot provisioning.
+#
+# This file is the `user-data` half of a NoCloud seed. `vm/qemu/build-image.sh` copies it
+# (dropping the .yaml extension, which the NoCloud datasource requires) into a small
+# ISO9660 filesystem labelled CIDATA, alongside `meta-data` and `network-config`, and
+# attaches that ISO to the VM as a read-only disk. cloud-init finds it by volume label.
+#
+# What this does, in order:
+#   1. Creates the unprivileged session user `sairi` and a locked maintenance account.
+#   2. Installs the graphical session stack (cage + cog + seatd) and Node.js 22 LTS.
+#   3. Creates /opt/sairios and the data directories with the right ownership.
+#   4. Installs the systemd units from /opt/sairios/os, if the product tree is present.
+#   5. Writes a legible self-check report to /var/log/sairios-firstboot.log and to the
+#      serial console, so that a headless CI boot has something to assert on.
+#
+# ---------------------------------------------------------------------------
+# CREDENTIALS: there are none in this file, and none may ever be added.
+# ---------------------------------------------------------------------------
+# No passwords. No API keys. No tokens. In particular OPENCLAW_GATEWAY_TOKEN and
+# SAIRIOS_LLM_API_KEY are NOT set here and must never be baked into an image. They are
+# supplied at runtime by writing /home/sairi/.config/sairios/env on the running machine
+# (mode 0600, owner sairi). That file is created empty below as a documented template.
+# An image is copied, shared and archived; a runtime file is not.
+#
+# The only thing `build-image.sh --ssh-key` injects is an SSH *public* key, which is not
+# a secret. Without it, neither account can be logged into at all, and the machine is
+# observable only through the serial console. That is the intended default.
+#
+# ---------------------------------------------------------------------------
+# VERIFICATION STATUS: this file has never been executed.
+# ---------------------------------------------------------------------------
+# The authoring host was macOS on arm64 with no QEMU, no Docker and no cloud-init. This
+# configuration has not been booted, and `cloud-init schema` has not been run against it.
+# Package names and versions were checked against the Debian 12 (bookworm) archive on
+# 2026-07-31 and all exist there; nothing beyond that has been confirmed. See
+# vm/README.md, "Unverified".
+
+# ---------------------------------------------------------------------------
+# Identity
+# ---------------------------------------------------------------------------
+hostname: sairios
+# manage_etc_hosts keeps 127.0.1.1 pointing at the hostname. Without it, anything that
+# resolves its own hostname (and several desktop libraries do) stalls on a DNS timeout,
+# which presents as a slow session start rather than as a name resolution error.
+manage_etc_hosts: true
+
+locale: en_US.UTF-8
+timezone: UTC
+
+# ---------------------------------------------------------------------------
+# Accounts
+# ---------------------------------------------------------------------------
+# Two accounts, and a deliberate asymmetry between them.
+#
+#   sairi   runs the session and the four SairiOS services. No password, NO SUDO AT ALL.
+#           This is the account an agent-proposed action would run under if it ever
+#           escaped the permission broker, so it holds no privilege worth escalating to.
+#
+#   debian  exists only so a human can triage a broken boot. Locked password, no
+#           console login, reachable exclusively with an SSH key that this file does not
+#           contain. It has NOPASSWD sudo, because an account with no password and
+#           password-requiring sudo has sudo that can never be used.
+#
+# The rule from the project contract is "no sudo NOPASSWD for anything the agent can
+# reach". The agent reaches `sairi`. It cannot reach `debian`: `sairi` cannot su, cannot
+# sudo, and the permission broker never spawns a shell (process.execute defaults to deny
+# and there is no unrestricted shell execution path from the model at all).
+#
+# The `- default` shorthand is deliberately not used. It would create the distribution's
+# default account with its stock configuration, and this file needs to state the
+# privilege boundary explicitly rather than inherit it.
+users:
+  - name: sairi
+    gecos: SairiOS session
+    primary_group: sairi
+    # video + render: DRM master and the GPU render node, which cage needs.
+    # input:          /dev/input/event*, which cage needs for keyboard and pointer.
+    # seat:           seatd's control socket. Created unconditionally in runcmd below,
+    #                 because sairios-session.service names it in SupplementaryGroups=
+    #                 and systemd refuses to start a unit that names a missing group.
+    # audio:          PipeWire device access, for when audio is wired up.
+    groups: [video, render, input, seat, audio]
+    shell: /bin/bash
+    # No password hash, and the account is locked against password authentication.
+    lock_passwd: true
+    # No `sudo:` key. cloud-init writes no sudoers entry, which is the point.
+    # SAIRIOS_SSH_AUTHORIZED_KEYS_MARKER
+
+  - name: debian
+    gecos: SairiOS maintenance (SSH key only)
+    # adm + systemd-journal so that reading the journal does not require sudo for the
+    # most common triage step.
+    groups: [adm, sudo, systemd-journal]
+    shell: /bin/bash
+    lock_passwd: true
+    sudo: 'ALL=(ALL) NOPASSWD:ALL'
+    # SAIRIOS_SSH_AUTHORIZED_KEYS_MARKER
+
+# Root has no password and cannot log in. Password authentication over SSH is off
+# entirely, so an empty or weak password can never become a remote foothold.
+disable_root: true
+ssh_pwauth: false
+
+# ---------------------------------------------------------------------------
+# Packages
+# ---------------------------------------------------------------------------
+package_update: true
+# Deliberately false. `apt-get upgrade` on first boot adds several minutes to a boot
+# that CI has to wait for, and makes two builds of the same image behave differently
+# depending on when they ran. The Debian cloud image is rebuilt frequently, so the base
+# is not stale in practice. Apply updates on a running machine, not during provisioning:
+#     sudo apt-get update && sudo apt-get upgrade
+package_upgrade: false
+
+# Every package below was confirmed present in Debian 12 (bookworm) on 2026-07-31.
+# Versions in the archive at that time: cage 0.1.4-4, cog 0.16.1-1, seatd 0.7.0-6,
+# pipewire 0.3.65-3+deb12u1, wireplumber 0.4.13-1.
+packages:
+  # Base tooling.
+  - ca-certificates
+  - curl
+  - gnupg
+  - git
+  - jq
+  - less
+  - xdg-utils
+  # REQUIRED, not optional: without dbus-user-session there is no per-user D-Bus, and
+  # `systemctl --user` cannot reach the user manager. The four SairiOS services are user
+  # units. Omitting this package breaks all of them in a way that is hard to read.
+  - dbus-user-session
+  # Graphical session. cage is the kiosk Wayland compositor, cog is the WebKit kiosk
+  # browser. See os/session/README.md for why these and not a custom compositor.
+  - cage
+  - cog
+  - seatd
+  # Audio. Not used by v0, enabled now so that adding audio later is configuration
+  # rather than a re-provision.
+  - pipewire
+  - pipewire-pulse
+  - wireplumber
+  # Fonts. The design language is modern typography on warm surfaces; a machine with
+  # only the default fallbacks renders the shell wrong in a way that looks like a bug.
+  - fonts-inter
+  - fonts-jetbrains-mono
+  - fonts-liberation2
+  - fonts-dejavu-core
+
+# ---------------------------------------------------------------------------
+# Files
+# ---------------------------------------------------------------------------
+# Everything is written to a root-owned staging path and then installed into place by
+# runcmd with explicit ownership. cloud-init's write_files creates missing parent
+# directories owned by root, which would leave /home/sairi/.config owned by root and
+# quietly break the user systemd instance. Staging avoids that entire class of problem.
+write_files:
+  # -------------------------------------------------------------------------
+  # Non-secret session configuration, read by sairios-session.service.
+  # -------------------------------------------------------------------------
+  - path: /etc/sairios/session.env
+    owner: root:root
+    permissions: '0644'
+    content: |
+      # Read by sairios-session.service (EnvironmentFile=-/etc/sairios/session.env).
+      # Non-secret only. Nothing here is confidential; the file is world readable.
+      SAIRIOS_SHELL_URL=http://127.0.0.1:7800
+      SAIRIOS_SHELL_HOST=127.0.0.1
+      SAIRIOS_SHELL_PORT=7800
+      SAIRIOS_SHELL_WAIT_SECONDS=120
+      SAIRIOS_SESSION_TTY=/dev/tty1
+
+  # -------------------------------------------------------------------------
+  # Template for the per-user service environment. Installed to
+  # /home/sairi/.config/sairios/env as mode 0600, owner sairi.
+  # -------------------------------------------------------------------------
+  - path: /etc/sairios/user-env.template
+    owner: root:root
+    permissions: '0644'
+    content: |
+      # SairiOS per-user service environment.
+      #
+      # Installed at ~/.config/sairios/env, mode 0600, owner sairi. Read by all four
+      # SairiOS user units via `EnvironmentFile=-%h/.config/sairios/env`.
+      #
+      # THIS IS WHERE SECRETS GO, AND THE ONLY PLACE THEY GO. It is created on the
+      # running machine and is never part of an image.
+      #
+      # SairiOS boots fully in mock mode with no credentials of any kind. Everything
+      # below is commented out on purpose.
+      #
+      # mock     deterministic in-process provider, no network, no API key. Default.
+      # openclaw connect to a running OpenClaw gateway.
+      #SAIRIOS_AGENT_PROVIDER=mock
+      #
+      # OpenClaw is an upstream pinned dependency reached over the network by the agent
+      # bridge. It is never vendored and never started by a SairiOS unit.
+      #OPENCLAW_GATEWAY_URL=ws://127.0.0.1:18789
+      #OPENCLAW_GATEWAY_TOKEN=
+      #
+      #SAIRIOS_LOG_LEVEL=info
+
+  # -------------------------------------------------------------------------
+  # Self-check configuration.
+  # -------------------------------------------------------------------------
+  - path: /etc/sairios/firstboot.env
+    owner: root:root
+    permissions: '0644'
+    content: |
+      # How long the first-boot self-check waits for the shell port before deciding it
+      # is not coming. Bounded on purpose: an unbounded wait in CI is a hung job.
+      SAIRIOS_FIRSTBOOT_WAIT_SECONDS=90
+
+  # -------------------------------------------------------------------------
+  # /usr/local/sbin/sairios-provision
+  #
+  # Installs the SairiOS OS-integration files from the product tree into system paths.
+  # Runs on every boot, so that delivering /opt/sairios after the image was built and
+  # rebooting is enough to wire the machine up. Idempotent by construction.
+  # -------------------------------------------------------------------------
+  - path: /etc/sairios/staging/sairios-provision
+    owner: root:root
+    permissions: '0644'
+    content: |
+      #!/usr/bin/env bash
+      #
+      # Install SairiOS OS integration from /opt/sairios/os into system paths.
+      #
+      # This script is the bridge between the product tree and the system. It reads only
+      # from /opt/sairios/os and writes only to well-known system paths. It contains no
+      # product logic and never will.
+      #
+      # Exit status is 0 even when the product tree is absent: a machine that has been
+      # provisioned but not yet had SairiOS delivered is a valid, expected state, and
+      # failing here would mark the boot as broken when it is merely empty.
+
+      set -euo pipefail
+
+      PREFIX=/opt/sairios
+      OS_DIR="$PREFIX/os"
+
+      log() { printf 'sairios-provision: %s\n' "$*"; }
+
+      if [ ! -d "$OS_DIR/systemd" ]; then
+        log "no product tree at $OS_DIR - nothing to install"
+        log "deliver the built repository to $PREFIX and re-run this script or reboot"
+        exit 0
+      fi
+
+      # --- user units -------------------------------------------------------
+      # /etc/systemd/user is the system-wide equivalent of ~/.config/systemd/user and
+      # has identical semantics. Installing here means the units exist for the `sairi`
+      # user without writing into that user's home directory.
+      install -d -m 0755 /etc/systemd/user
+      for unit in sairios-context-service sairios-permission-broker \
+                  sairios-agent-bridge sairios-shell; do
+        src="$OS_DIR/systemd/$unit.service"
+        if [ -f "$src" ]; then
+          install -m 0644 -o root -g root "$src" "/etc/systemd/user/$unit.service"
+          log "installed user unit $unit.service"
+        else
+          log "WARNING: missing $src"
+        fi
+      done
+
+      # --- system unit ------------------------------------------------------
+      if [ -f "$OS_DIR/systemd/sairios-session.service" ]; then
+        install -m 0644 -o root -g root \
+          "$OS_DIR/systemd/sairios-session.service" \
+          /etc/systemd/system/sairios-session.service
+        log "installed system unit sairios-session.service"
+      fi
+
+      # --- session desktop entry -------------------------------------------
+      # Only useful on a machine that already runs a display manager. The v0 VM has
+      # none; sairios-session.service claims tty1 directly. Installed anyway so that
+      # SairiOS is selectable if a greeter is added later.
+      if [ -f "$OS_DIR/session/sairios.desktop" ]; then
+        install -d -m 0755 /usr/share/wayland-sessions
+        install -m 0644 "$OS_DIR/session/sairios.desktop" \
+          /usr/share/wayland-sessions/sairios.desktop
+      fi
+
+      # --- branding ---------------------------------------------------------
+      if [ -d "$OS_DIR/branding" ]; then
+        install -d -m 0755 /usr/share/sairios
+        for asset in sairios-mark.svg sairios-wallpaper.svg palette.css; do
+          [ -f "$OS_DIR/branding/$asset" ] &&
+            install -m 0644 "$OS_DIR/branding/$asset" "/usr/share/sairios/$asset"
+        done
+        # Icon name `sairios`, referenced by sairios.desktop.
+        install -d -m 0755 /usr/share/icons/hicolor/scalable/apps
+        [ -f "$OS_DIR/branding/sairios-mark.svg" ] &&
+          install -m 0644 "$OS_DIR/branding/sairios-mark.svg" \
+            /usr/share/icons/hicolor/scalable/apps/sairios.svg
+      fi
+
+      # NOTE: /usr/local/bin/sairios-session is NOT installed from the product tree. It
+      # is a shim written by cloud-init that execs the tree's launcher when the tree is
+      # present and prints a legible banner on the console when it is not. Overwriting
+      # it here would remove exactly the diagnostic that matters on a broken machine.
+
+      systemctl daemon-reload
+      # --global enable creates the symlinks in /etc/systemd/user/default.target.wants,
+      # which applies to every user and works even when no user manager is running yet.
+      systemctl --global enable \
+        sairios-context-service.service \
+        sairios-permission-broker.service \
+        sairios-agent-bridge.service \
+        sairios-shell.service >/dev/null 2>&1 || \
+        log "WARNING: systemctl --global enable failed"
+      systemctl enable sairios-session.service >/dev/null 2>&1 || \
+        log "WARNING: could not enable sairios-session.service"
+
+      log "provisioning complete"
+
+  # -------------------------------------------------------------------------
+  # /usr/local/bin/sairios-session
+  #
+  # The shim named by sairios-session.service. Its only job is to produce a sentence
+  # instead of a black screen when the product tree is missing.
+  # -------------------------------------------------------------------------
+  - path: /etc/sairios/staging/sairios-session-shim
+    owner: root:root
+    permissions: '0644'
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      LAUNCHER=/opt/sairios/os/session/sairios-session.sh
+      TTY="${SAIRIOS_SESSION_TTY:-/dev/tty1}"
+
+      if [ -x "$LAUNCHER" ]; then
+        exec "$LAUNCHER" "$@"
+      fi
+
+      banner="
+      =====================================================================
+        SairiOS is installed but the product tree is missing
+      =====================================================================
+        Expected the session launcher at:
+            $LAUNCHER
+
+        The operating-system layer provisioned correctly. What is absent is
+        SairiOS itself: /opt/sairios has no built repository in it.
+
+        Deliver it from the host, then reboot:
+            rsync -a -e 'ssh -p 22022' ./ debian@127.0.0.1:/tmp/sairios/
+            ssh -p 22022 debian@127.0.0.1 \\
+                'sudo rsync -a /tmp/sairios/ /opt/sairios/ &&
+                 sudo chown -R sairi:sairi /opt/sairios &&
+                 sudo /usr/local/sbin/sairios-provision && sudo reboot'
+
+        Boot report:  cat /var/log/sairios-firstboot.log
+      =====================================================================
+      "
+
+      printf '%s\n' "$banner" >&2
+      if [ -w "$TTY" ]; then
+        printf '%s\n' "$banner" >>"$TTY" 2>/dev/null || true
+      fi
+      exit 1
+
+  # -------------------------------------------------------------------------
+  # /usr/local/sbin/sairios-firstboot-check
+  #
+  # The self-check. Writes a human-legible report and one machine-greppable verdict
+  # line. Runs on every boot from sairios-firstboot-check.service. Output goes to the
+  # log file AND to /dev/console, because on a headless CI boot the serial console is
+  # the only channel that exists.
+  #
+  # Verdict sentinels, which vm/qemu/run-vm-headless.sh greps for:
+  #     SAIRIOS-FIRSTBOOT: OK        everything expected is present and answering
+  #     SAIRIOS-FIRSTBOOT: DEGRADED  the OS layer is fine, SairiOS is not running
+  #     SAIRIOS-FIRSTBOOT: FAIL      the OS layer itself is broken
+  # -------------------------------------------------------------------------
+  - path: /etc/sairios/staging/sairios-firstboot-check
+    owner: root:root
+    permissions: '0644'
+    content: |
+      #!/usr/bin/env bash
+      #
+      # SairiOS boot self-check. Never exits non-zero: its job is to report, and a
+      # non-zero exit would only turn a legible report into a systemd failure message.
+
+      set -uo pipefail
+
+      LOG=/var/log/sairios-firstboot.log
+      CONSOLE=/dev/console
+
+      # shellcheck disable=SC1091
+      [ -r /etc/sairios/firstboot.env ] && . /etc/sairios/firstboot.env
+      WAIT_SECONDS="${SAIRIOS_FIRSTBOOT_WAIT_SECONDS:-90}"
+
+      OK=0
+      WARN=0
+      FAIL=0
+
+      emit() { printf '%s\n' "$*"; }
+
+      ok()   { OK=$((OK + 1));     emit "[ ok  ] $*"; }
+      warn() { WARN=$((WARN + 1)); emit "[warn ] $*"; }
+      fail() { FAIL=$((FAIL + 1)); emit "[fail ] $*"; }
+      note() { emit "         $*"; }
+
+      have() { command -v "$1" >/dev/null 2>&1; }
+
+      # Accepts a TCP connection? bash /dev/tcp needs no packages.
+      port_open() {
+        (exec 3<>"/dev/tcp/127.0.0.1/$1") >/dev/null 2>&1
+      }
+
+      check_binary() {
+        local name="$1" ver
+        if have "$name"; then
+          ver="$("$name" --version 2>&1 | head -n 1)"
+          ok "$name present: ${ver:-unknown version}"
+        else
+          fail "$name is NOT installed"
+        fi
+      }
+
+      report() {
+        emit "==================== SAIRIOS FIRST BOOT REPORT ===================="
+        emit "generated : $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+        emit "hostname  : $(hostname)"
+        emit "kernel    : $(uname -sr)"
+        emit "machine   : $(uname -m)"
+        emit "cloud-init: $(cloud-init --version 2>&1 | head -n 1)"
+        emit "uptime    : $(cut -d' ' -f1 /proc/uptime 2>/dev/null || echo '?')s"
+        emit ""
+        emit "--- base system ---------------------------------------------------"
+
+        if [ -r /etc/os-release ]; then
+          # shellcheck disable=SC1091
+          ok "distribution: $(. /etc/os-release && echo "$PRETTY_NAME")"
+        else
+          fail "/etc/os-release is missing"
+        fi
+
+        check_binary node
+        check_binary npm
+
+        # Node 22 LTS is a hard requirement: the context service uses node:sqlite,
+        # which does not exist before 22.5.
+        if have node; then
+          local major
+          major="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)"
+          if [ "${major:-0}" -ge 22 ]; then
+            ok "node major version $major meets the >= 22 requirement"
+          else
+            fail "node major version ${major:-unknown} is below the required 22"
+          fi
+        fi
+
+        emit ""
+        emit "--- graphical session ---------------------------------------------"
+        check_binary cage
+        check_binary cog
+
+        if [ -e /dev/dri/card0 ]; then
+          ok "DRM device /dev/dri/card0 present"
+        else
+          fail "no /dev/dri/card0 - the guest has no GPU; cage cannot start"
+          note "start the VM with -device virtio-gpu-pci"
+        fi
+
+        if getent group seat >/dev/null 2>&1; then
+          ok "group 'seat' exists (named by sairios-session.service)"
+        else
+          fail "group 'seat' is missing; sairios-session.service will refuse to start"
+        fi
+
+        if id -nG sairi 2>/dev/null | tr ' ' '\n' | grep -qx video; then
+          ok "user sairi is in group video"
+        else
+          fail "user sairi is NOT in group video"
+        fi
+
+        if systemctl is-active --quiet seatd.service 2>/dev/null; then
+          ok "seatd.service is active"
+        else
+          warn "seatd.service is not active (logind may still provide the seat)"
+        fi
+
+        emit ""
+        emit "--- sairios layout ------------------------------------------------"
+        for d in /opt/sairios /var/lib/sairios /var/lib/sairios/context \
+                 /var/lib/sairios/agent /var/lib/sairios/audit \
+                 /var/lib/sairios/sandbox; do
+          if [ -d "$d" ]; then
+            ok "$d exists ($(stat -c '%U:%G %a' "$d" 2>/dev/null || echo '?'))"
+          else
+            fail "$d is missing"
+          fi
+        done
+
+        if [ -f /home/sairi/.config/sairios/env ]; then
+          ok "user environment file present ($(stat -c '%U:%G %a' \
+              /home/sairi/.config/sairios/env 2>/dev/null || echo '?'))"
+        else
+          warn "/home/sairi/.config/sairios/env is missing"
+        fi
+
+        if loginctl show-user sairi -p Linger 2>/dev/null | grep -q 'Linger=yes'; then
+          ok "lingering is enabled for sairi (user units start at boot)"
+        else
+          fail "lingering is NOT enabled for sairi; user units will not start at boot"
+          note "fix with: loginctl enable-linger sairi"
+        fi
+
+        emit ""
+        emit "--- sairios product tree ------------------------------------------"
+        # This is the boundary between "the OS provisioned" and "SairiOS is running".
+        # An empty tree is DEGRADED, not FAIL: the image is correct, it is simply bare.
+        local tree_present=0
+        if [ -d /opt/sairios/os/systemd ] && [ -d /opt/sairios/services ]; then
+          tree_present=1
+          ok "/opt/sairios contains a SairiOS tree"
+        else
+          warn "/opt/sairios has no SairiOS tree - the image is bare"
+          note "this is expected for a freshly built image; deliver the built"
+          note "repository to /opt/sairios and run /usr/local/sbin/sairios-provision"
+        fi
+
+        emit ""
+        emit "--- services ------------------------------------------------------"
+        if [ "$tree_present" -eq 1 ]; then
+          local svc state sairi_uid
+          sairi_uid="$(id -u sairi 2>/dev/null || echo 0)"
+          for svc in sairios-context-service sairios-permission-broker \
+                     sairios-agent-bridge sairios-shell; do
+            # Query sairi's own user manager. `systemctl --machine=sairi@.host` would
+            # be shorter but needs the systemd-container package for its transport,
+            # which is not installed. runuser with an explicit XDG_RUNTIME_DIR needs
+            # nothing beyond util-linux and is exactly what a human would type.
+            state="$(runuser -u sairi -- env \
+                       "XDG_RUNTIME_DIR=/run/user/$sairi_uid" \
+                       systemctl --user is-active "$svc.service" 2>/dev/null || true)"
+            [ -n "$state" ] || state=unknown
+            if [ "$state" = active ]; then
+              ok "$svc: $state"
+            else
+              fail "$svc: $state"
+            fi
+          done
+        else
+          warn "skipping service checks: no product tree"
+        fi
+
+        emit ""
+        emit "--- ports ---------------------------------------------------------"
+        local waited=0
+        if [ "$tree_present" -eq 1 ]; then
+          emit "         waiting up to ${WAIT_SECONDS}s for the shell on 7800"
+          while [ "$waited" -lt "$WAIT_SECONDS" ]; do
+            port_open 7800 && break
+            sleep 2
+            waited=$((waited + 2))
+          done
+        fi
+
+        local port name
+        for entry in "7800 shell" "7801 context-service" \
+                     "7802 agent-bridge" "7803 permission-broker"; do
+          port="${entry%% *}"
+          name="${entry##* }"
+          if port_open "$port"; then
+            ok "127.0.0.1:$port answering ($name)"
+          elif [ "$tree_present" -eq 1 ]; then
+            fail "127.0.0.1:$port not answering ($name)"
+          else
+            warn "127.0.0.1:$port not answering ($name) - no product tree"
+          fi
+        done
+
+        emit ""
+        emit "--- summary -------------------------------------------------------"
+        emit "ok: $OK   warn: $WARN   fail: $FAIL"
+        emit ""
+        if [ "$FAIL" -gt 0 ]; then
+          emit "SAIRIOS-FIRSTBOOT: FAIL"
+          emit "The operating-system layer is broken. See docs/VM.md for triage."
+        elif [ "$WARN" -gt 0 ]; then
+          emit "SAIRIOS-FIRSTBOOT: DEGRADED"
+          emit "The OS layer provisioned correctly; SairiOS itself is not running."
+        else
+          emit "SAIRIOS-FIRSTBOOT: OK"
+        fi
+        emit "================== END SAIRIOS FIRST BOOT REPORT =================="
+      }
+
+      # Keep exactly one previous report, then write the current one to both the log
+      # file and the console. The console copy is what a headless CI run reads.
+      [ -f "$LOG" ] && mv -f "$LOG" "$LOG.1" 2>/dev/null
+      report >"$LOG" 2>&1
+      chmod 0644 "$LOG" 2>/dev/null
+      [ -w "$CONSOLE" ] && cat "$LOG" >"$CONSOLE" 2>/dev/null
+      cat "$LOG"
+      exit 0
+
+  # -------------------------------------------------------------------------
+  # The unit that runs the self-check.
+  # -------------------------------------------------------------------------
+  - path: /etc/systemd/system/sairios-firstboot-check.service
+    owner: root:root
+    permissions: '0644'
+    content: |
+      [Unit]
+      Description=SairiOS boot self-check
+      # Ordered after cloud-init has finished and after the session has been asked to
+      # start, so that the report describes the settled machine rather than a machine
+      # halfway through provisioning.
+      After=cloud-final.service sairios-session.service multi-user.target
+      Wants=cloud-final.service
+
+      [Service]
+      Type=oneshot
+      RemainAfterExit=yes
+      ExecStart=/usr/local/sbin/sairios-firstboot-check
+      # The script waits on the shell port; give it room beyond its own bounded wait.
+      TimeoutStartSec=300
+      StandardOutput=journal
+      StandardError=journal
+
+      [Install]
+      WantedBy=multi-user.target
+
+# ---------------------------------------------------------------------------
+# Provisioning commands
+# ---------------------------------------------------------------------------
+# Runs once per instance, after packages are installed. Ordering matters and is
+# commented at each step.
+runcmd:
+  - [sh, -c, 'echo "sairios: provisioning started $(date -u -Is)"']
+
+  # -- groups ------------------------------------------------------------
+  # `seat` is named in sairios-session.service SupplementaryGroups=. Debian's seatd
+  # package does not reliably create a group under that exact name, and systemd refuses
+  # to start a unit that names a group which does not exist. Creating it unconditionally
+  # (-f makes this a no-op if it already exists) removes a failure mode that otherwise
+  # presents as a session that never starts, with a message about a group nobody has
+  # heard of. Adding sairi to it a second time is harmless.
+  - [groupadd, -f, seat]
+  - [groupadd, -f, render]
+  - [sh, -c, 'usermod -aG seat,render,video,input,audio sairi || true']
+  # seatd's own socket group on Debian, if the package uses it.
+  - [sh, -c, 'getent group _seatd >/dev/null && usermod -aG _seatd sairi || true']
+  - [sh, -c, 'systemctl enable --now seatd.service || true']
+
+  # -- Node.js 22 LTS from NodeSource ------------------------------------
+  # Debian 12 ships Node 18, which is too old: the context service uses node:sqlite
+  # (Node >= 22.5). The key is fetched and dearmoured into a dedicated keyring rather
+  # than piping NodeSource's setup script into a root shell, so that what is trusted and
+  # what is executed are both visible here.
+  - [sh, -c, 'install -d -m 0755 /etc/apt/keyrings']
+  - [
+      sh,
+      -c,
+      "curl -fsSL --proto '=https' --tlsv1.2 --retry 3 https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg",
+    ]
+  - [sh, -c, 'chmod 0644 /etc/apt/keyrings/nodesource.gpg']
+  - [
+      sh,
+      -c,
+      'echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" > /etc/apt/sources.list.d/nodesource.list',
+    ]
+  - [sh, -c, 'apt-get update']
+  - [sh, -c, 'DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs']
+
+  # -- filesystem layout -------------------------------------------------
+  # /opt/sairios is owned by sairi so that delivering a build does not require root and
+  # so that the user units can read it. It is intentionally empty in a fresh image.
+  - [install, -d, -m, '0755', -o, sairi, -g, sairi, /opt/sairios]
+  # The data root. 0700 throughout: context memory, agent transcripts and the audit log
+  # are private to the user, and the sandbox is the only path agent file actions may
+  # touch. Nothing here is group or world readable.
+  - [install, -d, -m, '0700', -o, sairi, -g, sairi, /var/lib/sairios]
+  - [install, -d, -m, '0700', -o, sairi, -g, sairi, /var/lib/sairios/context]
+  - [install, -d, -m, '0700', -o, sairi, -g, sairi, /var/lib/sairios/agent]
+  - [install, -d, -m, '0700', -o, sairi, -g, sairi, /var/lib/sairios/audit]
+  - [install, -d, -m, '0700', -o, sairi, -g, sairi, /var/lib/sairios/sandbox]
+
+  # -- per-user environment file (no secrets; a documented template) -----
+  - [install, -d, -m, '0700', -o, sairi, -g, sairi, /home/sairi/.config]
+  - [install, -d, -m, '0700', -o, sairi, -g, sairi, /home/sairi/.config/sairios]
+  - [
+      install,
+      -m,
+      '0600',
+      -o,
+      sairi,
+      -g,
+      sairi,
+      /etc/sairios/user-env.template,
+      /home/sairi/.config/sairios/env,
+    ]
+
+  # -- scripts into place ------------------------------------------------
+  - [
+      install,
+      -m,
+      '0755',
+      -o,
+      root,
+      -g,
+      root,
+      /etc/sairios/staging/sairios-provision,
+      /usr/local/sbin/sairios-provision,
+    ]
+  - [
+      install,
+      -m,
+      '0755',
+      -o,
+      root,
+      -g,
+      root,
+      /etc/sairios/staging/sairios-firstboot-check,
+      /usr/local/sbin/sairios-firstboot-check,
+    ]
+  - [
+      install,
+      -m,
+      '0755',
+      -o,
+      root,
+      -g,
+      root,
+      /etc/sairios/staging/sairios-session-shim,
+      /usr/local/bin/sairios-session,
+    ]
+
+  # -- user manager at boot ----------------------------------------------
+  # Without lingering, `sairi`'s systemd instance only exists while that user has a
+  # login session, so the four user units would never start on an unattended boot. This
+  # single command is the difference between a working machine and a black screen.
+  - [loginctl, enable-linger, sairi]
+
+  # -- wire up whatever product tree exists -------------------------------
+  - [sh, -c, '/usr/local/sbin/sairios-provision || true']
+
+  # -- boot into the graphical session ------------------------------------
+  - [sh, -c, 'systemctl set-default graphical.target || true']
+
+  # -- self-check ---------------------------------------------------------
+  # Enabled here, started here. The unit runs again on every subsequent boot.
+  - [sh, -c, 'systemctl enable sairios-firstboot-check.service || true']
+  - [sh, -c, 'systemctl start --no-block sairios-firstboot-check.service || true']
+
+  - [sh, -c, 'echo "sairios: provisioning finished $(date -u -Is)"']
+
+# ---------------------------------------------------------------------------
+# Closing message on the console.
+# ---------------------------------------------------------------------------
+final_message: |
+  SairiOS provisioning finished after $UPTIME seconds ($TIMESTAMP).
+  The boot report is written to /var/log/sairios-firstboot.log and repeated on the
+  serial console. A bare image reports DEGRADED until SairiOS is delivered to
+  /opt/sairios. See docs/VM.md.

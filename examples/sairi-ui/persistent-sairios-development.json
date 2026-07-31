@@ -1,0 +1,183 @@
+{
+  "version": "0.1",
+  "contextId": "ctx_35168070461f2cf86ad5282857294e18",
+  "title": "SairiOS development",
+  "contextType": "persistent",
+  "layout": {
+    "type": "workspace",
+    "regions": [
+      {
+        "id": "status",
+        "width": "one-third",
+        "component": {
+          "type": "status-panel",
+          "binding": "project.status",
+          "props": {
+            "title": "Milestone 0",
+            "items": [
+              {
+                "label": "Context domain model",
+                "state": "ok",
+                "detail": "Schema, lifecycle, crystallization"
+              },
+              {
+                "label": "SairiUI protocol",
+                "state": "ok",
+                "detail": "16-component catalog, validated"
+              },
+              {
+                "label": "Permission broker",
+                "state": "ok",
+                "detail": "Observe / propose / execute"
+              },
+              {
+                "label": "Desktop shell",
+                "state": "ok",
+                "detail": "React, mock mode"
+              },
+              {
+                "label": "OpenClaw provider",
+                "state": "pending",
+                "detail": "Scaffolded, not connected"
+              },
+              {
+                "label": "VM image",
+                "state": "warn",
+                "detail": "Scripts written, never booted"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "tasks",
+        "width": "one-third",
+        "component": {
+          "type": "checklist",
+          "binding": "project.tasks",
+          "props": {
+            "title": "Next up",
+            "items": [
+              {
+                "id": "boot",
+                "label": "Boot the VM image end to end",
+                "checked": false
+              },
+              {
+                "id": "openclaw",
+                "label": "Connect the OpenClaw gateway",
+                "checked": false
+              },
+              {
+                "id": "tauri",
+                "label": "Evaluate the Tauri packaging path",
+                "checked": false
+              },
+              {
+                "id": "sync",
+                "label": "Prototype context sync between two devices",
+                "checked": false
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "metadata",
+        "width": "one-third",
+        "component": {
+          "type": "context-metadata",
+          "props": {
+            "title": "This context",
+            "showObjective": true
+          }
+        }
+      },
+      {
+        "id": "decisions",
+        "width": "one-half",
+        "component": {
+          "type": "key-value-list",
+          "binding": "project.decisions",
+          "props": {
+            "title": "Decisions on record",
+            "items": [
+              {
+                "key": "ADR-0001",
+                "value": "Debian 12 base image, not a kernel fork"
+              },
+              {
+                "key": "ADR-0003",
+                "value": "Declarative SairiUI; the model never returns code"
+              },
+              {
+                "key": "ADR-0004",
+                "value": "OpenClaw stays behind the agent bridge"
+              },
+              {
+                "key": "ADR-0006",
+                "value": "Every privileged action goes through the broker"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "files",
+        "width": "one-half",
+        "component": {
+          "type": "file-list",
+          "binding": "project.files",
+          "props": {
+            "title": "Recent files",
+            "files": [
+              {
+                "name": "ARCHITECTURE.md",
+                "relativePath": "notes/ARCHITECTURE.md",
+                "byteSize": 14820,
+                "mediaType": "text/markdown"
+              },
+              {
+                "name": "sairi-ui.schema.json",
+                "relativePath": "notes/sairi-ui.schema.json",
+                "byteSize": 11402,
+                "mediaType": "application/json"
+              },
+              {
+                "name": "milestone-0.md",
+                "relativePath": "notes/milestone-0.md",
+                "byteSize": 3118,
+                "mediaType": "text/markdown"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "activity",
+        "width": "full",
+        "component": {
+          "type": "activity-log",
+          "props": {
+            "title": "Activity",
+            "limit": 12
+          }
+        }
+      }
+    ]
+  },
+  "suggestedActions": [
+    {
+      "id": "list.services",
+      "label": "Check running services",
+      "kind": "system",
+      "capability": "process.list"
+    },
+    {
+      "id": "read.notes",
+      "label": "Read milestone notes",
+      "kind": "system",
+      "capability": "files.read"
+    }
+  ]
+}

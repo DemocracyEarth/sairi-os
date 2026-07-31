@@ -1,0 +1,90 @@
+# SairiOS shell — systemd USER unit.
+#
+# Install to ~/.config/systemd/user/sairios-shell.service
+#
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now sairios-shell.service
+#
+# Serves the built shell bundle on 127.0.0.1:7800. The kiosk session
+# (sairios-session.service, a SYSTEM unit) waits for this port before starting cog.
+
+[Unit]
+Description=SairiOS shell (adaptive UI, 127.0.0.1:7800)
+Documentation=file:/opt/sairios/os/README.md
+# Ordering: last in the chain.
+After=sairios-context-service.service sairios-permission-broker.service sairios-agent-bridge.service
+# Wants, not Requires, on purpose. A shell that starts and renders a legible
+# "services unavailable" state is far more useful during triage than a shell that
+# refuses to start because one backend is down. Do not change these to Requires.
+Wants=sairios-context-service.service sairios-permission-broker.service sairios-agent-bridge.service
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=exec
+WorkingDirectory=/opt/sairios
+
+Environment=NODE_ENV=production
+Environment=SAIRIOS_SHELL_PORT=7800
+# npm writes its cache and its crash logs somewhere. Point both at the private /tmp this
+# unit gets from PrivateTmp=yes, so that ProtectSystem=strict and ProtectHome=read-only
+# do not turn a routine npm warning into a start failure.
+Environment=NPM_CONFIG_CACHE=/tmp/npm-cache
+Environment=NPM_CONFIG_UPDATE_NOTIFIER=false
+Environment=NPM_CONFIG_FUND=false
+Environment=NPM_CONFIG_AUDIT=false
+EnvironmentFile=-%h/.config/sairios/env
+
+# v0 serves the built bundle with `vite preview` through the npm workspace. This is
+# honest about what it is: a static file server that happens to ship with the build
+# tool. --strictPort makes a port collision a hard failure instead of a silent move to
+# 7801, which would collide with the context service.
+#
+# Migration path: replace this with a small static server that has no dev dependency,
+# once one exists. The unit contract is only "something answers on 7800".
+ExecStart=/usr/bin/npm run preview --workspace @sairios/shell -- --host 127.0.0.1 --port 7800 --strictPort
+
+Restart=on-failure
+RestartSec=2
+KillSignal=SIGTERM
+TimeoutStopSec=15
+
+# ---------------------------------------------------------------------------
+# Hardening
+# ---------------------------------------------------------------------------
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+# No ReadWritePaths at all. A static file server writes nothing outside its private /tmp.
+# If you ever find yourself adding a path here, ask what the shell is writing and why.
+PrivateDevices=yes
+ProtectProc=invisible
+ProcSubset=pid
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=yes
+# MemoryDenyWriteExecute is deliberately NOT set: V8 requires write-then-execute pages
+# for JIT. Enabling it prevents Node from starting.
+# MemoryDenyWriteExecute=yes
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+SystemCallArchitectures=native
+# Loopback only. The shell serves static files to a browser on the same machine and has
+# no reason to reach anything else. All backend traffic from the page goes to 127.0.0.1
+# from the browser process, not from this one. Best-effort in a user unit; the
+# authoritative control is --host 127.0.0.1 above.
+IPAddressAllow=localhost
+IPAddressDeny=any
+UMask=0077
+
+[Install]
+WantedBy=default.target

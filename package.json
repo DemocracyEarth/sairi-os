@@ -1,0 +1,46 @@
+{
+  "name": "sairios",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SairiOS — an experimental operating environment where every window is a context.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "workspaces": [
+    "packages/*",
+    "services/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "clean": "node scripts/clean.mjs",
+    "dev": "node scripts/dev.mjs",
+    "doctor": "node scripts/doctor.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --build --force tsconfig.json"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/react": "^16.1.0",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@types/ws": "^8.5.13",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.17.0",
+    "globals": "^15.14.0",
+    "jsdom": "^25.0.1",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.1",
+    "vite": "^6.0.5",
+    "vitest": "^2.1.8"
+  }
+}

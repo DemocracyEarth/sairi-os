@@ -1,0 +1,86 @@
+# SairiOS permission broker — systemd USER unit.
+#
+# Install to ~/.config/systemd/user/sairios-permission-broker.service
+#
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now sairios-permission-broker.service
+#
+# The broker is the only component that executes capabilities. It is therefore the only
+# component whose sandbox is deliberately looser than the others, and every loosening
+# below is justified in a comment.
+
+[Unit]
+Description=SairiOS permission broker (capability policy and execution)
+Documentation=file:/opt/sairios/os/README.md
+# Ordering only. The broker keeps its own grant and audit state and can start and answer
+# policy questions even if the context service is down, so this is Wants, not Requires.
+Wants=sairios-context-service.service
+After=sairios-context-service.service
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=exec
+WorkingDirectory=/opt/sairios
+
+Environment=NODE_ENV=production
+Environment=SAIRIOS_BIND_HOST=127.0.0.1
+Environment=SAIRIOS_PERMISSION_BROKER_PORT=7803
+Environment=SAIRIOS_DATA_DIR=/var/lib/sairios
+Environment=SAIRIOS_SANDBOX_DIR=/var/lib/sairios/sandbox
+EnvironmentFile=-%h/.config/sairios/env
+
+ExecStart=/usr/bin/node /opt/sairios/services/permission-broker/dist/main.js
+
+Restart=on-failure
+RestartSec=2
+KillSignal=SIGTERM
+# Longer than the other services: an in-flight capability execution should be allowed to
+# finish or be cleanly abandoned before the process is killed.
+TimeoutStopSec=30
+
+# ---------------------------------------------------------------------------
+# Hardening
+# ---------------------------------------------------------------------------
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+# read-only rather than tmpfs: the files.read capability may legitimately be asked to
+# read something under $HOME, subject to policy. It may never write there.
+ProtectHome=read-only
+# Two writable paths and no others:
+#   audit/   the append-only decision log
+#   sandbox/ the ONLY directory agent-proposed file writes may ever touch
+# Note that files.write and files.delete confinement is enforced in the broker's own code
+# by path normalisation. This directive is the second, independent layer.
+ReadWritePaths=/var/lib/sairios/audit /var/lib/sairios/sandbox
+PrivateDevices=yes
+# ProtectProc / ProcSubset are deliberately NOT set here. The process.list capability
+# (policy default: allow) has to be able to enumerate processes in /proc. Setting
+# ProtectProc=invisible would make process.list silently return only this service.
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=yes
+# MemoryDenyWriteExecute is deliberately NOT set: V8 requires write-then-execute pages
+# for JIT. Enabling it prevents Node from starting.
+# MemoryDenyWriteExecute=yes
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+SystemCallArchitectures=native
+# No IPAddressAllow/IPAddressDeny here. Executing the network.fetch capability is this
+# service's job, and the destination is arbitrary by design. The control on network.fetch
+# is the policy engine (default: ask), not the unit file. If you want a hard network
+# lockdown for a particular deployment, add a drop-in with IPAddressDeny=any and accept
+# that network.fetch will then always fail.
+UMask=0077
+
+[Install]
+WantedBy=default.target

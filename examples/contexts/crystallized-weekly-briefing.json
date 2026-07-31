@@ -1,0 +1,235 @@
+{
+  "id": "ctx_fa00867e6921f4a836c63a4e9fd87dfa",
+  "schemaVersion": "0.1",
+  "name": "Weekly research briefing",
+  "type": "crystallized",
+  "status": "active",
+  "createdAt": "2026-07-28T09:00:00.000Z",
+  "updatedAt": "2026-07-28T11:00:00.000Z",
+  "objective": "Produce the weekly research briefing: gather sources, summarize what changed, get approval, export.",
+  "memory": [
+    {
+      "key": "briefing-audience",
+      "value": "Editorial team, Monday morning.",
+      "scope": "durable",
+      "sensitive": false,
+      "updatedAt": "2026-07-28T09:00:00.000Z"
+    }
+  ],
+  "artifacts": [],
+  "permissions": [],
+  "tasks": [],
+  "events": [
+    {
+      "id": "evt_22850334fdf996b66acd4fea4a500ff6",
+      "kind": "context.crystallized",
+      "at": "2026-07-28T09:00:00.000Z",
+      "summary": "Crystallized from \"Research AI regulation\""
+    }
+  ],
+  "uiSpecification": {
+    "version": "0.1",
+    "contextId": "ctx_fa00867e6921f4a836c63a4e9fd87dfa",
+    "title": "Weekly research briefing",
+    "contextType": "crystallized",
+    "layout": {
+      "type": "workspace",
+      "regions": [
+        {
+          "id": "agenda",
+          "width": "one-third",
+          "component": {
+            "type": "checklist",
+            "binding": "briefing.agenda",
+            "props": {
+              "title": "Reusable agenda",
+              "items": [
+                {
+                  "id": "gather",
+                  "label": "Gather sources published this week",
+                  "checked": false
+                },
+                {
+                  "id": "filter",
+                  "label": "Filter to the three that changed something",
+                  "checked": false
+                },
+                {
+                  "id": "draft",
+                  "label": "Draft the briefing",
+                  "checked": false
+                },
+                {
+                  "id": "review",
+                  "label": "Human review before export",
+                  "checked": false
+                },
+                {
+                  "id": "export",
+                  "label": "Export to the briefing folder",
+                  "checked": false
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "library",
+          "width": "one-third",
+          "component": {
+            "type": "source-list",
+            "binding": "briefing.library",
+            "props": {
+              "title": "Source library",
+              "sources": [
+                {
+                  "label": "Standing feed list",
+                  "kind": "note",
+                  "detail": "Carried forward between runs",
+                  "trusted": true
+                },
+                {
+                  "label": "Regulatory tracker",
+                  "kind": "note",
+                  "detail": "Checked every run",
+                  "trusted": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "stages",
+          "width": "one-third",
+          "component": {
+            "type": "timeline",
+            "binding": "briefing.stages",
+            "props": {
+              "title": "Workflow stages",
+              "entries": [
+                {
+                  "at": "Stage 1",
+                  "label": "Prepare workspace",
+                  "detail": "Create the run folder"
+                },
+                {
+                  "at": "Stage 2",
+                  "label": "Collect and summarize"
+                },
+                {
+                  "at": "Stage 3",
+                  "label": "Approval",
+                  "detail": "Requires a human decision"
+                },
+                {
+                  "at": "Stage 4",
+                  "label": "Export"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "template",
+          "width": "two-thirds",
+          "component": {
+            "type": "editor",
+            "binding": "briefing.template",
+            "props": {
+              "title": "Briefing template",
+              "value": "# Weekly research briefing — {{week}}\n\n## What changed\n\n- \n\n## Why it matters\n\n- \n\n## What to watch next week\n\n- \n\n## Sources\n\n- \n",
+              "placeholder": "The briefing structure carried between runs."
+            }
+          }
+        },
+        {
+          "id": "notes",
+          "width": "one-third",
+          "component": {
+            "type": "text",
+            "props": {
+              "title": "What this template keeps",
+              "tone": "muted",
+              "body": "Layout, component choices, stages, permission defaults, instructions and named inputs. Conversation, files, secrets and execution logs from the original run were removed when this context was crystallized."
+            }
+          }
+        }
+      ]
+    },
+    "suggestedActions": [
+      {
+        "id": "run.briefing",
+        "label": "Start this week’s briefing",
+        "kind": "context",
+        "description": "Create a new ephemeral context from this template."
+      },
+      {
+        "id": "export.briefing",
+        "label": "Export briefing",
+        "kind": "system",
+        "capability": "files.write"
+      }
+    ]
+  },
+  "agentSession": {
+    "provider": "mock",
+    "sessionId": null,
+    "status": "idle"
+  },
+  "parentContextId": null,
+  "crystallizedFrom": null,
+  "template": {
+    "instructions": "Produce a weekly research briefing. Gather sources published in the last seven days, keep only the items that changed something, and draft against the stored template. Ask for approval before exporting. Do not fetch anything without requesting network.fetch first.",
+    "inputs": [
+      {
+        "name": "week",
+        "label": "Week of",
+        "type": "date",
+        "required": true,
+        "description": "Monday of the week being briefed."
+      },
+      {
+        "name": "objective",
+        "label": "Focus for this run",
+        "type": "multiline",
+        "required": false,
+        "defaultValue": "General research briefing."
+      },
+      {
+        "name": "audience",
+        "label": "Audience",
+        "type": "choice",
+        "required": false,
+        "choices": ["Editorial team", "Executive", "Public"],
+        "defaultValue": "Editorial team"
+      }
+    ],
+    "stages": [
+      {
+        "id": "stage_1",
+        "title": "Prepare workspace",
+        "requiresApproval": false
+      },
+      {
+        "id": "stage_2",
+        "title": "Collect and summarize",
+        "requiresApproval": false
+      },
+      {
+        "id": "stage_3",
+        "title": "Approval",
+        "description": "A human approves before anything leaves the context.",
+        "requiresApproval": true
+      },
+      {
+        "id": "stage_4",
+        "title": "Export",
+        "requiresApproval": false
+      }
+    ],
+    "permissionDefaults": {
+      "files.write": "ask",
+      "network.fetch": "ask"
+    }
+  }
+}

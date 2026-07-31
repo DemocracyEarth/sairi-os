@@ -1,0 +1,227 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sairios.dev/schema/context/0.1/context.schema.json",
+  "title": "SairiOS Context",
+  "description": "A human intention and everything it accumulates. The primary abstraction of SairiOS.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "schemaVersion",
+    "name",
+    "type",
+    "status",
+    "createdAt",
+    "updatedAt",
+    "objective",
+    "memory",
+    "artifacts",
+    "permissions",
+    "tasks",
+    "events",
+    "uiSpecification",
+    "agentSession",
+    "parentContextId",
+    "crystallizedFrom"
+  ],
+  "properties": {
+    "id": { "$ref": "#/$defs/contextId" },
+    "schemaVersion": { "const": "0.1" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "type": { "$ref": "#/$defs/contextType" },
+    "status": { "$ref": "#/$defs/contextStatus" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "objective": { "type": "string", "maxLength": 4000 },
+    "memory": { "type": "array", "items": { "$ref": "#/$defs/memoryEntry" }, "maxItems": 1000 },
+    "artifacts": { "type": "array", "items": { "$ref": "#/$defs/artifact" }, "maxItems": 1000 },
+    "permissions": { "type": "array", "items": { "$ref": "#/$defs/permissionGrant" } },
+    "tasks": { "type": "array", "items": { "$ref": "#/$defs/task" }, "maxItems": 1000 },
+    "events": { "type": "array", "items": { "$ref": "#/$defs/contextEvent" }, "maxItems": 5000 },
+    "uiSpecification": {
+      "description": "A validated SairiUI document, or null before the agent has produced one. Validated separately against the SairiUI schema.",
+      "type": ["object", "null"]
+    },
+    "agentSession": { "$ref": "#/$defs/agentSession" },
+    "parentContextId": { "oneOf": [{ "$ref": "#/$defs/contextId" }, { "type": "null" }] },
+    "crystallizedFrom": { "oneOf": [{ "$ref": "#/$defs/contextId" }, { "type": "null" }] },
+    "template": { "$ref": "#/$defs/crystallizedTemplate" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "type": { "const": "crystallized" } }, "required": ["type"] },
+      "then": {
+        "required": ["template"],
+        "description": "A crystallized context is only meaningful with its reusable template."
+      }
+    }
+  ],
+  "$defs": {
+    "contextId": { "type": "string", "pattern": "^ctx_[0-9a-f]{32}$" },
+    "contextType": { "enum": ["ephemeral", "persistent", "crystallized"] },
+    "contextStatus": {
+      "enum": ["draft", "active", "waiting", "completed", "archived", "failed"]
+    },
+    "capability": {
+      "enum": [
+        "files.read",
+        "files.write",
+        "files.delete",
+        "process.list",
+        "process.execute",
+        "network.fetch",
+        "browser.open",
+        "clipboard.read",
+        "clipboard.write",
+        "notifications.send",
+        "system.settings.read"
+      ]
+    },
+    "policyDecision": { "enum": ["allow", "ask", "deny"] },
+    "memoryEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "value", "scope", "sensitive", "updatedAt"],
+      "properties": {
+        "key": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "value": { "type": "string", "maxLength": 20000 },
+        "scope": { "enum": ["durable", "working", "ephemeral"] },
+        "sensitive": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "relativePath", "mediaType", "byteSize", "createdAt", "untrusted"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^art_[0-9a-f]{32}$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "relativePath": {
+          "type": "string",
+          "description": "Sandbox-relative. Absolute paths and traversal segments are rejected.",
+          "pattern": "^(?!/)(?!.*(^|/)\\.\\.(/|$)).+$",
+          "maxLength": 1024
+        },
+        "mediaType": { "type": "string", "maxLength": 200 },
+        "byteSize": { "type": "integer", "minimum": 0 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "untrusted": { "type": "boolean" }
+      }
+    },
+    "permissionGrant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability", "decision", "scope", "remembered", "grantedAt", "grantedBy"],
+      "properties": {
+        "capability": { "$ref": "#/$defs/capability" },
+        "decision": { "$ref": "#/$defs/policyDecision" },
+        "scope": { "enum": ["once", "context"] },
+        "remembered": { "type": "boolean" },
+        "grantedAt": { "type": "string", "format": "date-time" },
+        "grantedBy": { "enum": ["user", "default-policy"] },
+        "reason": { "type": "string", "maxLength": 1000 }
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "status", "createdAt", "updatedAt"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^tsk_[0-9a-f]{32}$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "status": { "enum": ["pending", "in-progress", "blocked", "done", "cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "note": { "type": "string", "maxLength": 4000 }
+      }
+    },
+    "contextEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "at", "summary"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^evt_[0-9a-f]{32}$" },
+        "kind": {
+          "enum": [
+            "context.created",
+            "context.status-changed",
+            "context.renamed",
+            "intention.submitted",
+            "agent.message",
+            "agent.tool-call",
+            "agent.error",
+            "ui.specification-updated",
+            "ui.specification-rejected",
+            "permission.requested",
+            "permission.decided",
+            "action.executed",
+            "action.failed",
+            "context.crystallized",
+            "context.instantiated"
+          ]
+        },
+        "at": { "type": "string", "format": "date-time" },
+        "summary": { "type": "string", "maxLength": 500 },
+        "data": { "type": "object" }
+      }
+    },
+    "agentSession": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "sessionId", "status"],
+      "properties": {
+        "provider": { "type": "string", "maxLength": 64 },
+        "sessionId": { "type": ["string", "null"], "maxLength": 200 },
+        "status": { "enum": ["idle", "thinking", "streaming", "waiting-permission", "error"] },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "lastActivityAt": { "type": "string", "format": "date-time" },
+        "lastError": { "type": "string", "maxLength": 2000 }
+      }
+    },
+    "templateInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "label", "type", "required"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_]{0,63}$" },
+        "label": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "type": { "enum": ["text", "multiline", "number", "date", "choice"] },
+        "required": { "type": "boolean" },
+        "choices": { "type": "array", "items": { "type": "string" }, "maxItems": 100 },
+        "defaultValue": { "type": "string", "maxLength": 4000 },
+        "description": { "type": "string", "maxLength": 1000 }
+      }
+    },
+    "workflowStage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "requiresApproval"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "requiresApproval": { "type": "boolean" }
+      }
+    },
+    "crystallizedTemplate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["instructions", "inputs", "stages", "permissionDefaults"],
+      "properties": {
+        "instructions": { "type": "string", "maxLength": 20000 },
+        "inputs": { "type": "array", "items": { "$ref": "#/$defs/templateInput" }, "maxItems": 50 },
+        "stages": { "type": "array", "items": { "$ref": "#/$defs/workflowStage" }, "maxItems": 50 },
+        "permissionDefaults": {
+          "type": "object",
+          "additionalProperties": false,
+          "propertyNames": { "$ref": "#/$defs/capability" },
+          "patternProperties": {
+            "^.*$": { "$ref": "#/$defs/policyDecision" }
+          }
+        }
+      }
+    }
+  }
+}

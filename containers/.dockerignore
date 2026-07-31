@@ -1,0 +1,129 @@
+# Canonical Docker build-context exclude list for SairiOS.
+#
+# HOW DOCKER RESOLVES THIS FILE
+#
+# All four Dockerfiles in this directory are built with the REPOSITORY ROOT as
+# the build context, because npm workspaces need the root package.json, the
+# lockfile and every workspace manifest. Docker therefore looks for
+# `<context>/.dockerignore`, which is the repository root, NOT this file.
+#
+# BuildKit additionally honours a per-Dockerfile ignore file named
+# `<path-to-dockerfile>.dockerignore`. To make this list take effect, copy it
+# next to each Dockerfile:
+#
+#   for f in containers/*.Dockerfile; do cp containers/.dockerignore "$f.dockerignore"; done
+#
+# Without that step the build still works, it is just slower and ships a much
+# larger context. See docs/DOCKER.md.
+#
+# VERIFICATION STATUS: never exercised. Docker is not installed on the
+# authoring host.
+
+# ---------------------------------------------------------------------------
+# Dependencies. Reinstalled inside the builder stage with `npm ci` from the
+# lockfile. Copying a host node_modules in would be slow, would break on a
+# platform mismatch (macOS arm64 host, linux container), and would bypass the
+# lockfile entirely.
+# ---------------------------------------------------------------------------
+node_modules/
+**/node_modules/
+.pnpm-store/
+
+# ---------------------------------------------------------------------------
+# Build output. Recompiled in the builder stage. A stale host `dist/` copied
+# into the context is the classic way to ship code that does not match the
+# source it was supposedly built from.
+# ---------------------------------------------------------------------------
+dist/
+**/dist/
+build/
+**/build/
+.vite/
+**/*.tsbuildinfo
+
+# ---------------------------------------------------------------------------
+# Local runtime state: context database, audit log, sandbox scratch. Never
+# belongs in an image. This is real user data.
+# ---------------------------------------------------------------------------
+var/
+**/var/
+.sairios/
+sandbox/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# ---------------------------------------------------------------------------
+# VM artifacts. Multi-gigabyte disk images for the QEMU path, which is the
+# other half of the Docker/QEMU split and has nothing to do with these images.
+# ---------------------------------------------------------------------------
+vm/out/
+vm/.cache/
+*.qcow2
+*.img
+*.iso
+*.raw
+
+# ---------------------------------------------------------------------------
+# Version control metadata. Large, and carries full history including anything
+# that was ever committed and later removed.
+# ---------------------------------------------------------------------------
+.git/
+.gitignore
+.github/
+
+# ---------------------------------------------------------------------------
+# Secrets. `.env` holds provider credentials on some developers' machines.
+# Nothing in this project needs a credential inside a container: agent-bridge
+# runs in mock mode there. Excluded so a secret cannot reach an image layer
+# even by accident.
+# ---------------------------------------------------------------------------
+.env
+.env.*
+*.pem
+*.key
+secrets/
+openclaw/config/local/
+openclaw/workspace/.credentials*
+
+# ---------------------------------------------------------------------------
+# Test and coverage output.
+# ---------------------------------------------------------------------------
+coverage/
+**/coverage/
+.vitest/
+
+# ---------------------------------------------------------------------------
+# Frontend sources. The three service images are backend only; the shell is
+# served by Vite on the host during development. Excluding this keeps unrelated
+# UI edits from busting the service build cache.
+# ---------------------------------------------------------------------------
+apps/shell/src/
+apps/shell/public/
+apps/shell/index.html
+apps/shell/vite.config.ts
+
+# ---------------------------------------------------------------------------
+# Documentation and tooling that no image needs.
+# ---------------------------------------------------------------------------
+docs/
+containers/
+*.md
+!README.md
+.editorconfig
+.prettierrc.json
+.prettierignore
+eslint.config.js
+vitest.config.ts
+
+# ---------------------------------------------------------------------------
+# OS and editor noise.
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

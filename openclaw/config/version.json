@@ -1,0 +1,33 @@
+{
+  "$comment": [
+    "OpenClaw is an UPSTREAM RUNTIME DEPENDENCY of SairiOS. Its source is never",
+    "vendored into this repository. This file pins the version SairiOS expects,",
+    "so the image build, the agent bridge and CI all agree on one target.",
+    "",
+    "`status` is deliberately honest. It stays \"unpinned\" until a maintainer has",
+    "actually run SairiOS against a live gateway of a specific version and",
+    "recorded it here together with the protocol notes in docs/OPENCLAW.md.",
+    "`make doctor` prints this status, and the agent bridge includes it in its",
+    "provider report."
+  ],
+  "openclaw": {
+    "version": null,
+    "status": "unpinned",
+    "verifiedAgainst": null,
+    "gatewayProtocol": {
+      "transport": "websocket",
+      "defaultUrl": "ws://127.0.0.1:18789",
+      "status": "unverified",
+      "note": "The frame shapes in services/agent-bridge/src/providers/openclaw.ts are placeholders. Reconcile them with the pinned release before marking this verified."
+    }
+  },
+  "sairios": {
+    "agentBridgeContract": "0.1",
+    "requiredCapabilitiesFromGateway": [
+      "session lifecycle (create, prompt, done)",
+      "streamed assistant messages",
+      "tool-call events carrying a SairiOS capability name",
+      "a channel for returning a SairiUI document"
+    ]
+  }
+}

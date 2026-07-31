@@ -1,0 +1,97 @@
+# SairiOS agent bridge — systemd USER unit.
+#
+# Install to ~/.config/systemd/user/sairios-agent-bridge.service
+#
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now sairios-agent-bridge.service
+#
+# HTTP + WebSocket on 7802. Talks to the context service, asks the permission broker
+# before anything is executed, and in `openclaw` mode reaches the OpenClaw gateway.
+# OpenClaw is an upstream pinned dependency reached over the network; it is never
+# vendored and is never started by this unit.
+
+[Unit]
+Description=SairiOS agent bridge (agent transport, SairiUI generation)
+Documentation=file:/opt/sairios/os/README.md
+# Hard dependency: the bridge cannot serve a context it cannot read. If the context
+# service is stopped, stop the bridge too.
+Requires=sairios-context-service.service
+# Ordering: context service, then broker, then this.
+After=sairios-context-service.service sairios-permission-broker.service
+# The broker is Wants rather than Requires so that the bridge can start and report a
+# degraded state instead of disappearing. Every proposal it makes will be refused while
+# the broker is down, which is the correct failure mode.
+Wants=sairios-permission-broker.service
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=exec
+WorkingDirectory=/opt/sairios
+
+Environment=NODE_ENV=production
+Environment=SAIRIOS_BIND_HOST=127.0.0.1
+Environment=SAIRIOS_AGENT_BRIDGE_PORT=7802
+Environment=SAIRIOS_CONTEXT_SERVICE_PORT=7801
+Environment=SAIRIOS_PERMISSION_BROKER_PORT=7803
+Environment=SAIRIOS_DATA_DIR=/var/lib/sairios/agent
+# mock is the default on purpose: it requires no API key and works offline. Switching to
+# openclaw is an explicit act, done in the EnvironmentFile below.
+Environment=SAIRIOS_AGENT_PROVIDER=mock
+# OPENCLAW_GATEWAY_TOKEN is NOT set here and must never be baked into a unit file or an
+# image. Supply it at runtime in %h/.config/sairios/env (mode 0600) or via a drop-in
+# generated on the machine.
+EnvironmentFile=-%h/.config/sairios/env
+
+ExecStart=/usr/bin/node /opt/sairios/services/agent-bridge/dist/main.js
+
+Restart=on-failure
+RestartSec=2
+KillSignal=SIGTERM
+# Long enough to close WebSocket sessions with a proper close frame.
+TimeoutStopSec=20
+
+# ---------------------------------------------------------------------------
+# Hardening
+# ---------------------------------------------------------------------------
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+# The bridge has no business anywhere under $HOME. It cannot read files on behalf of an
+# agent; that is the broker's job and it goes through policy. read-only rather than
+# tmpfs only because systemd resolves the EnvironmentFile path from %h.
+ProtectHome=read-only
+# Transcripts and per-context agent state. Nothing else is writable.
+ReadWritePaths=/var/lib/sairios/agent
+PrivateDevices=yes
+ProtectProc=invisible
+ProcSubset=pid
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=yes
+# MemoryDenyWriteExecute is deliberately NOT set: V8 requires write-then-execute pages
+# for JIT. Enabling it prevents Node from starting.
+# MemoryDenyWriteExecute=yes
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+SystemCallArchitectures=native
+# No IPAddressDeny=any here. OPENCLAW_GATEWAY_URL defaults to ws://127.0.0.1:18789 but is
+# explicitly allowed to point at another host, and locking this unit to loopback would
+# make that configuration silently fail with a confusing connect error. If your
+# deployment keeps the gateway on loopback, add a drop-in:
+#
+#   [Service]
+#   IPAddressAllow=localhost
+#   IPAddressDeny=any
+UMask=0077
+
+[Install]
+WantedBy=default.target

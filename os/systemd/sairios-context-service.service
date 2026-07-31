@@ -1,0 +1,103 @@
+# SairiOS context service — systemd USER unit.
+#
+# Install to ~/.config/systemd/user/sairios-context-service.service
+# (or, for an image build, /etc/systemd/user/ which has identical semantics).
+#
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now sairios-context-service.service
+#
+# This is the root of the dependency graph. It owns the context store and must be
+# running before the agent bridge can serve anything useful.
+
+[Unit]
+Description=SairiOS context service (contexts, memory, events)
+Documentation=file:/opt/sairios/os/README.md
+# Nothing to order against: this is the first SairiOS unit to start.
+After=default.target
+# Restart storm guard. If the service dies five times inside a minute, stop trying and
+# leave it failed so the failure is visible instead of being hidden by a restart loop.
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+# Type=exec (not simple) so that a missing or non-executable ExecStart is reported as a
+# start failure rather than as a successful start followed by an immediate exit.
+Type=exec
+WorkingDirectory=/opt/sairios
+
+# Non-secret defaults. Anything sensitive belongs in the EnvironmentFile below, which is
+# not part of the image. The leading "-" makes the file optional so the unit still starts
+# on a machine that has not been configured yet.
+Environment=NODE_ENV=production
+Environment=SAIRIOS_BIND_HOST=127.0.0.1
+Environment=SAIRIOS_CONTEXT_SERVICE_PORT=7801
+Environment=SAIRIOS_DATA_DIR=/var/lib/sairios/context
+EnvironmentFile=-%h/.config/sairios/env
+
+# --experimental-sqlite: node:sqlite is behind a flag on Node 22 LTS. This matches the
+# `start` script in services/context-service/package.json. Drop the flag once the target
+# runtime is Node 23.4+, where node:sqlite is unflagged.
+ExecStart=/usr/bin/node --experimental-sqlite /opt/sairios/services/context-service/dist/main.js
+
+Restart=on-failure
+RestartSec=2
+# SIGTERM lets the store flush and close cleanly; 20s is generous for a local sqlite file.
+KillSignal=SIGTERM
+TimeoutStopSec=20
+
+# ---------------------------------------------------------------------------
+# Hardening
+# ---------------------------------------------------------------------------
+# See os/README.md for the caveat that several of these are best-effort in user units.
+
+# A compromised service must not be able to gain privileges via setuid binaries.
+NoNewPrivileges=yes
+# Private /tmp and /var/tmp. Also the only writable scratch space this service gets.
+PrivateTmp=yes
+# The entire filesystem hierarchy is read-only except for ReadWritePaths below.
+ProtectSystem=strict
+# The service reads its EnvironmentFile from $HOME (systemd reads it outside the
+# namespace, so read-only is not a problem) and writes nothing there.
+ProtectHome=read-only
+# The context store. The ONLY path this service may write.
+ReadWritePaths=/var/lib/sairios/context
+# No device access is required: no GPU, no audio, no serial. A minimal /dev is enough.
+PrivateDevices=yes
+# /proc shows only this service's own processes. Safe here; the permission broker is the
+# only component that legitimately needs to enumerate other processes.
+ProtectProc=invisible
+ProcSubset=pid
+# Deny writes to /proc/sys, /sys, kernel module loading and cgroup hierarchies.
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+# The service never needs to create setuid/setgid files.
+RestrictSUIDSGID=yes
+# No realtime scheduling: a runaway realtime thread can wedge the machine.
+RestrictRealtime=yes
+# The service never creates namespaces of its own.
+RestrictNamespaces=yes
+# Only the socket families an HTTP server on loopback needs.
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+# Block personality(2) tricks used to disable ASLR.
+LockPersonality=yes
+# MemoryDenyWriteExecute is deliberately NOT set. V8 maps JIT pages write-then-execute;
+# enabling this directive prevents Node from starting at all. Do not "fix" this.
+# MemoryDenyWriteExecute=yes
+# Only the syscalls a normal long-running service uses. Everything else gets EPERM
+# rather than SIGSYS, so failures surface as errors instead of unexplained crashes.
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+SystemCallArchitectures=native
+# Loopback only. This service must never speak to the network. Best-effort in a user
+# unit; the authoritative control is that it binds SAIRIOS_BIND_HOST=127.0.0.1.
+IPAddressAllow=localhost
+IPAddressDeny=any
+# Files created by the store are readable only by the owning user.
+UMask=0077
+
+[Install]
+WantedBy=default.target

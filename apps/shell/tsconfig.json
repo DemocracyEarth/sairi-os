@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "./dist-types",
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "types": ["vite/client", "node"],
+    "allowImportingTsExtensions": false
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"],
+  "references": [
+    { "path": "../../packages/shared" },
+    { "path": "../../packages/context-schema" },
+    { "path": "../../packages/adaptive-ui-schema" },
+    { "path": "../../packages/ui-components" }
+  ]
+}

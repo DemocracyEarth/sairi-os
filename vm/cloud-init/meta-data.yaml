@@ -1,0 +1,41 @@
+# SairiOS NoCloud seed: instance metadata.
+#
+# `vm/qemu/build-image.sh` copies this into the seed ISO as `meta-data` (no extension).
+# The NoCloud datasource requires that exact filename.
+#
+# This file is deliberately almost empty. NoCloud needs `instance-id` to exist; the rest
+# of what a cloud metadata service would provide (SSH keys, region, instance type) either
+# does not apply to a local VM or is handled in user-data.yaml.
+
+# ---------------------------------------------------------------------------
+# instance-id
+# ---------------------------------------------------------------------------
+# This is the single most operationally significant line in the file, and it is worth
+# understanding before changing anything.
+#
+# cloud-init records the instance-id it last provisioned under
+# /var/lib/cloud/instance-id. On every boot it compares that record with the id in the
+# seed:
+#
+#   same id      -> this is a REBOOT. Per-instance modules (users, packages, runcmd,
+#                   write_files) are skipped. Only per-boot modules run.
+#   different id -> this is a NEW INSTANCE. cloud-init re-runs the whole per-instance
+#                   pipeline against the existing disk.
+#
+# Consequences that bite people:
+#
+#   - Editing user-data.yaml and rebooting the SAME disk changes NOTHING. The edit is
+#     only picked up on a fresh disk, or after bumping this id, or after
+#     `sudo cloud-init clean --logs && sudo reboot` inside the guest.
+#   - Bumping this id re-runs provisioning over a machine that is already provisioned.
+#     Everything in user-data.yaml is written to be idempotent so that this is safe, but
+#     a fresh disk from `make vm-image` is the honest way to test a provisioning change.
+#
+# The suffix is a serial, not a version of SairiOS. Bump it when you want the next boot
+# of an existing disk to re-provision.
+instance-id: sairios-v0-0001
+
+# Matches `hostname:` in user-data.yaml. Set in both places because cloud-init applies
+# them from different modules at different stages, and a disagreement between the two
+# produces a machine whose hostname changes partway through boot.
+local-hostname: sairios

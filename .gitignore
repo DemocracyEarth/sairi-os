@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+dist-types/
+build/
+*.tsbuildinfo
+.vite/
+
+# Test / coverage
+coverage/
+.vitest/
+
+# Local runtime state — never commit context data or audit logs
+.sairios/
+var/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Secrets and local configuration — never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+!os/branding/*.key
+secrets/
+openclaw/config/local/
+openclaw/workspace/.credentials*
+
+# VM artifacts — multi-gigabyte, always rebuilt
+vm/.cache/
+vm/out/
+*.qcow2
+*.img
+*.iso
+*.raw
+seed.iso
+cloud-init-seed.*
+
+# Sandbox scratch space used by the permission broker demos
+sandbox/
+!sandbox/.gitkeep
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/*
+!.vscode/extensions.json

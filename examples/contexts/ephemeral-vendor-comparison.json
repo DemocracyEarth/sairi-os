@@ -1,0 +1,280 @@
+{
+  "id": "ctx_3d0bd92c8b4b3da8c2890754ed81ccec",
+  "schemaVersion": "0.1",
+  "name": "Compare three vendor proposals",
+  "type": "ephemeral",
+  "status": "active",
+  "createdAt": "2026-07-28T09:00:00.000Z",
+  "updatedAt": "2026-07-28T11:00:00.000Z",
+  "objective": "Decide which of the three submitted proposals to accept, and say why.",
+  "memory": [
+    {
+      "key": "budget-ceiling",
+      "value": "150,000 EUR",
+      "scope": "durable",
+      "sensitive": false,
+      "updatedAt": "2026-07-28T09:05:00.000Z"
+    },
+    {
+      "key": "deadline",
+      "value": "Delivery before Q4 2026",
+      "scope": "durable",
+      "sensitive": false,
+      "updatedAt": "2026-07-28T09:05:00.000Z"
+    },
+    {
+      "key": "call-transcript",
+      "value": "Reference call, Northgate, 24 July.",
+      "scope": "working",
+      "sensitive": true,
+      "updatedAt": "2026-07-28T09:40:00.000Z"
+    }
+  ],
+  "artifacts": [],
+  "permissions": [
+    {
+      "capability": "files.read",
+      "decision": "allow",
+      "scope": "context",
+      "remembered": true,
+      "grantedAt": "2026-07-28T09:31:00.000Z",
+      "grantedBy": "user",
+      "reason": "Open the three proposal PDFs"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "tsk_af5b30efd0d2e9a28ac652f1f1edfb9f",
+      "title": "Verify Arroyo references",
+      "status": "pending",
+      "createdAt": "2026-07-28T09:35:00.000Z",
+      "updatedAt": "2026-07-28T09:35:00.000Z"
+    }
+  ],
+  "events": [
+    {
+      "id": "evt_33854ec21d779ccfaa1452b135c15a9f",
+      "kind": "context.created",
+      "at": "2026-07-28T09:00:00.000Z",
+      "summary": "Context created as ephemeral"
+    },
+    {
+      "id": "evt_32854d2f978bd264b471f4875bdcbcfd",
+      "kind": "intention.submitted",
+      "at": "2026-07-28T09:01:00.000Z",
+      "summary": "Compare three vendor proposals"
+    },
+    {
+      "id": "evt_31854b9cfe77a8b132fb9e510e778923",
+      "kind": "ui.specification-updated",
+      "at": "2026-07-28T09:02:00.000Z",
+      "summary": "Interface updated (4 regions)"
+    },
+    {
+      "id": "evt_30854a09788bde46d0c0665b3492eb81",
+      "kind": "permission.requested",
+      "at": "2026-07-28T09:30:00.000Z",
+      "summary": "files.read requested to open the proposals"
+    },
+    {
+      "id": "evt_2f854876f2a013db055590d15aae4ddf",
+      "kind": "permission.decided",
+      "at": "2026-07-28T09:31:00.000Z",
+      "summary": "User chose allow (context)"
+    },
+    {
+      "id": "evt_2e8546e36cb4497046f4236f80c9b03d",
+      "kind": "action.executed",
+      "at": "2026-07-28T09:32:00.000Z",
+      "summary": "Read 3 files from the context sandbox"
+    }
+  ],
+  "uiSpecification": {
+    "version": "0.1",
+    "contextId": "ctx_3d0bd92c8b4b3da8c2890754ed81ccec",
+    "title": "Compare three vendor proposals",
+    "contextType": "ephemeral",
+    "layout": {
+      "type": "workspace",
+      "regions": [
+        {
+          "id": "comparison",
+          "width": "two-thirds",
+          "component": {
+            "type": "table",
+            "binding": "proposals.comparison",
+            "props": {
+              "title": "Proposal comparison",
+              "caption": "Figures transcribed from the three submitted documents.",
+              "columns": [
+                {
+                  "key": "criterion",
+                  "label": "Criterion"
+                },
+                {
+                  "key": "northgate",
+                  "label": "Northgate"
+                },
+                {
+                  "key": "lumen",
+                  "label": "Lumen Systems"
+                },
+                {
+                  "key": "arroyo",
+                  "label": "Arroyo Labs"
+                }
+              ],
+              "rows": [
+                {
+                  "criterion": "Fixed price (EUR)",
+                  "northgate": "148,000",
+                  "lumen": "121,500",
+                  "arroyo": "167,200"
+                },
+                {
+                  "criterion": "Delivery",
+                  "northgate": "14 weeks",
+                  "lumen": "22 weeks",
+                  "arroyo": "11 weeks"
+                },
+                {
+                  "criterion": "Support window",
+                  "northgate": "24 months",
+                  "lumen": "12 months",
+                  "arroyo": "36 months"
+                },
+                {
+                  "criterion": "On-premise option",
+                  "northgate": true,
+                  "lumen": false,
+                  "arroyo": true
+                },
+                {
+                  "criterion": "References checked",
+                  "northgate": 3,
+                  "lumen": 1,
+                  "arroyo": 2
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "criteria",
+          "width": "one-third",
+          "component": {
+            "type": "checklist",
+            "binding": "proposals.criteria",
+            "props": {
+              "title": "Decision criteria",
+              "items": [
+                {
+                  "id": "price",
+                  "label": "Total cost within budget",
+                  "checked": true
+                },
+                {
+                  "id": "delivery",
+                  "label": "Delivery before Q4",
+                  "checked": true
+                },
+                {
+                  "id": "support",
+                  "label": "Support beyond 24 months",
+                  "checked": false,
+                  "note": "Only Arroyo qualifies."
+                },
+                {
+                  "id": "onprem",
+                  "label": "On-premise deployment possible",
+                  "checked": true
+                },
+                {
+                  "id": "refs",
+                  "label": "At least two references verified",
+                  "checked": false
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "recommendation",
+          "width": "two-thirds",
+          "component": {
+            "type": "markdown",
+            "binding": "proposals.recommendation",
+            "props": {
+              "title": "Recommendation",
+              "source": "**Northgate** balances the three criteria that carry weight here: it lands inside budget, delivers before Q4, and is the only bid with three verified references.\n\nArroyo is faster and supports longer, but is 13% over budget. Lumen is cheapest and clears nothing else: 22 weeks misses the deadline and only one reference came back.\n\nOpen question: whether the 36-month support window is worth the Arroyo premium."
+            }
+          }
+        },
+        {
+          "id": "sources",
+          "width": "one-third",
+          "component": {
+            "type": "source-list",
+            "binding": "proposals.sources",
+            "props": {
+              "title": "Source files",
+              "sources": [
+                {
+                  "label": "northgate-proposal.pdf",
+                  "kind": "file",
+                  "detail": "18 pages",
+                  "trusted": true
+                },
+                {
+                  "label": "lumen-proposal.pdf",
+                  "kind": "file",
+                  "detail": "11 pages",
+                  "trusted": true
+                },
+                {
+                  "label": "arroyo-proposal.pdf",
+                  "kind": "file",
+                  "detail": "24 pages",
+                  "trusted": true
+                },
+                {
+                  "label": "Reference call notes",
+                  "kind": "note",
+                  "detail": "Three calls, 2026-07-24"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "suggestedActions": [
+      {
+        "id": "export.summary",
+        "label": "Write summary to sandbox",
+        "kind": "system",
+        "capability": "files.write",
+        "description": "Save the recommendation as a file in this context’s sandbox."
+      },
+      {
+        "id": "mark.complete",
+        "label": "Mark comparison complete",
+        "kind": "context",
+        "description": "Completing an ephemeral context archives it."
+      },
+      {
+        "id": "crystallize",
+        "label": "Crystallize this workflow",
+        "kind": "context",
+        "description": "Turn vendor comparison into a reusable template."
+      }
+    ]
+  },
+  "agentSession": {
+    "provider": "mock",
+    "sessionId": null,
+    "status": "idle"
+  },
+  "parentContextId": null,
+  "crystallizedFrom": null
+}

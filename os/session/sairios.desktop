@@ -1,0 +1,23 @@
+[Desktop Entry]
+# SairiOS Wayland session entry.
+#
+# Install to /usr/share/wayland-sessions/sairios.desktop so that a display manager
+# (greetd, gdm3, lightdm with a Wayland greeter) offers "SairiOS" as a session.
+#
+# In the v0 VM image there is no display manager: sairios-session.service claims tty1
+# directly. This file exists so that SairiOS is selectable on a machine that already has
+# a greeter, and so the session has a name that other software can key off.
+#
+# Validate with:  desktop-file-validate os/session/sairios.desktop
+Type=Application
+Version=1.0
+Name=SairiOS
+GenericName=Context Environment
+Comment=Every window is a context
+Exec=/usr/local/bin/sairios-session
+TryExec=/usr/local/bin/sairios-session
+Icon=sairios
+DesktopNames=SairiOS
+Keywords=sairios;context;agent;kiosk;
+X-LightDM-DesktopName=SairiOS
+X-GDM-SessionRegisters=false

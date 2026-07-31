@@ -1,0 +1,21 @@
+{
+  "name": "@sairios/shell",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "dev": "vite",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@sairios/adaptive-ui-schema": "*",
+    "@sairios/context-schema": "*",
+    "@sairios/shared": "*",
+    "@sairios/ui-components": "*",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}

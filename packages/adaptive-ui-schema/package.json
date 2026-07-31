@@ -1,0 +1,25 @@
+{
+  "name": "@sairios/adaptive-ui-schema",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./schema/sairi-ui.schema.json": "./src/schema/sairi-ui.schema.json"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "rm -rf dist *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@sairios/shared": "*",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
+  }
+}

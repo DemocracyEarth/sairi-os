@@ -1,0 +1,19 @@
+{
+  "name": "@sairios/context-service",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "start": "node --experimental-sqlite ./dist/main.js"
+  },
+  "dependencies": {
+    "@sairios/adaptive-ui-schema": "*",
+    "@sairios/context-schema": "*",
+    "@sairios/shared": "*"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "$comment": "This document is INVALID ON PURPOSE. It is the fixture behind examples/examples.test.ts, which asserts that SairiOS refuses it. The `iframe` component is not in the SairiUI catalog, so the whole document is rejected and the shell renders a safe error state instead of any part of it. Note the second region is perfectly valid: a valid region does not rescue an invalid document.",
+  "version": "0.1",
+  "contextId": "ctx_0123456789abcdef0123456789abcdef",
+  "title": "Interface SairiOS will refuse",
+  "contextType": "ephemeral",
+  "layout": {
+    "type": "workspace",
+    "regions": [
+      {
+        "id": "smuggled",
+        "width": "full",
+        "component": {
+          "type": "iframe",
+          "props": {
+            "src": "https://example.invalid/payload"
+          }
+        }
+      },
+      {
+        "id": "innocuous",
+        "width": "full",
+        "component": {
+          "type": "text",
+          "props": {
+            "title": "This will not render either",
+            "body": "Rejection is whole-document. A partially rendered interface would let an attacker get a foothold on screen by making one region valid."
+          }
+        }
+      }
+    ]
+  },
+  "suggestedActions": []
+}

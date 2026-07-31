@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <meta content="#f2f0ec" name="theme-color" />
+    <!--
+      The Content Security Policy is injected here at BUILD time by the
+      `sairios-csp` plugin in vite.config.ts. It is deliberately absent from the
+      dev server, because Vite's React Refresh preamble is an inline script that
+      `script-src 'self'` blocks. Shipping a policy that only holds in
+      production is better than weakening it to 'unsafe-inline' everywhere.
+      See the plugin for the policy itself and vm/ for how the VM serves the
+      built output.
+    -->
+    <title>SairiOS</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="/src/main.tsx" type="module"></script>
+  </body>
+</html>

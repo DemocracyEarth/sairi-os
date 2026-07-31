@@ -1,0 +1,654 @@
+/*
+ * SairiOS design language.
+ *
+ * Early Macintosh clarity, late-80s UNIX workstation utility, modern typography.
+ * Warm off-white surfaces, charcoal type, thin borders, one muted blue accent,
+ * explicit system state, minimal animation.
+ *
+ * Deliberately absent: gradients, glassmorphism, neon, chat bubbles, drop
+ * shadows heavier than 2px, and anything that animates for its own sake.
+ */
+
+:root {
+  --sairi-bg: #f2f0ec;
+  --sairi-surface: #fbfaf8;
+  --sairi-surface-raised: #ffffff;
+  --sairi-surface-sunken: #eae7e1;
+
+  --sairi-border: #d6d2ca;
+  --sairi-border-strong: #b4afa4;
+  --sairi-border-focus: #2f5d8c;
+
+  --sairi-text: #23252a;
+  --sairi-text-muted: #6a6c72;
+  --sairi-text-faint: #94969c;
+
+  --sairi-accent: #2f5d8c;
+  --sairi-accent-hover: #24496e;
+  --sairi-accent-soft: #e4ecf4;
+
+  --sairi-ok: #3a6b4c;
+  --sairi-warn: #8a6a1c;
+  --sairi-error: #8c3a2f;
+  --sairi-pending: #6a6c72;
+
+  --sairi-ephemeral: #7a6a45;
+  --sairi-persistent: #2f5d8c;
+  --sairi-crystallized: #55507a;
+
+  --sairi-font:
+    ui-sans-serif, -apple-system, 'Segoe UI', Inter, 'Helvetica Neue', Arial, sans-serif;
+  --sairi-font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+
+  --sairi-radius: 3px;
+  --sairi-shadow: 0 1px 2px rgb(35 37 42 / 8%);
+  --sairi-shadow-raised: 0 2px 6px rgb(35 37 42 / 10%);
+
+  --sairi-space-1: 4px;
+  --sairi-space-2: 8px;
+  --sairi-space-3: 12px;
+  --sairi-space-4: 16px;
+  --sairi-space-5: 24px;
+  --sairi-space-6: 32px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --sairi-bg: #1a1b1e;
+    --sairi-surface: #212327;
+    --sairi-surface-raised: #282a2f;
+    --sairi-surface-sunken: #17181b;
+
+    --sairi-border: #35383e;
+    --sairi-border-strong: #4a4e56;
+
+    --sairi-text: #e6e4df;
+    --sairi-text-muted: #9b9da4;
+    --sairi-text-faint: #6e7078;
+
+    --sairi-accent: #7aa6d2;
+    --sairi-accent-hover: #93b8df;
+    --sairi-accent-soft: #23303d;
+
+    --sairi-ok: #6fa981;
+    --sairi-warn: #c2a04e;
+    --sairi-error: #cf7f72;
+
+    --sairi-ephemeral: #b8a578;
+    --sairi-persistent: #7aa6d2;
+    --sairi-crystallized: #9a94c4;
+
+    --sairi-shadow: 0 1px 2px rgb(0 0 0 / 40%);
+    --sairi-shadow-raised: 0 2px 6px rgb(0 0 0 / 45%);
+  }
+}
+
+/* --- primitives --------------------------------------------------------- */
+
+.sairi-panel {
+  background: var(--sairi-surface);
+  border: 1px solid var(--sairi-border);
+  border-radius: var(--sairi-radius);
+  box-shadow: var(--sairi-shadow);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.sairi-panel__header {
+  align-items: baseline;
+  background: var(--sairi-surface-sunken);
+  border-bottom: 1px solid var(--sairi-border);
+  display: flex;
+  gap: var(--sairi-space-2);
+  justify-content: space-between;
+  padding: var(--sairi-space-2) var(--sairi-space-3);
+}
+
+.sairi-panel__title {
+  color: var(--sairi-text);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.sairi-panel__kind {
+  color: var(--sairi-text-faint);
+  font-family: var(--sairi-font-mono);
+  font-size: 10px;
+}
+
+.sairi-panel__body {
+  color: var(--sairi-text);
+  font-size: 13px;
+  line-height: 1.55;
+  overflow: auto;
+  padding: var(--sairi-space-3);
+}
+
+.sairi-empty {
+  color: var(--sairi-text-faint);
+  font-size: 12px;
+  font-style: italic;
+  padding: var(--sairi-space-2) 0;
+}
+
+/* --- text / markdown ---------------------------------------------------- */
+
+.sairi-text {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.sairi-text--muted {
+  color: var(--sairi-text-muted);
+}
+
+.sairi-text--warning {
+  border-left: 2px solid var(--sairi-warn);
+  color: var(--sairi-warn);
+  padding-left: var(--sairi-space-3);
+}
+
+.sairi-markdown h1,
+.sairi-markdown h2,
+.sairi-markdown h3 {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin: var(--sairi-space-4) 0 var(--sairi-space-2);
+}
+
+.sairi-markdown h1:first-child,
+.sairi-markdown h2:first-child,
+.sairi-markdown h3:first-child {
+  margin-top: 0;
+}
+
+.sairi-markdown p {
+  margin: 0 0 var(--sairi-space-3);
+}
+
+.sairi-markdown ul {
+  margin: 0 0 var(--sairi-space-3);
+  padding-left: var(--sairi-space-5);
+}
+
+.sairi-markdown code {
+  background: var(--sairi-surface-sunken);
+  border-radius: 2px;
+  font-family: var(--sairi-font-mono);
+  font-size: 12px;
+  padding: 1px 4px;
+}
+
+.sairi-markdown a {
+  color: var(--sairi-accent);
+}
+
+/* --- lists -------------------------------------------------------------- */
+
+.sairi-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sairi-space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sairi-list__row {
+  border-bottom: 1px solid var(--sairi-border);
+  display: flex;
+  gap: var(--sairi-space-3);
+  padding-bottom: var(--sairi-space-2);
+}
+
+.sairi-list__row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.sairi-list__label {
+  color: var(--sairi-text-muted);
+  flex: 0 0 38%;
+  font-size: 12px;
+}
+
+.sairi-list__value {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sairi-source {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.sairi-source__label {
+  align-items: center;
+  display: flex;
+  gap: var(--sairi-space-2);
+}
+
+.sairi-source__kind {
+  border: 1px solid var(--sairi-border);
+  border-radius: 2px;
+  color: var(--sairi-text-faint);
+  font-family: var(--sairi-font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  padding: 0 3px;
+  text-transform: uppercase;
+}
+
+.sairi-source__detail {
+  color: var(--sairi-text-muted);
+  font-size: 12px;
+}
+
+.sairi-untrusted {
+  border: 1px solid var(--sairi-warn);
+  border-radius: 2px;
+  color: var(--sairi-warn);
+  font-family: var(--sairi-font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  padding: 0 3px;
+  text-transform: uppercase;
+}
+
+/* --- table -------------------------------------------------------------- */
+
+.sairi-table-wrap {
+  overflow-x: auto;
+}
+
+.sairi-table {
+  border-collapse: collapse;
+  font-size: 12px;
+  width: 100%;
+}
+
+.sairi-table th,
+.sairi-table td {
+  border-bottom: 1px solid var(--sairi-border);
+  padding: var(--sairi-space-2) var(--sairi-space-3);
+  text-align: left;
+  vertical-align: top;
+}
+
+.sairi-table th {
+  border-bottom: 1px solid var(--sairi-border-strong);
+  color: var(--sairi-text-muted);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.sairi-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.sairi-table td.is-right,
+.sairi-table th.is-right {
+  text-align: right;
+}
+
+.sairi-table td.is-center,
+.sairi-table th.is-center {
+  text-align: center;
+}
+
+.sairi-table__caption {
+  color: var(--sairi-text-muted);
+  font-size: 11px;
+  margin-bottom: var(--sairi-space-2);
+}
+
+/* --- checklist ---------------------------------------------------------- */
+
+.sairi-check {
+  align-items: flex-start;
+  display: flex;
+  gap: var(--sairi-space-2);
+  padding: var(--sairi-space-1) 0;
+}
+
+.sairi-check__box {
+  accent-color: var(--sairi-accent);
+  margin-top: 3px;
+}
+
+.sairi-check__note {
+  color: var(--sairi-text-muted);
+  display: block;
+  font-size: 11px;
+}
+
+/* --- timeline ----------------------------------------------------------- */
+
+.sairi-timeline {
+  border-left: 1px solid var(--sairi-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sairi-space-3);
+  margin: 0;
+  padding: 0 0 0 var(--sairi-space-4);
+}
+
+.sairi-timeline__at {
+  color: var(--sairi-text-faint);
+  font-family: var(--sairi-font-mono);
+  font-size: 10px;
+}
+
+/* --- progress ----------------------------------------------------------- */
+
+.sairi-progress__track {
+  background: var(--sairi-surface-sunken);
+  border: 1px solid var(--sairi-border);
+  border-radius: 2px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.sairi-progress__fill {
+  background: var(--sairi-accent);
+  height: 100%;
+}
+
+.sairi-progress__fill--indeterminate {
+  animation: sairi-indeterminate 1.6s linear infinite;
+  width: 35%;
+}
+
+@keyframes sairi-indeterminate {
+  0% {
+    margin-left: -35%;
+  }
+  100% {
+    margin-left: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sairi-progress__fill--indeterminate {
+    animation: none;
+    width: 100%;
+  }
+}
+
+.sairi-progress__label {
+  color: var(--sairi-text-muted);
+  display: flex;
+  font-size: 11px;
+  justify-content: space-between;
+  margin-bottom: var(--sairi-space-1);
+}
+
+/* --- status ------------------------------------------------------------- */
+
+.sairi-status {
+  align-items: baseline;
+  display: flex;
+  gap: var(--sairi-space-2);
+  padding: var(--sairi-space-1) 0;
+}
+
+.sairi-status__dot {
+  border-radius: 50%;
+  flex: 0 0 auto;
+  height: 7px;
+  width: 7px;
+}
+
+.sairi-status__dot--ok {
+  background: var(--sairi-ok);
+}
+.sairi-status__dot--warn {
+  background: var(--sairi-warn);
+}
+.sairi-status__dot--error {
+  background: var(--sairi-error);
+}
+.sairi-status__dot--pending {
+  background: transparent;
+  border: 1px solid var(--sairi-pending);
+}
+.sairi-status__dot--idle {
+  background: var(--sairi-border-strong);
+}
+
+.sairi-status__detail {
+  color: var(--sairi-text-muted);
+  font-size: 11px;
+}
+
+/* --- permission --------------------------------------------------------- */
+
+.sairi-permission {
+  background: var(--sairi-surface-raised);
+  border: 1px solid var(--sairi-border-strong);
+  border-left: 3px solid var(--sairi-accent);
+  border-radius: var(--sairi-radius);
+  padding: var(--sairi-space-3);
+}
+
+.sairi-permission--high {
+  border-left-color: var(--sairi-error);
+}
+.sairi-permission--medium {
+  border-left-color: var(--sairi-warn);
+}
+
+.sairi-permission__capability {
+  font-family: var(--sairi-font-mono);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sairi-permission__risk {
+  border: 1px solid currentcolor;
+  border-radius: 2px;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  margin-left: var(--sairi-space-2);
+  padding: 0 3px;
+  text-transform: uppercase;
+}
+
+.sairi-permission__reason {
+  color: var(--sairi-text-muted);
+  font-size: 12px;
+  margin: var(--sairi-space-2) 0;
+}
+
+.sairi-permission__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sairi-space-2);
+  margin-top: var(--sairi-space-3);
+}
+
+/* --- buttons ------------------------------------------------------------ */
+
+.sairi-button {
+  background: var(--sairi-surface-raised);
+  border: 1px solid var(--sairi-border-strong);
+  border-radius: var(--sairi-radius);
+  color: var(--sairi-text);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+.sairi-button:hover {
+  background: var(--sairi-accent-soft);
+}
+
+.sairi-button:focus-visible {
+  outline: 2px solid var(--sairi-border-focus);
+  outline-offset: 1px;
+}
+
+.sairi-button:disabled {
+  color: var(--sairi-text-faint);
+  cursor: not-allowed;
+}
+
+.sairi-button--primary {
+  background: var(--sairi-accent);
+  border-color: var(--sairi-accent);
+  color: #fff;
+}
+
+.sairi-button--primary:hover {
+  background: var(--sairi-accent-hover);
+}
+
+.sairi-button--danger {
+  border-color: var(--sairi-error);
+  color: var(--sairi-error);
+}
+
+.sairi-button__description {
+  color: var(--sairi-text-muted);
+  font-size: 11px;
+  margin-top: var(--sairi-space-1);
+}
+
+/* --- editor / terminal -------------------------------------------------- */
+
+.sairi-editor {
+  background: var(--sairi-surface-raised);
+  border: 1px solid var(--sairi-border);
+  border-radius: var(--sairi-radius);
+  color: var(--sairi-text);
+  font-family: var(--sairi-font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  min-height: 140px;
+  padding: var(--sairi-space-3);
+  resize: vertical;
+  width: 100%;
+}
+
+.sairi-editor:focus-visible {
+  border-color: var(--sairi-border-focus);
+  outline: none;
+}
+
+.sairi-terminal {
+  background: var(--sairi-surface-sunken);
+  border: 1px solid var(--sairi-border);
+  border-radius: var(--sairi-radius);
+  font-family: var(--sairi-font-mono);
+  font-size: 11.5px;
+  line-height: 1.5;
+  margin: 0;
+  max-height: 320px;
+  overflow: auto;
+  padding: var(--sairi-space-3);
+  white-space: pre-wrap;
+}
+
+.sairi-terminal__exit {
+  color: var(--sairi-text-muted);
+  display: block;
+  margin-top: var(--sairi-space-2);
+}
+
+/* --- layout ------------------------------------------------------------- */
+
+.sairi-layout {
+  display: grid;
+  gap: var(--sairi-space-3);
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+.sairi-layout--stack {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.sairi-region--full {
+  grid-column: span 12;
+}
+.sairi-region--one-half {
+  grid-column: span 6;
+}
+.sairi-region--one-third {
+  grid-column: span 4;
+}
+.sairi-region--two-thirds {
+  grid-column: span 8;
+}
+.sairi-region--one-quarter {
+  grid-column: span 3;
+}
+.sairi-region--three-quarters {
+  grid-column: span 9;
+}
+
+@media (width <= 900px) {
+  .sairi-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sairi-layout > [class*='sairi-region--'] {
+    grid-column: span 1;
+  }
+}
+
+/* --- renderer error state ----------------------------------------------- */
+
+.sairi-render-error {
+  background: var(--sairi-surface-raised);
+  border: 1px solid var(--sairi-error);
+  border-radius: var(--sairi-radius);
+  padding: var(--sairi-space-4);
+}
+
+.sairi-render-error__title {
+  color: var(--sairi-error);
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 var(--sairi-space-2);
+}
+
+.sairi-render-error__list {
+  color: var(--sairi-text-muted);
+  font-family: var(--sairi-font-mono);
+  font-size: 11px;
+  margin: var(--sairi-space-2) 0 0;
+  padding-left: var(--sairi-space-4);
+}
+
+/* --- context type badge ------------------------------------------------- */
+
+.sairi-badge {
+  border: 1px solid currentcolor;
+  border-radius: 2px;
+  font-family: var(--sairi-font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  padding: 1px 4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.sairi-badge--ephemeral {
+  color: var(--sairi-ephemeral);
+}
+.sairi-badge--persistent {
+  color: var(--sairi-persistent);
+}
+.sairi-badge--crystallized {
+  color: var(--sairi-crystallized);
+}

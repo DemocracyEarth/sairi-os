@@ -1,0 +1,45 @@
+# SairiOS NoCloud seed: network configuration (cloud-init network config version 2).
+#
+# `vm/qemu/build-image.sh` copies this into the seed ISO as `network-config`
+# (no extension), which is the filename the NoCloud datasource looks for.
+#
+# The guest sits behind QEMU's user-mode (SLIRP) network: the guest gets 10.0.2.15/24 by
+# DHCP, the gateway is 10.0.2.2 and DNS is 10.0.2.3. Nothing on the host network can
+# reach the guest except through the explicit `hostfwd` rules in vm/qemu/run-vm.sh, and
+# those bind 127.0.0.1 on the host only. DHCP is therefore both correct and sufficient.
+#
+# Note that this configures the guest's *outbound* path only. It has no bearing on which
+# guest ports are reachable, which is decided entirely by hostfwd on the host side and by
+# SAIRIOS_BIND_HOST inside the guest (127.0.0.1 by default, and it should stay that way).
+
+version: 2
+ethernets:
+  # Two entries rather than one because the interface name is not predictable across the
+  # two guest architectures and the two machine types. systemd's predictable naming gives
+  # `enp0s1` on the arm64 `virt` machine and `enp0s2`/`ens3` on the amd64 `q35` machine,
+  # and a plain `eth0` appears if predictable naming is disabled. Matching on a glob for
+  # both families covers every case without hardcoding a name that will be wrong half the
+  # time.
+  #
+  # A `match:` block that matches nothing is not an error; the entry is simply unused.
+  primary:
+    match:
+      name: 'en*'
+    dhcp4: true
+    # IPv6 is off deliberately. QEMU's user-mode stack advertises IPv6 in a way that
+    # produces a router solicitation with no answer, and the guest then spends up to two
+    # minutes at `A start job is running for Wait for Network` before giving up. That
+    # delay is indistinguishable from a hang when you are watching a serial console, and
+    # it is the single most common "the VM is broken" report that turns out not to be.
+    dhcp6: false
+    # `optional` tells the renderer not to hold boot on this interface. SairiOS is
+    # entirely loopback-internal and boots fine with no network at all; in mock mode it
+    # needs none. Nothing about the session should wait on DHCP.
+    optional: true
+
+  fallback:
+    match:
+      name: 'eth*'
+    dhcp4: true
+    dhcp6: false
+    optional: true

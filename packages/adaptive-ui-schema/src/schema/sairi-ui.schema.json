@@ -1,0 +1,467 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sairios.dev/schema/sairi-ui/0.1/sairi-ui.schema.json",
+  "title": "SairiUI Document v0.1",
+  "description": "Declarative adaptive-UI description produced by an agent and rendered by the SairiOS shell. Model output is untrusted: every document is validated against this schema before a single node is rendered, and unknown component types or invalid props cause the whole document to be rejected in favour of a safe error state.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "contextId", "title", "contextType", "layout", "suggestedActions"],
+  "properties": {
+    "version": { "const": "0.1" },
+    "contextId": {
+      "oneOf": [{ "type": "string", "pattern": "^ctx_[0-9a-f]{32}$" }, { "type": "null" }]
+    },
+    "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "contextType": { "enum": ["ephemeral", "persistent", "crystallized"] },
+    "layout": { "$ref": "#/$defs/layout" },
+    "suggestedActions": {
+      "type": "array",
+      "maxItems": 12,
+      "items": { "$ref": "#/$defs/suggestedAction" }
+    }
+  },
+  "$defs": {
+    "shortText": { "type": "string", "maxLength": 200 },
+    "mediumText": { "type": "string", "maxLength": 2000 },
+    "longText": { "type": "string", "maxLength": 100000 },
+    "regionId": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" },
+    "componentType": {
+      "enum": [
+        "text",
+        "markdown",
+        "source-list",
+        "key-value-list",
+        "editor",
+        "table",
+        "checklist",
+        "timeline",
+        "progress",
+        "status-panel",
+        "permission-request",
+        "action-button",
+        "terminal-output",
+        "file-list",
+        "context-metadata",
+        "activity-log"
+      ]
+    },
+    "layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "regions"],
+      "properties": {
+        "type": { "enum": ["workspace", "stack", "split"] },
+        "regions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "items": { "$ref": "#/$defs/region" }
+        }
+      }
+    },
+    "region": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "component"],
+      "properties": {
+        "id": { "$ref": "#/$defs/regionId" },
+        "width": {
+          "enum": ["full", "one-half", "one-third", "two-thirds", "one-quarter", "three-quarters"]
+        },
+        "component": { "$ref": "#/$defs/component" }
+      }
+    },
+    "suggestedAction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "kind"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9._-]{0,63}$" },
+        "label": { "$ref": "#/$defs/shortText" },
+        "description": { "$ref": "#/$defs/mediumText" },
+        "capability": { "$ref": "#/$defs/capability" },
+        "kind": { "enum": ["agent", "system", "context"] }
+      }
+    },
+    "capability": {
+      "enum": [
+        "files.read",
+        "files.write",
+        "files.delete",
+        "process.list",
+        "process.execute",
+        "network.fetch",
+        "browser.open",
+        "clipboard.read",
+        "clipboard.write",
+        "notifications.send",
+        "system.settings.read"
+      ]
+    },
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "props"],
+      "properties": {
+        "type": { "$ref": "#/$defs/componentType" },
+        "props": { "type": "object" },
+        "binding": {
+          "description": "Advisory dot-path into context state. Never a code expression.",
+          "type": "string",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z][a-zA-Z0-9_]*)*$",
+          "maxLength": 200
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "text" } }, "required": ["type"] },
+          "then": { "properties": { "props": { "$ref": "#/$defs/props.text" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "markdown" } }, "required": ["type"] },
+          "then": { "properties": { "props": { "$ref": "#/$defs/props.markdown" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "source-list" } }, "required": ["type"] },
+          "then": { "properties": { "props": { "$ref": "#/$defs/props.sourceList" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "key-value-list" } }, "required": ["type"] },
+          "then": { "properties": { "props": { "$ref": "#/$defs/props.keyValueList" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "editor" } }, "required": ["type"] },
+          "then": { "properties": { "props": { "$ref": "#/$defs/props.editor" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "table" } }, "required": ["type"] },
+          "then": { "properties": { "props": { "$ref": "#/$defs/props.table" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "checklist" } }, "required": ["type"] },
+          "then": { "properties": { "props": { "$ref": "#/$defs/props.checklist" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "timeline" } }, "required": ["type"] },
+          "then": { "properties": { "props": { "$ref": "#/$defs/props.timeline" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "progress" } }, "required": ["type"] },
+          "then": { "properties": { "props": { "$ref": "#/$defs/props.progress" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "status-panel" } }, "required": ["type"] },
+          "then": { "properties": { "props": { "$ref": "#/$defs/props.statusPanel" } } }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "permission-request" } },
+            "required": ["type"]
+          },
+          "then": { "properties": { "props": { "$ref": "#/$defs/props.permissionRequest" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "action-button" } }, "required": ["type"] },
+          "then": { "properties": { "props": { "$ref": "#/$defs/props.actionButton" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "terminal-output" } }, "required": ["type"] },
+          "then": { "properties": { "props": { "$ref": "#/$defs/props.terminalOutput" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "file-list" } }, "required": ["type"] },
+          "then": { "properties": { "props": { "$ref": "#/$defs/props.fileList" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "context-metadata" } }, "required": ["type"] },
+          "then": { "properties": { "props": { "$ref": "#/$defs/props.contextMetadata" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "activity-log" } }, "required": ["type"] },
+          "then": { "properties": { "props": { "$ref": "#/$defs/props.activityLog" } } }
+        }
+      ]
+    },
+
+    "props.text": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["body"],
+      "properties": {
+        "title": { "$ref": "#/$defs/shortText" },
+        "body": { "type": "string", "maxLength": 20000 },
+        "tone": { "enum": ["normal", "muted", "warning"] }
+      }
+    },
+    "props.markdown": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source"],
+      "properties": {
+        "title": { "$ref": "#/$defs/shortText" },
+        "source": {
+          "description": "Rendered through a restricted markdown subset. Raw HTML, scripts and remote images are stripped by the renderer, not by this schema.",
+          "type": "string",
+          "maxLength": 50000
+        }
+      }
+    },
+    "props.sourceList": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sources"],
+      "properties": {
+        "title": { "$ref": "#/$defs/shortText" },
+        "sources": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["label", "kind"],
+            "properties": {
+              "label": { "$ref": "#/$defs/shortText" },
+              "kind": { "enum": ["file", "url", "note"] },
+              "detail": { "$ref": "#/$defs/mediumText" },
+              "trusted": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "props.keyValueList": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items"],
+      "properties": {
+        "title": { "$ref": "#/$defs/shortText" },
+        "items": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["key", "value"],
+            "properties": {
+              "key": { "$ref": "#/$defs/shortText" },
+              "value": { "$ref": "#/$defs/mediumText" }
+            }
+          }
+        }
+      }
+    },
+    "props.editor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value"],
+      "properties": {
+        "title": { "$ref": "#/$defs/shortText" },
+        "value": { "$ref": "#/$defs/longText" },
+        "placeholder": { "$ref": "#/$defs/shortText" },
+        "readOnly": { "type": "boolean" }
+      }
+    },
+    "props.table": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["columns", "rows"],
+      "properties": {
+        "title": { "$ref": "#/$defs/shortText" },
+        "caption": { "$ref": "#/$defs/mediumText" },
+        "columns": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 24,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["key", "label"],
+            "properties": {
+              "key": { "type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9_-]{0,63}$" },
+              "label": { "$ref": "#/$defs/shortText" },
+              "align": { "enum": ["left", "right", "center"] }
+            }
+          }
+        },
+        "rows": {
+          "type": "array",
+          "maxItems": 500,
+          "items": {
+            "type": "object",
+            "additionalProperties": {
+              "type": ["string", "number", "boolean", "null"],
+              "maxLength": 2000
+            }
+          }
+        }
+      }
+    },
+    "props.checklist": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items"],
+      "properties": {
+        "title": { "$ref": "#/$defs/shortText" },
+        "items": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "label", "checked"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$" },
+              "label": { "$ref": "#/$defs/mediumText" },
+              "checked": { "type": "boolean" },
+              "note": { "$ref": "#/$defs/mediumText" }
+            }
+          }
+        }
+      }
+    },
+    "props.timeline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entries"],
+      "properties": {
+        "title": { "$ref": "#/$defs/shortText" },
+        "entries": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["at", "label"],
+            "properties": {
+              "at": { "type": "string", "maxLength": 64 },
+              "label": { "$ref": "#/$defs/shortText" },
+              "detail": { "$ref": "#/$defs/mediumText" }
+            }
+          }
+        }
+      }
+    },
+    "props.progress": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value"],
+      "properties": {
+        "title": { "$ref": "#/$defs/shortText" },
+        "label": { "$ref": "#/$defs/shortText" },
+        "value": { "type": "number", "minimum": 0, "maximum": 1 },
+        "indeterminate": { "type": "boolean" }
+      }
+    },
+    "props.statusPanel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items"],
+      "properties": {
+        "title": { "$ref": "#/$defs/shortText" },
+        "items": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["label", "state"],
+            "properties": {
+              "label": { "$ref": "#/$defs/shortText" },
+              "state": { "enum": ["ok", "warn", "error", "pending", "idle"] },
+              "detail": { "$ref": "#/$defs/mediumText" }
+            }
+          }
+        }
+      }
+    },
+    "props.permissionRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability", "reason", "risk", "requestId"],
+      "properties": {
+        "title": { "$ref": "#/$defs/shortText" },
+        "capability": { "$ref": "#/$defs/capability" },
+        "reason": { "$ref": "#/$defs/mediumText" },
+        "risk": { "enum": ["low", "medium", "high"] },
+        "requestId": { "type": "string", "pattern": "^req_[0-9a-f]{32}$" }
+      }
+    },
+    "props.actionButton": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "actionId"],
+      "properties": {
+        "label": { "$ref": "#/$defs/shortText" },
+        "actionId": {
+          "description": "Opaque identifier resolved by the agent bridge. Never a command line, path or URL.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9._-]{0,63}$"
+        },
+        "description": { "$ref": "#/$defs/mediumText" },
+        "capability": { "$ref": "#/$defs/capability" },
+        "variant": { "enum": ["primary", "default", "danger"] }
+      }
+    },
+    "props.terminalOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lines"],
+      "properties": {
+        "title": { "$ref": "#/$defs/shortText" },
+        "lines": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": { "type": "string", "maxLength": 4000 }
+        },
+        "exitCode": { "type": "integer", "minimum": -256, "maximum": 256 }
+      }
+    },
+    "props.fileList": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["files"],
+      "properties": {
+        "title": { "$ref": "#/$defs/shortText" },
+        "files": {
+          "type": "array",
+          "maxItems": 500,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "relativePath"],
+            "properties": {
+              "name": { "$ref": "#/$defs/shortText" },
+              "relativePath": {
+                "description": "Sandbox-relative. Absolute paths and parent traversal are rejected.",
+                "type": "string",
+                "pattern": "^(?!/)(?!.*(^|/)\\.\\.(/|$)).+$",
+                "maxLength": 1024
+              },
+              "byteSize": { "type": "integer", "minimum": 0 },
+              "mediaType": { "$ref": "#/$defs/shortText" },
+              "untrusted": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "props.contextMetadata": {
+      "description": "Host-rendered. Content is read from the context record, never supplied by the model.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": { "$ref": "#/$defs/shortText" },
+        "showObjective": { "type": "boolean" }
+      }
+    },
+    "props.activityLog": {
+      "description": "Host-rendered. Content is read from the context event log, never supplied by the model.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": { "$ref": "#/$defs/shortText" },
+        "limit": { "type": "integer", "minimum": 1, "maximum": 200 }
+      }
+    }
+  }
+}

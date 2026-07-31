@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none" stroke="currentColor" stroke-linejoin="miter" stroke-linecap="butt" role="img" aria-labelledby="sairios-mark-title sairios-mark-desc">
+  <title id="sairios-mark-title">SairiOS</title>
+  <desc id="sairios-mark-desc">A window frame containing two tiles, one outlined and one filled: two contexts, one of them in focus.</desc>
+  <!--
+    SairiOS mark.
+
+    Monochrome, currentColor, square viewBox, no gradients, no filters, no text.
+    Set the colour by setting `color` on an ancestor. Set the size with width/height or
+    with CSS; the geometry is resolution independent.
+
+    The frame is an early-Macintosh window: a rounded rectangle, a rule under the title
+    bar, one close box at the left. Inside it, two tiles. One is an outline, one is
+    filled. That is the whole idea of the system: every window is a context, and one of
+    them has your attention.
+
+    Geometry (all values chosen so strokes land on whole or half pixels at 64px):
+      frame     outer 4..60, stroke 3 centred on 5.5 / 58.5
+      title rule  y 21.5, stroke 3, spanning the full frame width
+      close box 12..20 x 9.5..17.5, stroke 2
+      tile A    14..30 x 32..48, stroke 2   (an available context)
+      tile B    34..50 x 32..48, filled     (the focused context)
+      content block 14..50 is centred on x=32 within the 7..57 interior
+  -->
+  <g stroke-width="3">
+    <rect x="5.5" y="5.5" width="53" height="53" rx="4" />
+    <path d="M5.5 21.5H58.5" />
+  </g>
+  <g stroke-width="2">
+    <rect x="13" y="10.5" width="6" height="6" />
+    <rect x="15" y="33" width="14" height="14" />
+  </g>
+  <rect x="34" y="32" width="16" height="16" fill="currentColor" stroke="none" />
+</svg>

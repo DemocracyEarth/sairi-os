@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080" preserveAspectRatio="xMidYMid slice" role="img" aria-label="SairiOS wallpaper">
+  <title>SairiOS wallpaper</title>
+  <!--
+    SairiOS wallpaper. 16:9, 1920x1080, resolution independent.
+
+    Rules this obeys:
+      - No gradients. Nothing that reads as an AI product page.
+      - Very low contrast throughout. A wallpaper is a surface, not a picture. The
+        highest-contrast element here is about 8% against the background.
+      - Geometry only: a grid, a window echoing the mark, corner registration brackets,
+        a measuring rule. Workstation furniture, drawn quietly.
+      - preserveAspectRatio="slice" so that a non-16:9 display crops rather than
+        stretches. The composition is centred, so cropping is safe.
+
+    Colours are set twice on purpose. Presentation attributes carry the light palette so
+    that a renderer which ignores <style> (some SVG rasterisers do) still produces the
+    correct image. The <style> block, which wins on specificity where it is supported,
+    adds the dark variant.
+
+    Palette source: os/branding/palette.css. These are literal values rather than
+    var(--sairi-*) references because a wallpaper is rasterised outside any document
+    that would define those variables.
+  -->
+  <style>
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #1b1a17; }
+      .grid { stroke: #211f1b; }
+      .rule { stroke: #2b2822; }
+      .rule-faint { stroke: #232019; }
+      .tile { fill: #26231e; }
+      .accent { fill: #222b34; }
+    }
+  </style>
+
+  <defs>
+    <!-- 60px grid. One path per tile, drawn as the top and left edges only, so
+         adjacent tiles do not double up their strokes. -->
+    <pattern id="sairi-grid" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path class="grid" d="M60 0H0V60" fill="none" stroke="#eae5da" stroke-width="1" />
+    </pattern>
+  </defs>
+
+  <rect class="bg" width="1920" height="1080" fill="#f4f1ea" />
+  <rect width="1920" height="1080" fill="url(#sairi-grid)" />
+
+  <!-- Corner registration brackets. 120px arms, inset 72px. -->
+  <g class="rule-faint" fill="none" stroke="#e3ddd0" stroke-width="2" stroke-linecap="butt">
+    <path d="M72 192V72h120" />
+    <path d="M1848 192V72h-120" />
+    <path d="M72 888v120h120" />
+    <path d="M1848 888v120h-120" />
+  </g>
+
+  <!-- The window, echoing os/branding/sairios-mark.svg at 10x its inner geometry.
+       Frame 600..1320 x 300..780. Title rule at y=356. -->
+  <g class="rule" fill="none" stroke="#ded8cb" stroke-width="2">
+    <rect x="600" y="300" width="720" height="480" rx="6" />
+    <path d="M600 356H1320" />
+    <rect x="624" y="318" width="20" height="20" />
+    <!-- Tile A: an available context. -->
+    <rect x="670" y="458" width="260" height="220" />
+  </g>
+
+  <!-- Tile B: the focused context. The only filled shape in the composition. -->
+  <rect class="tile" x="970" y="448" width="280" height="240" fill="#e6e0d2" />
+
+  <!-- A single small accent square inside tile A. The one place colour appears. -->
+  <rect class="accent" x="706" y="494" width="56" height="56" fill="#dde4ee" />
+
+  <!-- Measuring rule across the lower third. Baseline plus ticks every 80px, with a
+       taller tick every 400px. Workstation furniture; almost invisible by design. -->
+  <g class="rule-faint" stroke="#e3ddd0" stroke-width="1" fill="none">
+    <path d="M0 940H1920" />
+    <path d="M80 940v-8M160 940v-8M240 940v-8M320 940v-8M400 940v-16M480 940v-8M560 940v-8M640 940v-8M720 940v-8M800 940v-16M880 940v-8M960 940v-8M1040 940v-8M1120 940v-8M1200 940v-16M1280 940v-8M1360 940v-8M1440 940v-8M1520 940v-8M1600 940v-16M1680 940v-8M1760 940v-8M1840 940v-8" />
+  </g>
+</svg>

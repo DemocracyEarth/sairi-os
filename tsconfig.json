@@ -1,0 +1,13 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/shared" },
+    { "path": "./packages/context-schema" },
+    { "path": "./packages/adaptive-ui-schema" },
+    { "path": "./packages/ui-components" },
+    { "path": "./services/context-service" },
+    { "path": "./services/permission-broker" },
+    { "path": "./services/agent-bridge" },
+    { "path": "./apps/shell" }
+  ]
+}

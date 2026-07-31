@@ -1,0 +1,181 @@
+{
+  "version": "0.1",
+  "contextId": "ctx_3d0bd92c8b4b3da8c2890754ed81ccec",
+  "title": "Compare three vendor proposals",
+  "contextType": "ephemeral",
+  "layout": {
+    "type": "workspace",
+    "regions": [
+      {
+        "id": "comparison",
+        "width": "two-thirds",
+        "component": {
+          "type": "table",
+          "binding": "proposals.comparison",
+          "props": {
+            "title": "Proposal comparison",
+            "caption": "Figures transcribed from the three submitted documents.",
+            "columns": [
+              {
+                "key": "criterion",
+                "label": "Criterion"
+              },
+              {
+                "key": "northgate",
+                "label": "Northgate"
+              },
+              {
+                "key": "lumen",
+                "label": "Lumen Systems"
+              },
+              {
+                "key": "arroyo",
+                "label": "Arroyo Labs"
+              }
+            ],
+            "rows": [
+              {
+                "criterion": "Fixed price (EUR)",
+                "northgate": "148,000",
+                "lumen": "121,500",
+                "arroyo": "167,200"
+              },
+              {
+                "criterion": "Delivery",
+                "northgate": "14 weeks",
+                "lumen": "22 weeks",
+                "arroyo": "11 weeks"
+              },
+              {
+                "criterion": "Support window",
+                "northgate": "24 months",
+                "lumen": "12 months",
+                "arroyo": "36 months"
+              },
+              {
+                "criterion": "On-premise option",
+                "northgate": true,
+                "lumen": false,
+                "arroyo": true
+              },
+              {
+                "criterion": "References checked",
+                "northgate": 3,
+                "lumen": 1,
+                "arroyo": 2
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "criteria",
+        "width": "one-third",
+        "component": {
+          "type": "checklist",
+          "binding": "proposals.criteria",
+          "props": {
+            "title": "Decision criteria",
+            "items": [
+              {
+                "id": "price",
+                "label": "Total cost within budget",
+                "checked": true
+              },
+              {
+                "id": "delivery",
+                "label": "Delivery before Q4",
+                "checked": true
+              },
+              {
+                "id": "support",
+                "label": "Support beyond 24 months",
+                "checked": false,
+                "note": "Only Arroyo qualifies."
+              },
+              {
+                "id": "onprem",
+                "label": "On-premise deployment possible",
+                "checked": true
+              },
+              {
+                "id": "refs",
+                "label": "At least two references verified",
+                "checked": false
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "recommendation",
+        "width": "two-thirds",
+        "component": {
+          "type": "markdown",
+          "binding": "proposals.recommendation",
+          "props": {
+            "title": "Recommendation",
+            "source": "**Northgate** balances the three criteria that carry weight here: it lands inside budget, delivers before Q4, and is the only bid with three verified references.\n\nArroyo is faster and supports longer, but is 13% over budget. Lumen is cheapest and clears nothing else: 22 weeks misses the deadline and only one reference came back.\n\nOpen question: whether the 36-month support window is worth the Arroyo premium."
+          }
+        }
+      },
+      {
+        "id": "sources",
+        "width": "one-third",
+        "component": {
+          "type": "source-list",
+          "binding": "proposals.sources",
+          "props": {
+            "title": "Source files",
+            "sources": [
+              {
+                "label": "northgate-proposal.pdf",
+                "kind": "file",
+                "detail": "18 pages",
+                "trusted": true
+              },
+              {
+                "label": "lumen-proposal.pdf",
+                "kind": "file",
+                "detail": "11 pages",
+                "trusted": true
+              },
+              {
+                "label": "arroyo-proposal.pdf",
+                "kind": "file",
+                "detail": "24 pages",
+                "trusted": true
+              },
+              {
+                "label": "Reference call notes",
+                "kind": "note",
+                "detail": "Three calls, 2026-07-24"
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "suggestedActions": [
+    {
+      "id": "export.summary",
+      "label": "Write summary to sandbox",
+      "kind": "system",
+      "capability": "files.write",
+      "description": "Save the recommendation as a file in this context’s sandbox."
+    },
+    {
+      "id": "mark.complete",
+      "label": "Mark comparison complete",
+      "kind": "context",
+      "description": "Completing an ephemeral context archives it."
+    },
+    {
+      "id": "crystallize",
+      "label": "Crystallize this workflow",
+      "kind": "context",
+      "description": "Turn vendor comparison into a reusable template."
+    }
+  ]
+}

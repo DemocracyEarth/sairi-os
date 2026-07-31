@@ -1,0 +1,355 @@
+# SairiOS development containers.
+#
+#   Docker = service development and tool sandboxing
+#   QEMU   = full SairiOS integration testing
+#
+# Nothing in this file boots SairiOS as an operating environment. There is no
+# shell, no compositor, no display, no init system here. This compose project
+# exists for two narrow purposes:
+#
+#   1. Running the three background services in isolation so they can be
+#      developed and exercised without a working host toolchain.
+#   2. Providing `tool-sandbox`, the constrained filesystem and process
+#      environment that agent tool executions are meant to run inside.
+#
+# To see SairiOS as an operating environment, build and run the QEMU image
+# (`make vm-image` then `make vm-run`). See docs/DOCKER.md for the full
+# decision table.
+#
+# VERIFICATION STATUS: this file has never been executed. Docker is not
+# installed on the host it was authored on (macOS arm64, no Docker, no QEMU).
+# Treat every claim below as a design intent that still needs a first run.
+#
+# ---------------------------------------------------------------------------
+# Usage (from the repository root)
+#
+#   docker compose --project-directory . -f containers/compose.yaml build
+#   docker compose --project-directory . -f containers/compose.yaml up
+#
+# `--project-directory .` makes the repository-root `.env` the interpolation
+# source for the ${...} defaults below. Every default is safe without a `.env`.
+# ---------------------------------------------------------------------------
+
+# Explicit project name so containers, volumes and networks are namespaced and
+# never collide with another compose project on the same machine.
+name: sairios-dev
+
+# ---------------------------------------------------------------------------
+# Shared security posture.
+#
+# YAML anchors, not a Compose feature. Every service merges this block so the
+# posture cannot drift service by service. Each line is explained once here.
+# ---------------------------------------------------------------------------
+x-hardening: &hardening
+  # The container filesystem is immutable at runtime. A compromised process
+  # cannot drop a binary, rewrite application code or persist anything outside
+  # the explicitly declared volumes below.
+  read_only: true
+
+  # Drop every Linux capability. These are plain Node HTTP servers on ports
+  # above 1024; they need none of CAP_NET_BIND_SERVICE, CAP_CHOWN, CAP_SETUID
+  # or anything else. Start from zero rather than pruning the Docker default
+  # set.
+  cap_drop:
+    - ALL
+
+  # Block privilege escalation through setuid binaries and file capabilities.
+  # Without this, dropping capabilities is not durable: a setuid binary inside
+  # the image could regain them.
+  security_opt:
+    - no-new-privileges:true
+
+  # Stated explicitly even though it is the default, because `privileged: true`
+  # silently voids every other line in this block and a reviewer should be able
+  # to see that it is off without knowing Docker defaults.
+  privileged: false
+
+  # Never run as root inside the container. uid/gid 10001 is created in each
+  # Dockerfile. Numeric rather than a name so the value is checkable here and
+  # does not depend on the image's /etc/passwd.
+  user: '10001:10001'
+
+  # Cap the process table. A fork bomb from a runaway tool execution or a
+  # dependency exhausts this limit instead of the host's.
+  pids_limit: 256
+
+  # Docker Compose v2 applies deploy.resources.limits outside Swarm. These are
+  # development limits, not a defence against a determined attacker: they bound
+  # accidental runaway resource use, and they make it obvious when a service
+  # regresses into a memory leak.
+  deploy:
+    resources:
+      limits:
+        cpus: '1.00'
+        memory: 512M
+
+  # With read_only: true the process still needs somewhere to write scratch
+  # files. tmpfs is memory backed, wiped on container exit, and mounted with
+  # noexec so a downloaded or generated file cannot be run from it.
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,nodev,size=64m
+
+  # Deliberately absent from this project and from every service below:
+  #   - /var/run/docker.sock is NEVER mounted. Mounting the Docker socket is
+  #     equivalent to handing out host root, which would make the whole
+  #     permission broker meaningless.
+  #   - The user's home directory is NEVER bind mounted. Agent-reachable file
+  #     state lives in a named volume, not in $HOME.
+  #   - No `network_mode: host`, no `--add-host` to the host gateway.
+
+  restart: 'no'
+  init: true
+
+x-healthcheck-defaults: &healthcheck-defaults
+  interval: 10s
+  timeout: 3s
+  retries: 5
+  # Generous first-start window: `tsc` output plus schema compilation on a cold
+  # container is slower than a warm host process.
+  start_period: 30s
+
+services:
+  # -------------------------------------------------------------------------
+  # context-service
+  #
+  # Owns contexts, their memory, tasks, events and UI state. The only service
+  # that touches the context store, so it is the only one that gets the
+  # sqlite data volume and the --experimental-sqlite flag.
+  # -------------------------------------------------------------------------
+  context-service:
+    <<: *hardening
+    build:
+      context: ..
+      dockerfile: containers/context-service.Dockerfile
+    image: sairios/context-service:dev
+    ports:
+      # Published on the host loopback interface ONLY. Written as
+      # 127.0.0.1:HOST:CONTAINER rather than HOST:CONTAINER, because the short
+      # form binds 0.0.0.0 and would expose the context store to the local
+      # network.
+      - '127.0.0.1:${SAIRIOS_CONTEXT_SERVICE_PORT:-7801}:7801'
+    environment:
+      # Inside the container the process must listen on all container
+      # interfaces or Docker's port forwarding cannot reach it. This is NOT a
+      # relaxation of the loopback-only rule: the only path in from outside the
+      # container is the 127.0.0.1-bound published port above.
+      SAIRIOS_BIND_HOST: '0.0.0.0'
+      SAIRIOS_CONTEXT_SERVICE_PORT: '7801'
+      SAIRIOS_DATA_DIR: '/app/var'
+      SAIRIOS_STORE_DRIVER: '${SAIRIOS_STORE_DRIVER:-auto}'
+      SAIRIOS_LOG_LEVEL: '${SAIRIOS_LOG_LEVEL:-info}'
+      NODE_ENV: 'production'
+    volumes:
+      # The single writable path. A named volume, managed by Docker, not a bind
+      # mount of a host directory.
+      - sairios-context-data:/app/var
+    networks:
+      - sairios-svc
+    healthcheck:
+      <<: *healthcheck-defaults
+      # Node's global fetch rather than curl, because curl and wget are
+      # deliberately not installed in the runtime images.
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:7801/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+
+  # -------------------------------------------------------------------------
+  # permission-broker
+  #
+  # Separates observation, proposal and execution for the 11 capabilities.
+  # Nothing else in this project is allowed to execute a capability. It holds
+  # the sandbox workspace volume read-write because approved file actions are
+  # applied by the broker, never by the agent.
+  # -------------------------------------------------------------------------
+  permission-broker:
+    <<: *hardening
+    build:
+      context: ..
+      dockerfile: containers/permission-broker.Dockerfile
+    image: sairios/permission-broker:dev
+    ports:
+      - '127.0.0.1:${SAIRIOS_PERMISSION_BROKER_PORT:-7803}:7803'
+    environment:
+      SAIRIOS_BIND_HOST: '0.0.0.0'
+      SAIRIOS_PERMISSION_BROKER_PORT: '7803'
+      SAIRIOS_DATA_DIR: '/app/var'
+      # The ONLY directory agent-proposed file actions may touch, and it is a
+      # named volume shared with tool-sandbox. Not the user's home, not the
+      # repository, not /app.
+      SAIRIOS_SANDBOX_DIR: '/workspace'
+      SAIRIOS_LOG_LEVEL: '${SAIRIOS_LOG_LEVEL:-info}'
+      NODE_ENV: 'production'
+    volumes:
+      - sairios-broker-data:/app/var
+      - sairios-sandbox-workspace:/workspace
+    networks:
+      - sairios-svc
+    healthcheck:
+      <<: *healthcheck-defaults
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:7803/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+
+  # -------------------------------------------------------------------------
+  # agent-bridge
+  #
+  # HTTP plus WebSocket. Talks to OpenClaw as an upstream pinned dependency in
+  # `openclaw` mode; no OpenClaw source is vendored anywhere.
+  #
+  # Pinned to mock here on purpose. mock needs no API key, no network and no
+  # credentials, so this compose project stays fully offline and secret-free.
+  # `openclaw` mode is NOT supported from these containers in v0: the gateway
+  # runs on the host at ws://127.0.0.1:18789, which inside a container resolves
+  # to the container itself. Reaching a host gateway would require an egress
+  # path and a host-gateway alias, both of which are deliberately absent. Run
+  # `make dev` on the host for openclaw mode.
+  # -------------------------------------------------------------------------
+  agent-bridge:
+    <<: *hardening
+    build:
+      context: ..
+      dockerfile: containers/agent-bridge.Dockerfile
+    image: sairios/agent-bridge:dev
+    ports:
+      - '127.0.0.1:${SAIRIOS_AGENT_BRIDGE_PORT:-7802}:7802'
+    environment:
+      SAIRIOS_BIND_HOST: '0.0.0.0'
+      SAIRIOS_AGENT_BRIDGE_PORT: '7802'
+      # Hardcoded, not interpolated from .env. Changing this to `openclaw`
+      # inside a container will not work; see the block comment above.
+      SAIRIOS_AGENT_PROVIDER: 'mock'
+      # Service-to-service addresses use compose DNS names on the internal
+      # network, not localhost.
+      SAIRIOS_CONTEXT_SERVICE_URL: 'http://context-service:7801'
+      SAIRIOS_PERMISSION_BROKER_URL: 'http://permission-broker:7803'
+      SAIRIOS_DATA_DIR: '/app/var'
+      SAIRIOS_LOG_LEVEL: '${SAIRIOS_LOG_LEVEL:-info}'
+      NODE_ENV: 'production'
+      # SAIRIOS_LLM_API_KEY is intentionally NOT passed through. mock mode does
+      # not read it, and no secret should ever enter a container image or a
+      # container environment in this project.
+    volumes:
+      - sairios-agent-data:/app/var
+    networks:
+      - sairios-svc
+    depends_on:
+      context-service:
+        condition: service_healthy
+      permission-broker:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck-defaults
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:7802/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+
+  # -------------------------------------------------------------------------
+  # tool-sandbox
+  #
+  # The constrained execution environment for agent tool calls. Not a service:
+  # it publishes no ports, answers no requests and is not a dependency of
+  # anything. It is a place to put an execution, not a thing to call.
+  #
+  # v0 honesty note: the permission broker cannot yet drive this container by
+  # itself. Driving it would require either the Docker socket (never mounted
+  # here, see the hardening block) or an in-container executor that does not
+  # exist yet. Today the container is used to reproduce and inspect a tool
+  # execution by hand, and as the target image for that later executor.
+  # -------------------------------------------------------------------------
+  tool-sandbox:
+    <<: *hardening
+    build:
+      context: ..
+      dockerfile: containers/tool-sandbox.Dockerfile
+    image: sairios/tool-sandbox:dev
+    # No network at all. Not an internal network, not a firewalled network:
+    # none. The container has a loopback interface and nothing else.
+    #
+    # This is the point of the whole design. `network.fetch` is a capability
+    # that the permission broker grants, mediates and logs per context. It is
+    # NOT something you enable by giving the sandbox a route to the internet.
+    # If a tool needs to fetch a URL, the broker performs the fetch after a
+    # grant and hands the result in. Opening this container's network would
+    # move that decision from a policy the user can see into a default nobody
+    # reviews.
+    #
+    # The alternative, if an in-container executor ever needs to reach the
+    # broker, is to join `sairios-sandbox` (internal: true, no route off the
+    # host) and add nothing else. Do not reach for `sairios-svc`.
+    network_mode: 'none'
+    # No `ports:` key at all. There is nothing to publish, and publishing a
+    # port is incompatible with network_mode: none, so an accidental addition
+    # fails at `up` time rather than quietly exposing something.
+    environment:
+      SAIRIOS_SANDBOX_DIR: '/workspace'
+      SAIRIOS_LOG_LEVEL: '${SAIRIOS_LOG_LEVEL:-info}'
+      NODE_ENV: 'production'
+      # No HOME writes: the read-only root filesystem means anything that tries
+      # to write a dotfile fails loudly instead of silently persisting.
+      HOME: '/workspace'
+    volumes:
+      # The single writable path in the entire container, shared with the
+      # permission broker so an approved file action and a sandboxed execution
+      # see the same tree.
+      - sairios-sandbox-workspace:/workspace
+    working_dir: /workspace
+    # Idles. Nothing runs until a developer runs something in it.
+    command: ['node', '-e', 'setInterval(() => {}, 1 << 30)']
+    healthcheck:
+      <<: *healthcheck-defaults
+      # There is no /healthz because there is no server. The only meaningful
+      # liveness question is whether the one writable path is actually
+      # writable.
+      test:
+        - CMD
+        - node
+        - -e
+        - "require('node:fs').accessSync('/workspace', require('node:fs').constants.W_OK)"
+
+# ---------------------------------------------------------------------------
+# Networks
+#
+# Both are declared explicitly. Relying on the implicit compose default network
+# means the topology is invisible in this file and cannot be reviewed.
+# ---------------------------------------------------------------------------
+networks:
+  # Service-to-service traffic plus the loopback-published ports above.
+  #
+  # internal: false is set explicitly and is a real tradeoff. An internal
+  # network has no gateway, and host port publishing into one is not reliable
+  # across Docker versions, so the three services that must be reachable from
+  # the developer's browser sit on a normal bridge network. Their exposure to
+  # the outside world is still only the three 127.0.0.1-bound ports.
+  sairios-svc:
+    name: sairios-dev-svc
+    driver: bridge
+    internal: false
+
+  # Fully internal: Docker adds no gateway and no NAT, so a container attached
+  # only to this network cannot reach anything off the host. Unused by default
+  # (tool-sandbox runs with network_mode: none) and kept declared so the
+  # intended escalation path is written down rather than improvised.
+  sairios-sandbox:
+    name: sairios-dev-sandbox
+    driver: bridge
+    internal: true
+
+# ---------------------------------------------------------------------------
+# Volumes
+#
+# All Docker-managed named volumes. No `driver_opts` binding them back to a
+# host path, and specifically no bind mount of the repository or of $HOME.
+# Remove them all with:
+#   docker compose --project-directory . -f containers/compose.yaml down -v
+# ---------------------------------------------------------------------------
+volumes:
+  sairios-context-data:
+  sairios-broker-data:
+  sairios-agent-data:
+  sairios-sandbox-workspace:

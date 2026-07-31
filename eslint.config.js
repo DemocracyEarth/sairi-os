@@ -1,0 +1,64 @@
+import js from '@eslint/js';
+import globals from 'globals';
+import tseslint from 'typescript-eslint';
+
+/**
+ * Lint configuration.
+ *
+ * Type-aware rules are deliberately off: they roughly triple lint time across
+ * eight projects, and `make typecheck` already runs the compiler in strict mode
+ * over the same files. The rules kept here are the ones the compiler does not
+ * enforce.
+ */
+export default tseslint.config(
+  {
+    ignores: [
+      '**/dist/**',
+      '**/dist-types/**',
+      '**/node_modules/**',
+      '**/coverage/**',
+      'var/**',
+      'vm/out/**',
+      'vm/.cache/**',
+    ],
+  },
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+  {
+    files: ['**/*.{ts,tsx,js,mjs}'],
+    languageOptions: {
+      ecmaVersion: 2023,
+      sourceType: 'module',
+      globals: { ...globals.node, ...globals.browser },
+    },
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrors: 'none' },
+      ],
+      '@typescript-eslint/consistent-type-imports': [
+        'error',
+        { prefer: 'type-imports', fixStyle: 'inline-type-imports' },
+      ],
+      // Model output is untrusted and arrives as `unknown`. Explicit `any` is
+      // how that discipline gets bypassed, so it stays an error.
+      '@typescript-eslint/no-explicit-any': 'error',
+      'no-console': 'off',
+      eqeqeq: ['error', 'smart'],
+      'no-var': 'error',
+      'prefer-const': 'error',
+    },
+  },
+  {
+    // Tests may reach for shapes the production code would not.
+    files: ['**/*.test.{ts,tsx}', 'tests/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
+    },
+  },
+  {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: { globals: globals.node },
+  },
+);
