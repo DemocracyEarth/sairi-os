@@ -144,7 +144,8 @@ all by design, and the serial console is the only channel.
 
 `build-image.sh` produces a provisioned operating-system layer with an **empty**
 `/opt/sairios`. It does not clone the repository and does not bake a build into the
-image. A freshly built image reports `SAIRIOS-FIRSTBOOT: DEGRADED`, and that is a pass.
+image. A freshly built image is meant to report `SAIRIOS-FIRSTBOOT: DEGRADED`, which is a pass.
+Not today, though: the NodeSource signing-key fingerprint in `vm/cloud-init/user-data.yaml` is still an unfilled placeholder, so the Node step aborts, `node` and `npm` are absent, and the verdict is `FAIL` with `--smoke` exiting 1. Pin a fingerprint you verified out of band first.
 
 This keeps image builds independent of product builds, so a broken `npm run build` cannot
 produce an unbootable image. See `vm/cloud-init/README.md` for how to deliver SairiOS to
@@ -206,8 +207,10 @@ In order. Each step is cheap and the failures are distinguishable. Step 1 needs 
 installed at all; steps 4 and 5 need QEMU.
 
 ```sh
-# 1. No network, no writes. Prints a plan and exits 0 even with no QEMU on the
-#    machine, warning about what a real run would need. Run this first, anywhere.
+# 1. No writes. One network call: a HEAD against cloud.debian.org to report the
+#    exact download size, which is the whole point of looking before you leap.
+#    Prints a plan and exits 0 even with no QEMU on the machine, warning about
+#    what a real run would need. Run this first, anywhere.
 ./vm/qemu/build-image.sh --dry-run
 ./vm/qemu/clean.sh --dry-run
 
@@ -240,7 +243,9 @@ What correct output looks like:
 - **Step 4** ends with the paths of `vm/out/sairios-<arch>.qcow2` and
   `vm/out/seed-<arch>.iso`, and `qemu-img info` on the disk reports a 20 GiB virtual size
   with a much smaller actual size.
-- **Step 5** ends with `SMOKE: PASSED after Ns (verdict DEGRADED).` and exit status 0.
+- **Step 5** is intended to end with `SMOKE: PASSED after Ns (verdict DEGRADED).` and exit
+  status 0. Until the NodeSource fingerprint is pinned it ends with `FAIL` and exit 1,
+  because `node` and `npm` are absent. Once pinned,
   `DEGRADED` is the correct result for a bare image, and the printed guest report should
   show `[ ok ]` for node, cage, cog, the DRM device, the `seat` group, the data
   directories and lingering, with warnings only about the absent product tree.

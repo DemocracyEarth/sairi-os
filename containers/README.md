@@ -76,6 +76,20 @@ that later executor.
 
 ## Running it
 
+> **Untested, and internally in tension.** The commands below pass
+> `--project-directory .` from the repository root so that `${...}` interpolation reads the
+> root `.env`. Every service in `compose.yaml` uses `context: ..`, which Compose resolves
+> relative to the compose file's directory — but `--project-directory` changes the project
+> directory, and whether that also moves build-context resolution differs between Compose
+> versions. If it does, `..` resolves to the PARENT of the repository and every build fails
+> immediately.
+>
+> The `make docker-up` / `make docker-down` targets pass no `--project-directory`, so the
+> two entry points do not agree. Nothing here has been run: Docker is not installed on the
+> machine this repository was scaffolded on. Before relying on either, run
+> `docker compose -f containers/compose.yaml config` and check the resolved `context`
+> paths, then make the Makefile and these commands match whichever is correct.
+
 All commands are run from the repository root.
 
 ```sh

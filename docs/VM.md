@@ -43,9 +43,12 @@ The smoke check's exit status is the signal:
 | 2    | Timeout expired with no verdict on the serial console. |
 | 3    | QEMU exited before the guest reported anything.        |
 
-`DEGRADED` is a pass for a freshly built image. The image ships the operating-system
-layer with an empty `/opt/sairios`; SairiOS is delivered separately. Use `--strict` only
-after delivering the product tree.
+`DEGRADED` is the intended pass for a freshly built image. The image ships the
+operating-system layer with an empty `/opt/sairios`; SairiOS is delivered separately. Use
+`--strict` only after delivering the product tree.
+
+Not today, though: the NodeSource signing-key fingerprint in `vm/cloud-init/user-data.yaml` is still an unfilled placeholder, so the Node step aborts, `node` and `npm` are absent, and the verdict is `FAIL` with `--smoke` exiting 1. Pin a fingerprint you verified out of band first. The sample report below shows the intended output, not what an image built today
+produces.
 
 Under TCG (any cross-architecture run) raise the bound: `--smoke --timeout 2400`. The
 default 600s will time out, and the script warns before it starts.
@@ -102,8 +105,8 @@ machine   : aarch64
 
 --- base system ---------------------------------------------------
 [ ok  ] distribution: Debian GNU/Linux 12 (bookworm)
-[ ok  ] node present: v22.x.x
-[ ok  ] node major version 22 meets the >= 22 requirement
+[ ok  ] node present: v22.x.x            <- only once the NodeSource key is pinned;
+[ ok  ] node major version 22 meets the >= 22 requirement      today both of these fail
 ...
 --- summary -------------------------------------------------------
 ok: 21   warn: 6   fail: 0

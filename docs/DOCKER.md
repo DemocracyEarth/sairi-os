@@ -38,7 +38,7 @@ Rules of thumb, in order:
 
 There are two `make` targets for Docker: `docker-up` runs `docker compose -f
 containers/compose.yaml up --build`, and `docker-down` runs the matching
-`down`. The rest of the Makefile covers `setup dev test test-watch lint
+`down`. The rest of the Makefile covers `help setup dev test test-watch lint
 typecheck format format-check build validate vm-image vm-image-dry-run vm-run
 vm-run-headless vm-clean vm-clean-all doctor clean clean-all`.
 
@@ -54,6 +54,20 @@ Anything beyond starting and stopping everything is driven directly with
 SairiOS: no image in this repository boots it.
 
 ## Commands
+
+> **Untested, and internally in tension.** The commands here pass
+> `--project-directory .` from the repository root so that `${...}` interpolation reads
+> the root `.env`. Every service in `containers/compose.yaml` uses `context: ..`, which
+> Compose resolves relative to the compose file's directory — but `--project-directory`
+> changes the project directory, and whether that also moves build-context resolution
+> differs between Compose versions. If it does, `..` would resolve to the PARENT of the
+> repository and every build would fail immediately with a missing `package.json`.
+>
+> The `make docker-up` / `make docker-down` targets pass no `--project-directory`, so the
+> two entry points do not agree. Nothing here has been run: Docker is not installed on the
+> machine this repository was scaffolded on. Before relying on either, run
+> `docker compose -f containers/compose.yaml config` and check the resolved `context`
+> paths, then make the Makefile and these commands match whichever is correct.
 
 All commands run from the repository root. `--project-directory .` makes the
 repository-root `.env` the interpolation source for `containers/compose.yaml`.

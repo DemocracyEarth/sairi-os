@@ -57,8 +57,9 @@ of any kind, so the default image needs none.
 
 **The image is bare.** Provisioning installs the operating-system layer and creates
 `/opt/sairios` owned by `sairi`, but it does not put SairiOS in it. There is no `git
-clone` and no baked-in build. A freshly built image reports `DEGRADED` on purpose. See
-"Delivering SairiOS" below.
+clone` and no baked-in build. A freshly built image is meant to report `DEGRADED` on
+purpose. It does not today: the NodeSource fingerprint pin is an unfilled placeholder, so
+Node is never installed and the verdict is `FAIL`. See "Delivering SairiOS" below.
 
 **`package_upgrade` is false.** It would add minutes to every first boot and make two
 builds of the same image differ by when they ran. Upgrade a running machine instead.
@@ -154,11 +155,11 @@ The previous report is kept as `.log.1`.
 The last verdict line is machine-readable and is what `vm/qemu/run-vm-headless.sh
 --smoke` greps for:
 
-| Verdict                       | Meaning                                                                                             |
-| ----------------------------- | --------------------------------------------------------------------------------------------------- |
-| `SAIRIOS-FIRSTBOOT: OK`       | Everything present and answering. Requires a delivered product tree.                                |
-| `SAIRIOS-FIRSTBOOT: DEGRADED` | The OS layer provisioned correctly; SairiOS is not running. **Expected for a freshly built image.** |
-| `SAIRIOS-FIRSTBOOT: FAIL`     | The OS layer itself is broken. Something in this directory is wrong.                                |
+| Verdict                       | Meaning                                                                                                                                        |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SAIRIOS-FIRSTBOOT: OK`       | Everything present and answering. Requires a delivered product tree.                                                                           |
+| `SAIRIOS-FIRSTBOOT: DEGRADED` | The OS layer provisioned correctly; SairiOS is not running. **Intended for a freshly built image, once the NodeSource fingerprint is pinned.** |
+| `SAIRIOS-FIRSTBOOT: FAIL`     | The OS layer itself is broken. Something in this directory is wrong.                                                                           |
 
 The distinction is the whole design of the check. A bare image is not a broken image, and
 conflating the two would make the smoke test either useless or permanently red.
@@ -194,6 +195,8 @@ shellcheck -s bash <(sed -n '/#!\/usr\/bin\/env bash/,/^$/p' vm/cloud-init/user-
 ./vm/qemu/run-vm-headless.sh --arch arm64 --smoke
 ```
 
-Correct output from the smoke run is a serial log containing
+Intended output from the smoke run is a serial log containing
 `SAIRIOS-FIRSTBOOT: DEGRADED` and an exit status of 0. `OK` is not expected until a
 product tree has been delivered.
+
+Not today, though: the NodeSource signing-key fingerprint in `vm/cloud-init/user-data.yaml` is still an unfilled placeholder, so the Node step aborts, `node` and `npm` are absent, and the verdict is `FAIL` with `--smoke` exiting 1. Pin a fingerprint you verified out of band first.

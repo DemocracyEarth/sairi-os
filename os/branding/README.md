@@ -154,19 +154,19 @@ Three questions, all of which must be answered yes:
 
 ## Verification status
 
-Nothing here has been rasterised to a file or measured. The only asset anyone has looked
-at is `sairios-mark.svg`, rendered once in a browser while it was being drawn; everything
-else is arithmetic. XML well-formedness is checked, and both SVGs pass.
+Nothing here has been rendered on a display, rasterised to a file, or measured. The
+geometry is arithmetic, not observation, and `os/README.md` says the same. XML
+well-formedness IS checked, and both SVGs pass.
 
-| Item                                         | Status                                                                                                                                                                             |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sairios-mark.svg` structure                 | Rendered once in a browser during authoring. Frame, title rule, close box and both tiles appeared as intended. Not checked at small sizes, not checked against a light background. |
-| `sairios-wallpaper.svg`                      | **Never rendered.** Composed from arithmetic.                                                                                                                                      |
-| Rasterisation with `rsvg-convert` or `resvg` | **Not run.** Neither is installed on the authoring host.                                                                                                                           |
-| Contrast ratios in `palette.css`             | **Not measured.** Values were chosen to clear WCAG AA by construction. Verify before shipping.                                                                                     |
-| Dark palette checked on a real panel         | **Not done.**                                                                                                                                                                      |
-| `palette.css` parsed by any build            | **Not done.** No consumer imports it yet.                                                                                                                                          |
-| XML well-formedness of both SVGs             | **Checked, passes.** Both files parse with Python's `xml.dom.minidom`. `sairios-wallpaper.svg` previously did not: an XML comment contained `--`. That is fixed.                   |
+| Item                                         | Status                                                                                                                                                                        |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sairios-mark.svg` structure                 | **Not verified.** Written by hand; the geometry is arithmetic, not observation. Nothing here was rendered, rasterised or measured on this host. `os/README.md` says the same. |
+| `sairios-wallpaper.svg`                      | **Never rendered.** Composed from arithmetic.                                                                                                                                 |
+| Rasterisation with `rsvg-convert` or `resvg` | **Not run.** Neither is installed on the authoring host.                                                                                                                      |
+| Contrast ratios in `palette.css`             | **Not measured.** Values were chosen to clear WCAG AA by construction. Verify before shipping.                                                                                |
+| Dark palette checked on a real panel         | **Not done.**                                                                                                                                                                 |
+| `palette.css` parsed by any build            | **Not done.** No consumer imports it yet.                                                                                                                                     |
+| XML well-formedness of both SVGs             | **Checked, passes.** Both files parse with Python's `xml.dom.minidom`. `sairios-wallpaper.svg` previously did not: an XML comment contained `--`. That is fixed.              |
 
 To verify:
 
