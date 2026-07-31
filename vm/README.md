@@ -167,23 +167,23 @@ they were written carefully, which is a different thing.
 
 Some of it could be checked without QEMU, and was. This list is exact.
 
-| Claim                                                                                                                                                                                                           | How it was checked                                                                                                                            |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Base image URLs resolve; sizes as tabled above                                                                                                                                                                  | HTTP HEAD against `cloud.debian.org`                                                                                                          |
-| `SHA512SUMS` format is `<hash>␠␠<filename>` and lists the genericcloud qcow2                                                                                                                                    | Fetched and parsed                                                                                                                            |
-| Every package in `user-data.yaml` exists in bookworm                                                                                                                                                            | Queried the Debian source index                                                                                                               |
-| All five scripts are syntactically valid bash                                                                                                                                                                   | `bash -n`                                                                                                                                     |
-| All three cloud-init YAML files parse                                                                                                                                                                           | YAML 1.2 parser                                                                                                                               |
-| The three shell scripts embedded in `user-data.yaml` parse                                                                                                                                                      | Extracted, then `bash -n`                                                                                                                     |
-| `--ssh-key` injection produces valid YAML attaching the key to both accounts                                                                                                                                    | Ran the awk, re-parsed the result                                                                                                             |
-| Seed ISO builds, is labelled `CIDATA`, and carries **lowercase** `user-data`, `meta-data`, `network-config`                                                                                                     | Built a real ISO with `hdiutil`, then read the ISO9660 primary and Joliet volume descriptors directly                                         |
-| aarch64 pflash padding yields exactly 67,108,864 bytes with the firmware intact at offset 0 and zero padding after                                                                                              | Ran it on a 2 MiB stand-in, compared hashes, counted non-zero bytes in the tail                                                               |
-| `--dry-run` on all four scripts writes nothing and exits 0                                                                                                                                                      | Executed                                                                                                                                      |
-| Bad-arch, unknown-flag and missing-image paths produce a legible message and a non-zero exit                                                                                                                    | Executed each                                                                                                                                 |
-| Missing `qemu-img`, missing QEMU and missing aarch64 firmware stop a real run with install instructions, but only warn under `--dry-run`, so the full plan still prints on a machine without any of the tooling | Executed on a host that genuinely has none of it                                                                                              |
-| All seven `--smoke` outcomes (OK, DEGRADED, DEGRADED+`--strict`, FAIL, unrecognised verdict, QEMU died, timeout) return the documented exit codes and leave no orphan processes                                 | Executed against a stand-in QEMU that writes a synthetic serial log                                                                           |
-| `clean.sh` keeps `vm/.cache/` by default, removes it with `--all`, and refuses a `vm/out` symlinked outside the repository or a repository that is not SairiOS                                                  | Executed, including the symlink-escape attempt                                                                                                |
-| `sairios-firstboot-check` renders its sections, counts correctly and selects a verdict                                                                                                                          | Executed on macOS with paths redirected. Every Linux-specific probe correctly reported failure there, which says nothing about a Debian guest |
+| Claim                                                                                                                                                                                                                                               | How it was checked                                                                                                                            |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Base image URLs resolve; sizes as tabled above                                                                                                                                                                                                      | HTTP HEAD against `cloud.debian.org`                                                                                                          |
+| `SHA512SUMS` format is `<hash>␠␠<filename>` and lists the genericcloud qcow2                                                                                                                                                                        | Fetched and parsed                                                                                                                            |
+| Every package in `user-data.yaml` exists in bookworm                                                                                                                                                                                                | Queried the Debian source index                                                                                                               |
+| The four scripts in `vm/qemu/` and `os/session/sairios-session.sh` are syntactically valid bash                                                                                                                                                     | `bash -n`                                                                                                                                     |
+| All three cloud-init YAML files parse                                                                                                                                                                                                               | YAML 1.2 parser                                                                                                                               |
+| The four shell scripts embedded in `user-data.yaml` parse                                                                                                                                                                                           | Extracted, then `bash -n`                                                                                                                     |
+| `--ssh-key` injection produces valid YAML attaching the key to both accounts                                                                                                                                                                        | Ran the awk, re-parsed the result                                                                                                             |
+| Seed ISO builds, is labelled `CIDATA`, and carries **lowercase** `user-data`, `meta-data`, `network-config`                                                                                                                                         | Built a real ISO with `hdiutil`, then read the ISO9660 primary and Joliet volume descriptors directly                                         |
+| aarch64 pflash padding yields exactly 67,108,864 bytes with the firmware intact at offset 0 and zero padding after                                                                                                                                  | Ran it on a 2 MiB stand-in, compared hashes, counted non-zero bytes in the tail                                                               |
+| `--dry-run` on all four `vm/qemu/` scripts writes nothing and exits 0, once `vm/out/` holds a disk and a seed for that architecture                                                                                                                 | Executed                                                                                                                                      |
+| Bad-arch, unknown-flag and missing-image paths produce a legible message and a non-zero exit. The missing-image check is not relaxed by `--dry-run`: `run-vm.sh` and `run-vm-headless.sh` stop, dry run or not, when `vm/out/` has no disk and seed | Executed each                                                                                                                                 |
+| Missing `qemu-img`, missing QEMU and missing aarch64 firmware stop a real run with install instructions, but only warn under `--dry-run`, so the full plan still prints on a machine without any of the tooling                                     | Executed on a host that genuinely has none of it                                                                                              |
+| All seven `--smoke` outcomes (OK, DEGRADED, DEGRADED+`--strict`, FAIL, unrecognised verdict, QEMU died, timeout) return the documented exit codes and leave no orphan processes                                                                     | Executed against a stand-in QEMU that writes a synthetic serial log                                                                           |
+| `clean.sh` keeps `vm/.cache/` by default, removes it with `--all`, and refuses a `vm/out` symlinked outside the repository or a repository that is not SairiOS                                                                                      | Executed, including the symlink-escape attempt                                                                                                |
+| `sairios-firstboot-check` renders its sections, counts correctly and selects a verdict                                                                                                                                                              | Executed on macOS with paths redirected. Every Linux-specific probe correctly reported failure there, which says nothing about a Debian guest |
 
 The `CIDATA` and pflash findings are worth singling out, because both are silent-failure
 modes. An ISO whose filenames got upper-cased boots to a stock Debian with no SairiOS and
@@ -209,9 +209,13 @@ installed at all; steps 4 and 5 need QEMU.
 # 1. No network, no writes. Prints a plan and exits 0 even with no QEMU on the
 #    machine, warning about what a real run would need. Run this first, anywhere.
 ./vm/qemu/build-image.sh --dry-run
+./vm/qemu/clean.sh --dry-run
+
+# 1b. The same for the two boot scripts, but these check for the disk and the seed
+#     before anything else and stop when they are absent, dry run or not. Run them
+#     after step 4.
 ./vm/qemu/run-vm.sh --dry-run
 ./vm/qemu/run-vm-headless.sh --smoke --dry-run
-./vm/qemu/clean.sh --dry-run
 
 # 2. Lint. Not installed on the authoring host, so this has never run.
 shellcheck vm/qemu/*.sh
@@ -228,8 +232,9 @@ cloud-init schema --config-file vm/cloud-init/user-data.yaml
 
 What correct output looks like:
 
-- **Step 1** prints the full plan and the full `qemu` command line, creates no files, and
-  exits 0. `git status` is unchanged afterwards.
+- **Step 1** prints the full build plan, creates no files, and exits 0. `git status` is
+  unchanged afterwards. **Step 1b** prints the full `qemu` command line the same way,
+  once step 4 has produced a disk and a seed to point it at.
 - **Step 2** is silent. Any output is a finding; these scripts have never been linted.
 - **Step 3** prints `Valid schema user-data.yaml`.
 - **Step 4** ends with the paths of `vm/out/sairios-<arch>.qcow2` and
@@ -239,6 +244,10 @@ What correct output looks like:
   `DEGRADED` is the correct result for a bare image, and the printed guest report should
   show `[ ok ]` for node, cage, cog, the DRM device, the `seat` group, the data
   directories and lingering, with warnings only about the absent product tree.
+  **Not today for node.** `user-data.yaml` refuses to trust the NodeSource signing key
+  until a maintainer pins its fingerprint, and no fingerprint has been pinned, so that
+  step aborts and the report says `[fail ] node is NOT installed`, which makes the verdict
+  `FAIL` and step 5 exit 1. Pin the fingerprint first; the file says where.
 
 If step 5 reports `FAIL`, the operating-system layer is broken and the guest report names
 which check failed. If it times out, read `vm/out/serial-<arch>.log`. Triage for every

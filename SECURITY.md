@@ -225,6 +225,13 @@ marketing.
 8. **No rate limiting or resource accounting** on the local services.
 9. **`node:sqlite` is an experimental Node API.** Its stability guarantees are
    weaker than the rest of the standard library.
+10. **A remembered decision cannot be revoked from the UI.** `GET /policies` shows
+    every remembered grant and `GET /audit` shows the decision log, but no
+    endpoint removes a grant once made, and nothing clears one when its context
+    is archived or deleted. Today the only way to undo one is to edit
+    `permission-policies.json` under `SAIRIOS_DATA_DIR` and restart the broker.
+    The boundary therefore gives visibility but not control, and a grant made
+    once persists until a human edits a file.
 
 ## Reporting scope
 

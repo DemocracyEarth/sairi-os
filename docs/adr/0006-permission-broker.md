@@ -96,8 +96,11 @@ user is not asked, because asking normalizes the request.
 When a capability is `ask`, the user gets four answers:
 
 1. **Allow once**: this action only. The next one asks again.
-2. **Allow for this context**: for the remainder of this context (ADR 0005). Scoped to
-   one piece of work and gone when that work is archived.
+2. **Allow for this context**: for every later action of this capability in this context
+   (ADR 0005). The broker stores it as a remembered decision keyed by capability, scope and
+   context id, and writes it to the policy file. It grants nothing to any other context,
+   but it does not expire: archiving or deleting the context leaves the entry in place. See
+   the Negative consequences.
 3. **Deny**: refuse this action. Ask again next time.
 4. **Deny and remember**: refuse and stop asking for this capability in this context.
 
@@ -110,8 +113,13 @@ Every privileged action, without exception:
 
 - is **schema-validated** before the broker considers it, with unknown capabilities,
   unknown fields and malformed arguments rejected outright;
-- is **logged** to an append-only audit record: capability, arguments, context, decision,
-  scope, outcome, timestamp;
+- is **logged** to an append-only audit record holding a record id, a timestamp, the context
+  id, the request id, the capability, the phase (proposed, auto-allowed, auto-denied, decided,
+  executed, failed, cancelled), a one-line summary and an optional detail. The decision, its
+  scope and the outcome are prose inside the summary rather than separate fields. The action's
+  arguments are deliberately absent: a payload is a file path, a URL or file contents, which
+  is untrusted or sensitive material that should not be copied into a log. The cost of that is
+  real, and it is legibility. The log shows that a file was written, not which file;
 - is **attributable to a context**, so "what did this piece of work touch?" is answerable;
 - is **visible to the user**, both as a prompt when policy requires and afterward in the
   context's activity log;
@@ -142,8 +150,8 @@ filesystem.
   does.
 - "What did this context do?" and "what was it allowed to do?" are both answerable from the
   audit log.
-- Grants expire with the work they were for, so authority does not accumulate silently over
-  a session.
+- Grants are scoped to one context, so saying yes for one piece of work grants nothing to
+  another.
 - Policy is data. Changing defaults, or shipping a stricter profile, does not mean changing
   the agent.
 - One chokepoint means one place to add rate limiting, anomaly detection or stricter
@@ -156,6 +164,12 @@ filesystem.
 - Prompt fatigue is a live risk even with context-scoped grants. If the design gets the
   frequency wrong, users will approve reflexively and the whole mechanism degrades to
   theater. This has to be measured, not assumed.
+- A context-scoped grant currently outlives its context. The broker keeps remembered decisions
+  in one list keyed by capability, scope and context id, persisted to a policy file, and
+  nothing removes an entry when the context is archived or deleted. Expiring a grant with the
+  work it belongs to is not implemented. An entry goes away only when a later decision at the
+  same scope replaces it, or when someone edits the policy file, so a grant given for finished
+  work still applies to any later action attributed to that context id.
 - The broker is on the path of everything privileged, so it is both a latency cost and a
   single point of failure.
 - Eleven capabilities is a coarse vocabulary. `network.fetch` does not distinguish a

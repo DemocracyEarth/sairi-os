@@ -1,20 +1,34 @@
-# Canonical Docker build-context exclude list for SairiOS.
+# Docker build-context exclude list for SairiOS. NOT IN FORCE WHERE IT SITS.
 #
 # HOW DOCKER RESOLVES THIS FILE
 #
 # All four Dockerfiles in this directory are built with the REPOSITORY ROOT as
-# the build context, because npm workspaces need the root package.json, the
-# lockfile and every workspace manifest. Docker therefore looks for
-# `<context>/.dockerignore`, which is the repository root, NOT this file.
+# the build context (`context: ..` in compose.yaml), because npm workspaces
+# need the root package.json, the lockfile and every workspace manifest. Docker
+# reads `<context>/.dockerignore`, which is the repository root. There is no
+# file there, and Docker never reads this one. For the builds documented in
+# docs/DOCKER.md, nothing below excludes anything.
 #
-# BuildKit additionally honours a per-Dockerfile ignore file named
-# `<path-to-dockerfile>.dockerignore`. To make this list take effect, copy it
-# next to each Dockerfile:
+# What that means in practice: the whole repository is sent to the daemon as
+# build context, `.env` and var/ and node_modules/ included. The Dockerfiles do
+# not `COPY . .`, so a repository-root `.env` does not reach an image layer,
+# but the directory-level copies (`COPY packages/shared ./packages/shared`, and
+# the same shape for each built workspace) take whatever sits inside those
+# directories: a host node_modules/, a stale dist/, a workspace-local .env or
+# key file. This file stops none of that today. Read the list below as a
+# statement of intent, not as a control.
 #
-#   for f in containers/*.Dockerfile; do cp containers/.dockerignore "$f.dockerignore"; done
+# TO MAKE IT EFFECTIVE, either:
 #
-# Without that step the build still works, it is just slower and ships a much
-# larger context. See docs/DOCKER.md.
+#   1. Put a `.dockerignore` at the repository root. That is the path Docker
+#      reads for these builds, and it works on every builder.
+#   2. Or add a per-Dockerfile ignore file named
+#      `<path-to-dockerfile>.dockerignore`, which BuildKit honours where it is
+#      supported:
+#
+#        for f in containers/*.Dockerfile; do cp containers/.dockerignore "$f.dockerignore"; done
+#
+# Neither exists in this repository right now.
 #
 # VERIFICATION STATUS: never exercised. Docker is not installed on the
 # authoring host.
@@ -78,8 +92,9 @@ vm/.cache/
 # ---------------------------------------------------------------------------
 # Secrets. `.env` holds provider credentials on some developers' machines.
 # Nothing in this project needs a credential inside a container: agent-bridge
-# runs in mock mode there. Excluded so a secret cannot reach an image layer
-# even by accident.
+# runs in mock mode there. Listed so a secret cannot reach an image layer even
+# by accident, which only becomes true once this list is in force. See the
+# header: it is not in force today.
 # ---------------------------------------------------------------------------
 .env
 .env.*

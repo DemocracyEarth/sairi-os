@@ -36,11 +36,22 @@ Rules of thumb, in order:
 - Reach for QEMU when the question is about the system rather than about a
   service.
 
-There are no `make` targets for Docker. The Makefile covers `setup dev test
-lint typecheck build vm-image vm-run vm-run-headless vm-clean doctor clean`,
-and Docker is driven directly with `docker compose` so that the boundary stays
-visible. If Docker had a `make` target next to `dev`, it would start to look
-like an alternative way to run SairiOS, which it is not.
+There are two `make` targets for Docker: `docker-up` runs `docker compose -f
+containers/compose.yaml up --build`, and `docker-down` runs the matching
+`down`. The rest of the Makefile covers `setup dev test test-watch lint
+typecheck format format-check build validate vm-image vm-image-dry-run vm-run
+vm-run-headless vm-clean vm-clean-all doctor clean clean-all`.
+
+Two things to know before using them. `docker-up` names no services, so it
+starts all four, `tool-sandbox` included; the commands below start only the
+three you usually want. Neither target passes `--project-directory .`, so
+`${...}` interpolation resolves against `containers/` rather than the
+repository root. Every default in the compose file is safe without a `.env`
+either way.
+
+Anything beyond starting and stopping everything is driven directly with
+`docker compose`. The two targets are a convenience, not a second way to run
+SairiOS: no image in this repository boots it.
 
 ## Commands
 
@@ -100,10 +111,15 @@ The build context is the repository root, because npm workspaces need the root
 at all. Docker reads `<context>/.dockerignore`, which is therefore the
 repository root and not `containers/.dockerignore`.
 
-`containers/.dockerignore` is the canonical list. BuildKit also honours a
-per-Dockerfile ignore file named `<dockerfile>.dockerignore`, which is what the
-one-time copy command above sets up. Skipping it does not break the build; it
-makes the context much larger and the builds slower.
+There is no `.dockerignore` at the repository root, so `containers/.dockerignore`
+is not in force as it sits: Docker never reads it, and it excludes nothing
+today. Two things would change that. Adding a `.dockerignore` at the repository
+root works on every builder. BuildKit also honours a per-Dockerfile ignore file
+named `<dockerfile>.dockerignore`, which is what the one-time copy command above
+sets up. Skipping both does not break the build; it makes the context much
+larger, the builds slower, and leaves every exclusion in that file inactive,
+secrets included. `containers/README.md` spells out what does and does not reach
+an image layer in that state.
 
 ## Threat model for tool sandboxing
 

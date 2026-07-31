@@ -33,7 +33,7 @@ Node version, the ports it expects to be free, and which optional tools it can f
 ## Getting started
 
 ```sh
-make setup   # install workspace dependencies and prepare ./var
+make setup   # npm install, copy .env.example to .env if absent, then run doctor
 make dev     # start context-service, agent-bridge, permission-broker and the shell
 ```
 
@@ -41,9 +41,11 @@ make dev     # start context-service, agent-bridge, permission-broker and the sh
 no API key, no network access and no OpenClaw gateway. If your first run asks you for a
 credential, that is a bug worth reporting.
 
-Copy `.env.example` to `.env` if you want to change ports, the data directory, the sandbox
-directory or the log level. Never commit a `.env` file and never put a real key, token or
-gateway secret in any file in this repository.
+`make setup` already created `.env` from `.env.example` unless you had one. Edit it if you
+want to change ports, the data directory, the sandbox directory or the log level. Neither
+`make setup` nor anything else in setup creates `./var`; the services create their data
+and sandbox directories when they first need them. Never commit a `.env` file and never
+put a real key, token or gateway secret in any file in this repository.
 
 Default local ports:
 
@@ -143,8 +145,14 @@ grant scopes of allow once, allow for this context, deny, or deny and remember. 
 unrestricted shell execution from the model. Agent file actions stay confined to
 `SAIRIOS_SANDBOX_DIR` (default `./var/sandbox`). Do not add a direct filesystem, process or
 network call from the agent path that skips the broker, and do not widen a default policy
-without a written justification. The broker is the only place a user can see and revoke what
-the system is allowed to do on their behalf.
+without a written justification. The broker is the only place a user can see what the system
+is allowed to do on their behalf: `GET /policies` returns the defaults plus every remembered
+decision, and `GET /audit` returns the decision log. Revocation is the gap. `POST
+/requests/:id/cancel` cancels a single pending request, and no endpoint removes a remembered
+decision once it has been made. Remembered decisions are written to
+`permission-policies.json` under `SAIRIOS_DATA_DIR`, so today the only way to undo one is to
+edit or delete that file and restart the broker. A revoke path belongs in the broker, next to
+the two read endpoints, and until it exists this invariant covers visibility but not control.
 
 ## Adding a SairiUI component
 

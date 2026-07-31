@@ -26,7 +26,7 @@ subsystems.
 - [x] Restricted markdown renderer that never emits HTML
 - [x] Three seeded demo contexts, one per type
 - [x] End-to-end test of the full flow in mock mode against the real services
-- [x] 198 tests, none requiring a credential or the network
+- [x] 205 tests, none requiring a credential or the network
 
 ### Built but NOT verified
 
@@ -53,6 +53,13 @@ subsystems.
 **Goal:** turn the three unverified items above into verified ones. Nothing new
 until what exists is real.
 
+0. **Pin the NodeSource signing key.** The image provisioning now refuses to
+   install Node until a maintainer fills in a fingerprint they verified out of
+   band, because fetching a key over TLS and immediately trusting it lets
+   whatever can answer for the download host choose what apt trusts. The pin is
+   a placeholder, so a freshly built image reports `node is NOT installed` and
+   the first-boot verdict is FAIL. Nothing else in this milestone can proceed
+   until this is done.
 1. **Boot the VM end to end.** Build the image, boot it, reach the SairiOS
    session, create a context, crystallize it, reboot, confirm it is still there.
    Record what actually happened, including what broke.
@@ -61,6 +68,11 @@ until what exists is real.
 3. **Build and run the containers.** Confirm the hardening directives do what
    the comments claim.
 4. **CI.** Run `make validate` plus a headless VM boot smoke test on every PR.
+5. **One palette, not two.** `os/branding/palette.css` and
+   `packages/ui-components/src/styles.css` both declare `--sairi-*` tokens, nothing
+   imports the former, and the nine tokens they share currently disagree on every
+   value. Pick which file is canonical and make the other derive from it, so the
+   login screen and the shell cannot drift apart.
 
 Exit criterion: the "Built but NOT verified" list is empty and every claim in
 the README has been demonstrated.
@@ -80,6 +92,10 @@ the README has been demonstrated.
   the template from what the runs taught you.
 - Real `network.fetch` behind an egress policy, with fetched content marked
   untrusted end to end.
+- **Revoking a permission.** A remembered grant currently has no expiry and no
+  removal path: nothing clears it when its context is archived, and there is no
+  endpoint to withdraw it. Visibility without control is only half a permission
+  system. This is the first thing to fix in the broker.
 
 ## Milestone 3 — isolation worth the name
 

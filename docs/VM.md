@@ -135,6 +135,15 @@ one.
 
 ## Triage
 
+### The report says `node is NOT installed`
+
+Expected on every image built today, and it makes the verdict `FAIL`. `user-data.yaml`
+compares the fetched NodeSource signing key against a pinned fingerprint before it trusts
+it, and the pin is still a placeholder, so the whole Node step aborts:
+`sairios: NodeSource step ABORTED: no verified key fingerprint is pinned`. The serial log
+carries that line during cloud-init. Pin a fingerprint you have verified out of band, in
+the block that says so in `vm/cloud-init/user-data.yaml`, then build a fresh image.
+
 ### QEMU exits immediately (smoke exit 3)
 
 Read `vm/out/qemu-<arch>.log`. QEMU's own errors go there and are usually specific:
@@ -289,7 +298,15 @@ Common causes:
   reports it explicitly.
 - **`node_modules` is missing.** The delivery instructions exclude it on purpose, because
   copying native modules from a macOS arm64 host to a Linux guest ships binaries for the
-  wrong platform. Run `npm ci --omit=dev` in `/opt/sairios` inside the guest.
+  wrong platform. Run a full `sudo npm ci` in `/opt/sairios` inside the guest.
+- **`node_modules` was installed with `--omit=dev`.** Same symptom, different cause, and
+  it looks like a sensible thing to have done. The shell unit's `ExecStart=` is
+  `npm run preview --workspace @sairios/shell`, which is `vite preview`, and `vite` is a
+  devDependency of the root `package.json`. With dev dependencies omitted there is no
+  `vite` to run, the unit fails at start, nothing listens on 7800, and the session waits
+  out its timeout and prints a banner. Re-run `npm ci` without the flag. The alternative
+  is to serve `apps/shell/dist` with something that is not a build tool, which is the
+  migration noted in the unit file; nothing does that today.
 - **The shell was never built.** No `apps/shell/dist`. Run `npm run build`.
 - **Ownership.** `/opt/sairios` must be `sairi:sairi`. A tree copied as root leaves the
   services unable to read it.

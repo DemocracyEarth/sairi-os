@@ -5,12 +5,22 @@ The graphical session for SairiOS v0: `cage` running `cog`, pointed at
 
 ## Files
 
-| File                 | Installed to                                  | Purpose                                                                      |
-| -------------------- | --------------------------------------------- | ---------------------------------------------------------------------------- |
-| `sairios-session.sh` | `/usr/local/bin/sairios-session`              | Checks the environment, waits for the shell port, execs `cage -- cog <url>`. |
-| `sairios.desktop`    | `/usr/share/wayland-sessions/sairios.desktop` | Makes SairiOS selectable in a display manager that already exists.           |
+| File                 | Where it lives on the machine                              | Purpose                                                                      |
+| -------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `sairios-session.sh` | `/opt/sairios/os/session/`, as delivered. Not installed.   | Checks the environment, waits for the shell port, execs `cage -- cog <url>`. |
+| `sairios.desktop`    | `/usr/share/wayland-sessions/`, installed by provisioning. | Makes SairiOS selectable in a display manager that already exists.           |
 
 The system unit that starts this on tty1 is `os/systemd/sairios-session.service`.
+
+**The launcher is not installed anywhere.** The unit's `ExecStart=` is
+`/usr/local/bin/sairios-session`, and in a VM built from `vm/` that path holds a shim
+written by cloud-init, not a copy of `sairios-session.sh`. The shim execs
+`/opt/sairios/os/session/sairios-session.sh` when that file is executable, and otherwise
+prints a banner on the console saying the operating-system layer provisioned but the
+product tree is missing. `sairios-provision` deliberately leaves the shim alone rather
+than overwriting it from the tree: on a machine with no tree, the shim is the only thing
+standing between the user and a black screen. Editing `sairios-session.sh` therefore takes
+effect as soon as the file is delivered, with no install step.
 
 ## Why cage and cog
 

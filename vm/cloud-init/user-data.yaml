@@ -10,6 +10,8 @@
 # What this does, in order:
 #   1. Creates the unprivileged session user `sairi` and a locked maintenance account.
 #   2. Installs the graphical session stack (cage + cog + seatd) and Node.js 22 LTS.
+#      The Node step refuses to run until a maintainer pins the NodeSource signing key
+#      fingerprint in this file. Until then it aborts and Node is not installed.
 #   3. Creates /opt/sairios and the data directories with the right ownership.
 #   4. Installs the systemd units from /opt/sairios/os, if the product tree is present.
 #   5. Writes a legible self-check report to /var/log/sairios-firstboot.log and to the
@@ -50,6 +52,27 @@ locale: en_US.UTF-8
 timezone: UTC
 
 # ---------------------------------------------------------------------------
+# Groups
+# ---------------------------------------------------------------------------
+# This key is handled by the same cloud-init module as `users:` below, and groups are
+# created before users are. A group named here therefore exists by the time `sairi`
+# references it. Creating these in `runcmd` alone would be too late: runcmd runs in a
+# later stage than the users-groups module, and assigning a user to a group that does
+# not exist yet fails.
+#
+#   seat    named in sairios-session.service SupplementaryGroups=, and systemd refuses
+#           to start a unit that names a missing group. Debian's seatd package does not
+#           reliably create a group under this exact name.
+#   render  the GPU render node group. Usually present already on Debian, listed here
+#           because "usually" is not a guarantee and the failure it would cause is the
+#           same one: a user assigned to a group that does not exist.
+#
+# video, input and audio are created by the base system and are not listed here.
+groups:
+  - seat
+  - render
+
+# ---------------------------------------------------------------------------
 # Accounts
 # ---------------------------------------------------------------------------
 # Two accounts, and a deliberate asymmetry between them.
@@ -77,10 +100,12 @@ users:
     primary_group: sairi
     # video + render: DRM master and the GPU render node, which cage needs.
     # input:          /dev/input/event*, which cage needs for keyboard and pointer.
-    # seat:           seatd's control socket. Created unconditionally in runcmd below,
-    #                 because sairios-session.service names it in SupplementaryGroups=
-    #                 and systemd refuses to start a unit that names a missing group.
+    # seat:           seatd's control socket. sairios-session.service names it in
+    #                 SupplementaryGroups= and systemd refuses to start a unit that
+    #                 names a missing group.
     # audio:          PipeWire device access, for when audio is wired up.
+    # seat and render are created by the top-level `groups:` key above, which runs with
+    # this module. The other three come from the base system.
     groups: [video, render, input, seat, audio]
     shell: /bin/bash
     # No password hash, and the account is locked against password authentication.
@@ -215,8 +240,11 @@ write_files:
   # /usr/local/sbin/sairios-provision
   #
   # Installs the SairiOS OS-integration files from the product tree into system paths.
-  # Runs on every boot, so that delivering /opt/sairios after the image was built and
-  # rebooting is enough to wire the machine up. Idempotent by construction.
+  # Idempotent by construction, but it does NOT run on every boot. The only automatic
+  # invocation is from `runcmd` below, and cloud-init runs runcmd once per instance, on
+  # first boot. Nothing re-runs it afterwards, so delivering /opt/sairios to a machine
+  # that is already provisioned and rebooting is not enough. Run it by hand:
+  #     sudo /usr/local/sbin/sairios-provision && sudo reboot
   # -------------------------------------------------------------------------
   - path: /etc/sairios/staging/sairios-provision
     owner: root:root
@@ -659,12 +687,12 @@ runcmd:
   - [sh, -c, 'echo "sairios: provisioning started $(date -u -Is)"']
 
   # -- groups ------------------------------------------------------------
-  # `seat` is named in sairios-session.service SupplementaryGroups=. Debian's seatd
-  # package does not reliably create a group under that exact name, and systemd refuses
-  # to start a unit that names a group which does not exist. Creating it unconditionally
-  # (-f makes this a no-op if it already exists) removes a failure mode that otherwise
-  # presents as a session that never starts, with a message about a group nobody has
-  # heard of. Adding sairi to it a second time is harmless.
+  # `seat` and `render` were already created by the top-level `groups:` key, which runs
+  # with the users-groups module and therefore before `sairi` is given membership of
+  # them. These two calls are no-ops on a machine that provisioned normally (-f makes
+  # `groupadd` succeed when the group exists) and are kept so that running this section
+  # by hand on a repaired machine still works. The usermod line is the one that matters
+  # here: it also covers video, input and audio.
   - [groupadd, -f, seat]
   - [groupadd, -f, render]
   - [sh, -c, 'usermod -aG seat,render,video,input,audio sairi || true']
@@ -677,20 +705,84 @@ runcmd:
   # (Node >= 22.5). The key is fetched and dearmoured into a dedicated keyring rather
   # than piping NodeSource's setup script into a root shell, so that what is trusted and
   # what is executed are both visible here.
+  #
+  # The fetched key is checked against a pinned fingerprint before anything trusts it.
+  # Fetching a key over TLS and immediately trusting it means that whatever can answer
+  # for deb.nodesource.com - a compromised mirror, an interception proxy, a bad DNS
+  # answer - chooses the key that apt trusts, and the next `apt-get install` runs that
+  # party's maintainer scripts as root. The pin is the only thing that turns "we got a
+  # key" into "we got the key".
+  #
+  # The whole step is one `sh -c` so that a failed check skips the repository file, the
+  # `apt-get update` and the install together. cloud-init's runcmd has no `set -e` of
+  # its own, so splitting these across entries would let an abort be ignored.
   - [sh, -c, 'install -d -m 0755 /etc/apt/keyrings']
-  - [
-      sh,
-      -c,
-      "curl -fsSL --proto '=https' --tlsv1.2 --retry 3 https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg",
-    ]
-  - [sh, -c, 'chmod 0644 /etc/apt/keyrings/nodesource.gpg']
-  - [
-      sh,
-      -c,
-      'echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" > /etc/apt/sources.list.d/nodesource.list',
-    ]
-  - [sh, -c, 'apt-get update']
-  - [sh, -c, 'DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs']
+  - - sh
+    - -c
+    - |
+      set -eu
+
+      # #####################################################################
+      # #  A MAINTAINER MUST FILL THIS IN. IT IS NOT FILLED IN.             #
+      # #####################################################################
+      # Put the 40 hex characters of the NodeSource signing key fingerprint below,
+      # uppercase and unspaced. Obtain it from somewhere that is NOT this download:
+      # NodeSource's published documentation, a keyring on a machine you already trust,
+      # or the same fetch repeated from a different network, and compare. No value is
+      # written here because nobody working on this file has verified one, and an
+      # official-looking fingerprint that was never checked is worse than an empty one.
+      #
+      # Until it is filled in this step aborts, no NodeSource repository is configured,
+      # and the machine boots without Node. The first-boot self-check then reports
+      # `node is NOT installed`, which is the intended and legible failure.
+      NODESOURCE_KEY_FPR='FILL_IN_VERIFIED_NODESOURCE_KEY_FINGERPRINT'
+
+      abort() {
+        printf 'sairios: NodeSource step ABORTED: %s\n' "$*" >&2
+        printf 'sairios: Node.js was NOT installed; see vm/cloud-init/user-data.yaml\n' >&2
+        exit 1
+      }
+
+      case "$NODESOURCE_KEY_FPR" in
+      *[!0-9A-F]* | '') abort "no verified key fingerprint is pinned in user-data.yaml" ;;
+      esac
+      [ "${#NODESOURCE_KEY_FPR}" -eq 40 ] ||
+        abort "the pinned fingerprint is not 40 hex characters"
+
+      tmp="$(mktemp -d)"
+      trap 'rm -rf "$tmp"' EXIT
+      # A private GNUPGHOME: --show-keys still wants a home directory, and this keeps
+      # the check from touching root's keyring.
+      GNUPGHOME="$tmp/gnupg"
+      export GNUPGHOME
+      mkdir -m 0700 "$GNUPGHOME"
+
+      curl -fsSL --proto '=https' --tlsv1.2 --retry 3 \
+        https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+        -o "$tmp/nodesource.asc" || abort "could not fetch the signing key"
+
+      gpg --dearmor -o "$tmp/nodesource.gpg" "$tmp/nodesource.asc" ||
+        abort "the fetched file is not a usable OpenPGP key"
+
+      # --with-colons is the machine-readable form; field 10 of the fpr record is the
+      # fingerprint. Parsing gpg's human output instead would depend on its locale and
+      # on a layout that has changed between versions.
+      got="$(gpg --show-keys --with-colons "$tmp/nodesource.gpg" |
+        awk -F: '$1 == "fpr" { print $10; exit }')"
+      [ -n "$got" ] || abort "could not read a fingerprint from the fetched key"
+
+      if [ "$got" != "$NODESOURCE_KEY_FPR" ]; then
+        abort "fingerprint mismatch: fetched $got, pinned $NODESOURCE_KEY_FPR"
+      fi
+
+      install -m 0644 -o root -g root \
+        "$tmp/nodesource.gpg" /etc/apt/keyrings/nodesource.gpg
+      printf '%s\n' \
+        'deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main' \
+        >/etc/apt/sources.list.d/nodesource.list
+
+      apt-get update
+      DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
 
   # -- filesystem layout -------------------------------------------------
   # /opt/sairios is root-owned and world-readable, NOT writable by sairi.
@@ -771,6 +863,9 @@ runcmd:
   - [loginctl, enable-linger, sairi]
 
   # -- wire up whatever product tree exists -------------------------------
+  # First boot only, because runcmd itself is per-instance. On a fresh image
+  # /opt/sairios is empty, so this logs that fact and exits 0. A tree delivered later
+  # needs the script run by hand; see the comment above the script.
   - [sh, -c, '/usr/local/sbin/sairios-provision || true']
 
   # -- boot into the graphical session ------------------------------------

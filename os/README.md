@@ -37,9 +37,9 @@ would be a layering violation.
 | `systemd/sairios-permission-broker.service` | user unit, capability broker           | `~/.config/systemd/user/`                   |
 | `systemd/sairios-shell.service`             | user unit, shell HTTP server           | `~/.config/systemd/user/`                   |
 | `systemd/sairios-session.service`           | **system** unit, kiosk session on a VT | `/etc/systemd/system/`                      |
-| `session/sairios-session.sh`                | session launcher (`cage` + `cog`)      | `/usr/local/bin/sairios-session`            |
+| `session/sairios-session.sh`                | session launcher (`cage` + `cog`)      | not installed; run in place from the tree   |
 | `session/sairios.desktop`                   | Wayland session entry                  | `/usr/share/wayland-sessions/`              |
-| `branding/palette.css`                      | design tokens                          | consumed by the shell and by session chrome |
+| `branding/palette.css`                      | design tokens                          | session chrome reference; unused by product |
 | `branding/sairios-mark.svg`                 | monochrome mark                        | session chrome, docs, favicon source        |
 | `branding/sairios-wallpaper.svg`            | 16:9 wallpaper                         | session background                          |
 
@@ -47,6 +47,21 @@ In a VM built from `vm/`, these are installed system-wide by
 `/usr/local/sbin/sairios-provision` (written by cloud-init): the four user units go to
 `/etc/systemd/user/`, which is the system-wide equivalent of `~/.config/systemd/user/`
 and has identical semantics. The unit text is the same either way.
+
+The session launcher is the exception, and `sairios-provision` says so in a comment.
+`sairios-session.service` starts `/usr/local/bin/sairios-session`, which cloud-init writes
+as a shim: it execs `/opt/sairios/os/session/sairios-session.sh` if that file is
+executable, and prints a legible banner on the console if it is not. Provisioning does not
+overwrite the shim with the tree's launcher, because on a machine whose product tree is
+missing the shim is the only thing that explains the missing tree instead of showing a
+black screen.
+
+`branding/palette.css` is the reference for OS-level and session chrome. No product code
+imports it. The shell renders with its own copy of the tokens in
+`packages/ui-components/src/styles.css`, and the two are kept in step by hand. They are
+not in step today: nine tokens are declared in both files and all nine differ, including
+`--sairi-surface` (`#f4f1ea` here, `#fbfaf8` there) and `--sairi-accent` (`#3a6ea5` here,
+`#2f5d8c` there). The full list is in `os/branding/README.md`.
 
 ## Design decisions worth stating once
 

@@ -531,3 +531,46 @@ describe('sandbox containment', () => {
     expect(result.ok).toBe(false);
   });
 });
+
+describe('resource limits', () => {
+  it('caps how much an agent can write into the sandbox', async () => {
+    const { broker } = await makeBroker();
+    const proposed = await broker.propose({
+      contextId: CONTEXT,
+      capability: 'files.write',
+      reason: 'fill the disk',
+      // One byte over the documented 512 kB cap.
+      payload: { path: 'big.txt', content: 'a'.repeat(512 * 1024 + 1) },
+    });
+    if (!proposed.ok) throw new Error('expected success');
+    await broker.decide(proposed.value.id, { decision: 'allow', scope: 'once', remember: false });
+    const executed = await broker.execute(proposed.value.id);
+    if (!executed.ok) throw new Error('expected a recorded failure');
+    expect(executed.value.status).toBe('failed');
+    expect(executed.value.error?.code).toBe('invalid_payload');
+  });
+
+  it('rejects a payload that is not the shape the capability expects', async () => {
+    const { broker } = await makeBroker();
+    for (const payload of [undefined, {}, { path: 123 }, { path: '' }, 'a string', []]) {
+      const proposed = await broker.propose({
+        contextId: CONTEXT,
+        capability: 'files.read',
+        reason: 'x',
+        payload,
+      });
+      if (!proposed.ok) throw new Error('expected success');
+      await broker.decide(proposed.value.id, { decision: 'allow', scope: 'once', remember: false });
+      const executed = await broker.execute(proposed.value.id);
+      if (!executed.ok) throw new Error('expected a recorded failure');
+      expect(executed.value.status, `payload ${JSON.stringify(payload)}`).toBe('failed');
+    }
+  });
+
+  it('refuses an over-long path outright', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'sairios-sandbox-'));
+    const sandbox = new Sandbox({ root: dir });
+    const result = await sandbox.resolvePath(CONTEXT, 'a'.repeat(2000));
+    expect(result.ok).toBe(false);
+  });
+});

@@ -113,17 +113,38 @@ ssh -p 22022 debian@127.0.0.1 '
   sudo reboot'
 ```
 
-`sairios-provision` is idempotent and runs on every boot. It installs the four user units
-into `/etc/systemd/user/`, the session unit into `/etc/systemd/system/`, the desktop entry
-and the branding assets, then enables everything. On a machine with no product tree it
-logs that fact and exits 0, because "provisioned but empty" is a valid state and should
-not look like a failure.
+`sairios-provision` installs the four user units into `/etc/systemd/user/`, the session
+unit into `/etc/systemd/system/`, the desktop entry and the branding assets, then enables
+everything. On a machine with no product tree it logs that fact and exits 0, because
+"provisioned but empty" is a valid state and should not look like a failure.
+
+It is idempotent, but it does **not** run on every boot: the only automatic invocation is
+from cloud-init's `runcmd`, which runs once per instance, on first boot. That first run
+happens on a bare image and finds nothing. So delivering a tree and rebooting is not
+enough, and running the script by hand is not an optional flourish in the command above:
+it is the step that installs the units. The same applies to any later delivery.
 
 Note that `node_modules` is excluded above, so `/opt/sairios` needs its dependencies
-installed in the guest (`npm ci --omit=dev`) before the services can start. Copying
-`node_modules` from an arm64 macOS host to an amd64 Linux guest would ship native
-binaries for the wrong platform, which fails in a confusing way. Let the guest resolve
-its own.
+installed in the guest before the services can start. Copying `node_modules` from an arm64
+macOS host to an amd64 Linux guest would ship native binaries for the wrong platform,
+which fails in a confusing way. Let the guest resolve its own:
+
+```sh
+ssh -p 22022 debian@127.0.0.1 'cd /opt/sairios && sudo npm ci'
+```
+
+**A full `npm ci`, not `npm ci --omit=dev`.** Omitting dev dependencies is the obvious
+thing to do on a machine that only has to run the thing, and here it produces a blank
+kiosk. The `ExecStart=` of `os/systemd/sairios-shell.service` is
+`npm run preview --workspace @sairios/shell`, which is `vite preview`, and `vite` is a
+devDependency of the root `package.json`. Omit it and the shell unit has no command to
+run, so it never starts, nothing ever listens on 7800, and the session sits through its
+wait and prints its "shell never answered" banner instead.
+
+Building on the host and delivering `apps/shell/dist` does not remove the need: the built
+bundle is already delivered by the `rsync` above, and what the guest is missing is the
+server, not the bundle. Serving `dist/` with something that has no dev dependency is the
+migration the unit file describes; nothing does that today.
 
 ## Reading the boot report
 
@@ -147,16 +168,16 @@ conflating the two would make the smoke test either useless or permanently red.
 Never executed. The authoring host was macOS on arm64 with no QEMU, no Docker and no
 cloud-init, so none of this has been booted.
 
-| Item                                                   | Status                                                                                                                                                                                                                                                                               |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| YAML parses                                            | **Verified.** All three files parse with a YAML 1.2 parser.                                                                                                                                                                                                                          |
-| Embedded shell scripts parse                           | **Verified.** All three pass `bash -n`.                                                                                                                                                                                                                                              |
-| `sairios-firstboot-check` logic executed               | **Partially verified.** Run on the macOS authoring host with paths redirected. Section rendering, counter arithmetic and verdict selection are correct. Every Linux-specific probe reported failure there, which is the right answer on macOS and says nothing about a Debian guest. |
-| Package names exist in Debian 12                       | **Verified against the archive on 2026-07-31.** cage 0.1.4-4, cog 0.16.1-1, seatd 0.7.0-6, pipewire 0.3.65-3+deb12u1, wireplumber 0.4.13-1, fonts-inter, fonts-jetbrains-mono, fonts-liberation2. Presence in the archive is not the same as installing cleanly together.            |
-| `cloud-init schema` validation                         | **Not run.** cloud-init is not installed on the authoring host.                                                                                                                                                                                                                      |
-| Booted in a VM                                         | **Not run.** No QEMU.                                                                                                                                                                                                                                                                |
-| NodeSource repository reachable and signed as expected | **Not run.**                                                                                                                                                                                                                                                                         |
-| Seed ISO built and detected by cloud-init              | **Not run.**                                                                                                                                                                                                                                                                         |
+| Item                                                   | Status                                                                                                                                                                                                                                                                                                  |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| YAML parses                                            | **Verified.** All three files parse with a YAML 1.2 parser.                                                                                                                                                                                                                                             |
+| Embedded shell scripts parse                           | **Verified.** All four pass `bash -n`: the three in `write_files`, and the NodeSource step in `runcmd`, which also passes `sh -n`.                                                                                                                                                                      |
+| `sairios-firstboot-check` logic executed               | **Partially verified.** Run on the macOS authoring host with paths redirected. Section rendering, counter arithmetic and verdict selection are correct. Every Linux-specific probe reported failure there, which is the right answer on macOS and says nothing about a Debian guest.                    |
+| Package names exist in Debian 12                       | **Verified against the archive on 2026-07-31.** cage 0.1.4-4, cog 0.16.1-1, seatd 0.7.0-6, pipewire 0.3.65-3+deb12u1, wireplumber 0.4.13-1, fonts-inter, fonts-jetbrains-mono, fonts-liberation2. Presence in the archive is not the same as installing cleanly together.                               |
+| `cloud-init schema` validation                         | **Not run.** cloud-init is not installed on the authoring host.                                                                                                                                                                                                                                         |
+| Booted in a VM                                         | **Not run.** No QEMU.                                                                                                                                                                                                                                                                                   |
+| NodeSource repository reachable and signed as expected | **Not run**, and it cannot be until a maintainer pins the signing key fingerprint. `user-data.yaml` compares the fetched key against a pinned value and aborts the Node step if it does not match; the pin is a placeholder, so on any machine booted today that step aborts and Node is not installed. |
+| Seed ISO built and detected by cloud-init              | **Not run.**                                                                                                                                                                                                                                                                                            |
 
 To verify on a machine that has the tools:
 

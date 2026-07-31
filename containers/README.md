@@ -27,7 +27,7 @@ a full system. The decision table is in `docs/DOCKER.md`.
 | `agent-bridge.Dockerfile`      | Image for `@sairios/agent-bridge` (port 7802).              |
 | `permission-broker.Dockerfile` | Image for `@sairios/permission-broker` (port 7803).         |
 | `tool-sandbox.Dockerfile`      | The agent tool execution sandbox. No ports.                 |
-| `.dockerignore`                | Canonical build-context exclude list. See the caveat below. |
+| `.dockerignore`                | Build-context exclude list Docker does not read. See below. |
 
 ## The compose services
 
@@ -160,16 +160,29 @@ The build context is the repository root, because npm workspaces need the root
 reads `<context>/.dockerignore`, which is the repository root, not
 `containers/.dockerignore`.
 
-`containers/.dockerignore` is the canonical list. To make BuildKit honour it,
-copy it next to each Dockerfile, which BuildKit resolves as
-`<dockerfile>.dockerignore`:
+There is no `.dockerignore` at the repository root, so `containers/.dockerignore`
+is not in force for any build described here. Docker never reads it. It is the
+list this project intends to apply, and it currently excludes nothing.
+
+That belongs in the posture above rather than in a footnote. The whole
+repository is uploaded to the daemon as build context, `.env` and `var/`
+included. The Dockerfiles do not `COPY . .`, so a repository-root `.env` does
+not reach an image layer, but the directory-level copies (`COPY packages/shared
+./packages/shared`, and the same shape for each built workspace) take whatever
+sits inside those directories: a host `node_modules/`, a stale `dist/`, a
+workspace-local `.env` or key file.
+
+Two things would make the list effective. Either add a `.dockerignore` at the
+repository root, which is the path Docker reads for these builds on every
+builder, or copy this one next to each Dockerfile, which BuildKit resolves as
+`<dockerfile>.dockerignore` where that is supported:
 
 ```sh
 for f in containers/*.Dockerfile; do cp containers/.dockerignore "$f.dockerignore"; done
 ```
 
-Without that step the builds still work. They are slower and the context is
-much larger.
+Without one of those, the builds still work. They are slower, the context is
+much larger, and none of the exclusions apply.
 
 ## Verification status
 

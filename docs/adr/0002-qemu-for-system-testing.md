@@ -101,8 +101,13 @@ flag to build or run a mismatched pair, with a printed warning that it will run 
 
 ### Neutral
 
-- CI runs the headless target (`vm-run-headless`) with serial console output as the machine
-  readable signal. The interactive target exists for humans.
+- The machine readable signal is `vm/qemu/run-vm-headless.sh --smoke`, which redirects the
+  serial console to a log file, watches it for the guest's first-boot verdict, and exits 0 on
+  OK (or DEGRADED without `--strict`), 1 on FAIL, 2 when the timeout expires with no verdict,
+  and 3 when QEMU exits before the guest reports. The `vm-run-headless` target passes no
+  `--smoke`, so it gives the interactive serial console, which is for humans and never exits
+  on its own. There is no CI configuration in this repository, so neither mode runs
+  automatically anywhere yet.
 - The choice of QEMU does not constrain the eventual installer or the bare-metal story.
   Both are separate decisions.
 - Neither QEMU nor Docker is installed on the machine where this repository was scaffolded,

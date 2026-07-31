@@ -267,7 +267,10 @@ make vm-run             # boot it
 ```
 
 > **The VM image has never been built or booted.** The machine this repository
-> was scaffolded on had no QEMU installed. The scripts verify checksums, detect
+> was scaffolded on had no QEMU installed. It also will not install Node until a
+> maintainer pins the NodeSource signing key fingerprint in
+> `vm/cloud-init/user-data.yaml` — the provisioning fails closed rather than
+> trusting a key it just downloaded. The scripts verify checksums, detect
 > host acceleration (KVM, HVF, TCG fallback) and support `--dry-run`, but none of
 > that has been executed. [vm/README.md](vm/README.md) lists the exact commands
 > to verify it and what correct output looks like.
