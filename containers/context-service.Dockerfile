@@ -70,6 +70,12 @@ COPY services/context-service ./services/context-service
 
 # `tsc --build` follows TypeScript project references, so building this one
 # workspace also builds the three packages it depends on, in order.
+# The adaptive-ui-schema package precompiles its JSON Schema validator in its
+# OWN npm build script (see ADR 0009). `tsc --build` follows TypeScript project
+# references but never runs a referenced package's npm scripts, so without this
+# line dist/generated/sairi-ui-validator.js is missing and the service dies at
+# startup with ERR_MODULE_NOT_FOUND.
+RUN npm run build --workspace @sairios/adaptive-ui-schema
 RUN npm run build --workspace @sairios/context-service
 
 # Drop dev dependencies from the installed tree now that compilation is done.

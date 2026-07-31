@@ -223,7 +223,11 @@ services:
       # inside a container will not work; see the block comment above.
       SAIRIOS_AGENT_PROVIDER: 'mock'
       # Service-to-service addresses use compose DNS names on the internal
-      # network, not localhost.
+      # network, not localhost. These are read by packages/shared/src/env.ts as
+      # `contextServiceUrl` / `permissionBrokerUrl`, which are separate from
+      # SAIRIOS_BIND_HOST on purpose: bind host answers "where do I listen" and
+      # must be 0.0.0.0 in a container, while dialling 0.0.0.0 would reach this
+      # container's own loopback instead of the peer.
       SAIRIOS_CONTEXT_SERVICE_URL: 'http://context-service:7801'
       SAIRIOS_PERMISSION_BROKER_URL: 'http://permission-broker:7803'
       SAIRIOS_DATA_DIR: '/app/var'

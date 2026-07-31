@@ -26,7 +26,7 @@ WorkingDirectory=/opt/sairios
 Environment=NODE_ENV=production
 Environment=SAIRIOS_BIND_HOST=127.0.0.1
 Environment=SAIRIOS_PERMISSION_BROKER_PORT=7803
-Environment=SAIRIOS_DATA_DIR=/var/lib/sairios
+Environment=SAIRIOS_DATA_DIR=/var/lib/sairios/broker
 Environment=SAIRIOS_SANDBOX_DIR=/var/lib/sairios/sandbox
 EnvironmentFile=-%h/.config/sairios/env
 
@@ -49,11 +49,14 @@ ProtectSystem=strict
 # read something under $HOME, subject to policy. It may never write there.
 ProtectHome=read-only
 # Two writable paths and no others:
-#   audit/   the append-only decision log
+#   broker/  the append-only audit log (audit.log) and the remembered-policy
+#            file (permission-policies.json). The broker writes both directly
+#            in SAIRIOS_DATA_DIR, so the data dir IS this directory - pointing
+#            it at /var/lib/sairios would put them on the read-only root.
 #   sandbox/ the ONLY directory agent-proposed file writes may ever touch
 # Note that files.write and files.delete confinement is enforced in the broker's own code
 # by path normalisation. This directive is the second, independent layer.
-ReadWritePaths=/var/lib/sairios/audit /var/lib/sairios/sandbox
+ReadWritePaths=/var/lib/sairios/broker /var/lib/sairios/sandbox
 PrivateDevices=yes
 # ProtectProc / ProcSubset are deliberately NOT set here. The process.list capability
 # (policy default: allow) has to be able to enumerate processes in /proc. Setting

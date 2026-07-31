@@ -65,6 +65,12 @@ COPY services/agent-bridge ./services/agent-bridge
 
 # `tsc --build` follows project references, so this also builds the three
 # workspace packages this service depends on.
+# The adaptive-ui-schema package precompiles its JSON Schema validator in its
+# OWN npm build script (see ADR 0009). `tsc --build` follows TypeScript project
+# references but never runs a referenced package's npm scripts, so without this
+# line dist/generated/sairi-ui-validator.js is missing and the service dies at
+# startup with ERR_MODULE_NOT_FOUND.
+RUN npm run build --workspace @sairios/adaptive-ui-schema
 RUN npm run build --workspace @sairios/agent-bridge
 
 RUN npm prune --omit=dev

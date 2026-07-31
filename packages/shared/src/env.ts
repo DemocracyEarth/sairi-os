@@ -22,6 +22,14 @@ export interface SairiEnv {
   dataDir: string;
   sandboxDir: string;
   storeDriver: StoreDriver;
+  /**
+   * Where to REACH the peer services, which is not the same question as where
+   * to listen. `bindHost` is often `0.0.0.0` (in a container, it must be), and
+   * dialling `0.0.0.0` reaches the caller's own loopback, not the peer. These
+   * default to loopback and are overridden per deployment.
+   */
+  contextServiceUrl: string;
+  permissionBrokerUrl: string;
   openclawGatewayUrl: string;
   openclawGatewayToken: string | undefined;
   logLevel: string;
@@ -37,14 +45,21 @@ export function readEnv(source: NodeJS.ProcessEnv = process.env): SairiEnv {
   const provider = source['SAIRIOS_AGENT_PROVIDER'];
   const driver = source['SAIRIOS_STORE_DRIVER'];
   const dataDir = resolve(source['SAIRIOS_DATA_DIR'] ?? './var');
+  const contextPort = num(source['SAIRIOS_CONTEXT_SERVICE_PORT'], 7801);
+  const brokerPort = num(source['SAIRIOS_PERMISSION_BROKER_PORT'], 7803);
 
   return {
     agentProvider: provider === 'openclaw' ? 'openclaw' : 'mock',
     bindHost: source['SAIRIOS_BIND_HOST'] ?? '127.0.0.1',
-    contextServicePort: num(source['SAIRIOS_CONTEXT_SERVICE_PORT'], 7801),
+    contextServicePort: contextPort,
     agentBridgePort: num(source['SAIRIOS_AGENT_BRIDGE_PORT'], 7802),
-    permissionBrokerPort: num(source['SAIRIOS_PERMISSION_BROKER_PORT'], 7803),
+    permissionBrokerPort: brokerPort,
     shellPort: num(source['SAIRIOS_SHELL_PORT'], 7800),
+    // An empty string is treated as unset, so a `.env` that lists the variable
+    // without a value still gets the loopback default.
+    contextServiceUrl: source['SAIRIOS_CONTEXT_SERVICE_URL'] || `http://127.0.0.1:${contextPort}`,
+    permissionBrokerUrl:
+      source['SAIRIOS_PERMISSION_BROKER_URL'] || `http://127.0.0.1:${brokerPort}`,
     dataDir,
     sandboxDir: resolve(source['SAIRIOS_SANDBOX_DIR'] ?? `${dataDir}/sandbox`),
     storeDriver: driver === 'sqlite' || driver === 'json' ? driver : 'auto',

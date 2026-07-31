@@ -18,7 +18,7 @@
     adds the dark variant.
 
     Palette source: os/branding/palette.css. These are literal values rather than
-    var(--sairi-*) references because a wallpaper is rasterised outside any document
+    CSS custom property references because a wallpaper is rasterised outside any document
     that would define those variables.
   -->
   <style>

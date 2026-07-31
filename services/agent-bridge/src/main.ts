@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 import { createLogger } from '@sairios/shared';
-import { readEnv, startupChecks } from '@sairios/shared/node';
+import { attachListenDiagnostics, readEnv, startupChecks } from '@sairios/shared/node';
 import { AgentBridge } from './bridge.js';
 import { HttpBrokerClient, HttpContextClient } from './clients.js';
 import { MockAgentProvider } from './providers/mock.js';
@@ -24,8 +24,8 @@ const provider: AgentProvider =
 
 const bridge = new AgentBridge({
   provider,
-  broker: new HttpBrokerClient(`http://${env.bindHost}:${env.permissionBrokerPort}`),
-  contexts: new HttpContextClient(`http://${env.bindHost}:${env.contextServicePort}`),
+  broker: new HttpBrokerClient(env.permissionBrokerUrl),
+  contexts: new HttpContextClient(env.contextServiceUrl),
   logger: log,
 });
 
@@ -43,6 +43,13 @@ for (const check of startupChecks(env)) {
 }
 
 const server = createAgentBridgeServer({ bridge, env, logger: log });
+
+attachListenDiagnostics(server, {
+  service: 'agent-bridge',
+  host: env.bindHost,
+  port: env.agentBridgePort,
+  onFatal: (message) => log.error(message),
+});
 
 server.listen(env.agentBridgePort, env.bindHost, () => {
   log.info('agent bridge listening', {

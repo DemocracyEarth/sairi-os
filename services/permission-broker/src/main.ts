@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { createLogger } from '@sairios/shared';
-import { readEnv, startupChecks } from '@sairios/shared/node';
+import { attachListenDiagnostics, readEnv, startupChecks } from '@sairios/shared/node';
 import { FileAuditLog } from './audit.js';
 import { PermissionBroker } from './broker.js';
 import { createPermissionBrokerServer } from './server.js';
@@ -24,6 +24,13 @@ for (const check of startupChecks(env)) {
 }
 
 const server = createPermissionBrokerServer({ broker, env, logger: log });
+
+attachListenDiagnostics(server, {
+  service: 'permission-broker',
+  host: env.bindHost,
+  port: env.permissionBrokerPort,
+  onFatal: (message) => log.error(message),
+});
 
 server.listen(env.permissionBrokerPort, env.bindHost, () => {
   log.info('permission broker listening', {

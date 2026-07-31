@@ -1,5 +1,5 @@
 import { createLogger } from '@sairios/shared';
-import { readEnv, startupChecks } from '@sairios/shared/node';
+import { attachListenDiagnostics, readEnv, startupChecks } from '@sairios/shared/node';
 import { demoContexts } from './seeds.js';
 import { createContextServiceServer } from './server.js';
 import { ContextService } from './service.js';
@@ -28,6 +28,13 @@ for (const check of startupChecks(env)) {
 }
 
 const server = createContextServiceServer({ service, store, env, logger: log });
+
+attachListenDiagnostics(server, {
+  service: 'context-service',
+  host: env.bindHost,
+  port: env.contextServicePort,
+  onFatal: (message) => log.error(message),
+});
 
 server.listen(env.contextServicePort, env.bindHost, () => {
   log.info('context service listening', {

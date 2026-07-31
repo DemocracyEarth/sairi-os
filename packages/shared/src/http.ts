@@ -90,3 +90,41 @@ export function applyDevCors(
 export function loopbackOrigins(ports: readonly number[]): string[] {
   return ports.flatMap((p) => [`http://127.0.0.1:${p}`, `http://localhost:${p}`]);
 }
+
+/**
+ * Turns a failed `listen` into a sentence instead of a stack trace.
+ *
+ * An unhandled EADDRINUSE prints a Node trace that says nothing about the real
+ * problem, which is almost always a previous run still holding the port. These
+ * services are started by `make dev`, by systemd and by Docker, so the
+ * explanation belongs with the server rather than in one launcher.
+ */
+export function attachListenDiagnostics(
+  server: { on(event: 'error', listener: (error: NodeJS.ErrnoException) => void): unknown },
+  options: { service: string; host: string; port: number; onFatal?: (message: string) => void },
+): void {
+  server.on('error', (error: NodeJS.ErrnoException) => {
+    const { service, host, port } = options;
+    let message: string;
+    switch (error.code) {
+      case 'EADDRINUSE':
+        message =
+          `${service} cannot start: ${host}:${port} is already in use. ` +
+          `Another SairiOS instance is probably running. Find it with ` +
+          `\`lsof -nP -iTCP:${port} -sTCP:LISTEN\`, or choose another port in .env.`;
+        break;
+      case 'EACCES':
+        message =
+          `${service} cannot start: permission denied binding ${host}:${port}. ` +
+          `Ports below 1024 need privileges SairiOS deliberately does not take.`;
+        break;
+      case 'EADDRNOTAVAIL':
+        message = `${service} cannot start: ${host} is not an address on this machine.`;
+        break;
+      default:
+        message = `${service} cannot start: ${error.message}`;
+    }
+    (options.onFatal ?? ((m: string) => process.stderr.write(`${m}\n`)))(message);
+    process.exit(1);
+  });
+}

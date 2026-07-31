@@ -247,6 +247,30 @@ write_files:
         exit 0
       fi
 
+      # This script runs as root and installs systemd units from $PREFIX. If a
+      # non-root account can write there it can choose what root installs, which
+      # is a local privilege escalation. Refuse rather than warn: a warning in a
+      # boot log is not a control.
+      for path in "$PREFIX" "$OS_DIR" "$OS_DIR/systemd"; do
+        [ -e "$path" ] || continue
+        owner="$(stat -c '%U' "$path")"
+        mode="$(stat -c '%a' "$path")"
+        if [ "$owner" != root ]; then
+          log "REFUSING: $path is owned by '$owner', not root."
+          log "  Fix with: sudo chown -R root:root $PREFIX"
+          exit 1
+        fi
+        # Mask 022 is group-write plus other-write. Arithmetic rather than a glob
+        # on the last digit, which would miss the group bit entirely. The base is
+        # written explicitly as 8#: a leading zero is octal in bash but decimal in
+        # some other shells, and the difference here is silent and wrong.
+        if [ "$(( 8#$mode & 8#22 ))" -ne 0 ]; then
+          log "REFUSING: $path is group- or world-writable (mode $mode)."
+          log "  Fix with: sudo chmod -R go-w $PREFIX"
+          exit 1
+        fi
+      done
+
       # --- user units -------------------------------------------------------
       # /etc/systemd/user is the system-wide equivalent of ~/.config/systemd/user and
       # has identical semantics. Installing here means the units exist for the `sairi`
@@ -348,7 +372,7 @@ write_files:
             rsync -a -e 'ssh -p 22022' ./ debian@127.0.0.1:/tmp/sairios/
             ssh -p 22022 debian@127.0.0.1 \\
                 'sudo rsync -a /tmp/sairios/ /opt/sairios/ &&
-                 sudo chown -R sairi:sairi /opt/sairios &&
+                 sudo chown -R root:root /opt/sairios &&
                  sudo /usr/local/sbin/sairios-provision && sudo reboot'
 
         Boot report:  cat /var/log/sairios-firstboot.log
@@ -486,7 +510,7 @@ write_files:
         emit ""
         emit "--- sairios layout ------------------------------------------------"
         for d in /opt/sairios /var/lib/sairios /var/lib/sairios/context \
-                 /var/lib/sairios/agent /var/lib/sairios/audit \
+                 /var/lib/sairios/agent /var/lib/sairios/broker \
                  /var/lib/sairios/sandbox; do
           if [ -d "$d" ]; then
             ok "$d exists ($(stat -c '%U:%G %a' "$d" 2>/dev/null || echo '?'))"
@@ -669,16 +693,25 @@ runcmd:
   - [sh, -c, 'DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs']
 
   # -- filesystem layout -------------------------------------------------
-  # /opt/sairios is owned by sairi so that delivering a build does not require root and
-  # so that the user units can read it. It is intentionally empty in a fresh image.
-  - [install, -d, -m, '0755', -o, sairi, -g, sairi, /opt/sairios]
+  # /opt/sairios is root-owned and world-readable, NOT writable by sairi.
+  #
+  # This is a privilege boundary, not a preference. sairios-provision runs as root
+  # and installs systemd units out of this tree. If the account that runs the
+  # SairiOS services could write here - and that is the account an escaped agent
+  # would land in - it could drop a unit file that root then installs and enables.
+  # Delivering a build therefore requires root, which it did in practice anyway.
+  # Intentionally empty in a fresh image.
+  - [install, -d, -m, '0755', -o, root, -g, root, /opt/sairios]
   # The data root. 0700 throughout: context memory, agent transcripts and the audit log
   # are private to the user, and the sandbox is the only path agent file actions may
   # touch. Nothing here is group or world readable.
   - [install, -d, -m, '0700', -o, sairi, -g, sairi, /var/lib/sairios]
   - [install, -d, -m, '0700', -o, sairi, -g, sairi, /var/lib/sairios/context]
   - [install, -d, -m, '0700', -o, sairi, -g, sairi, /var/lib/sairios/agent]
-  - [install, -d, -m, '0700', -o, sairi, -g, sairi, /var/lib/sairios/audit]
+  # The broker's SAIRIOS_DATA_DIR: it writes audit.log and
+  # permission-policies.json directly here, and the unit's ReadWritePaths
+  # names this directory rather than /var/lib/sairios.
+  - [install, -d, -m, '0700', -o, sairi, -g, sairi, /var/lib/sairios/broker]
   - [install, -d, -m, '0700', -o, sairi, -g, sairi, /var/lib/sairios/sandbox]
 
   # -- per-user environment file (no secrets; a documented template) -----

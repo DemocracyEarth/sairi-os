@@ -60,6 +60,52 @@ console.log(
   `\n${BOLD}SairiOS${RESET} — starting in ${BOLD}${env.SAIRIOS_AGENT_PROVIDER}${RESET} mode\n`,
 );
 
+/**
+ * Refuse to start on a busy port.
+ *
+ * Without this the first service to bind fails with an unhandled EADDRINUSE and
+ * prints a Node stack trace, which says nothing about the actual problem: a
+ * previous `make dev` is still running.
+ */
+async function findBusyPorts() {
+  const { createServer } = await import('node:net');
+  const wanted = [
+    ['shell', PORTS.shell],
+    ['context-service', PORTS.context],
+    ['agent-bridge', PORTS.bridge],
+    ['permission-broker', PORTS.broker],
+  ];
+  const busy = [];
+  for (const [name, port] of wanted) {
+    const free = await new Promise((resolve) => {
+      const probe = createServer();
+      probe.once('error', () => resolve(false));
+      probe.once('listening', () => probe.close(() => resolve(true)));
+      probe.listen(Number(port), env.SAIRIOS_BIND_HOST);
+    });
+    if (!free) busy.push({ name, port });
+  }
+  return busy;
+}
+
+const busy = await findBusyPorts();
+if (busy.length > 0) {
+  console.error(`\nThese ports are already in use:\n`);
+  for (const { name, port } of busy) {
+    console.error(`  ${String(port).padEnd(6)} ${name}`);
+  }
+  console.error(
+    `\nA previous \`make dev\` is probably still running. Stop it, or find what is
+holding the port:
+
+  lsof -nP -iTCP:${busy[0].port} -sTCP:LISTEN
+
+Ports can also be moved in .env (SAIRIOS_SHELL_PORT, SAIRIOS_CONTEXT_SERVICE_PORT,
+SAIRIOS_AGENT_BRIDGE_PORT, SAIRIOS_PERMISSION_BROKER_PORT).\n`,
+  );
+  process.exit(1);
+}
+
 console.log(`${DIM}Building TypeScript projects…${RESET}`);
 const build = spawnSync(
   process.platform === 'win32' ? 'npx.cmd' : 'npx',
