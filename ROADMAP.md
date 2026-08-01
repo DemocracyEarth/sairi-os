@@ -37,12 +37,10 @@ subsystems.
 - [x] **The full stack runs in the guest** and the desktop is reachable through
       an SSH tunnel: guest shell, guest context service, guest SQLite, real
       contexts. See vm/README.md, "Seeing the desktop".
-- [ ] **The kiosk session cannot present on macOS QEMU.** `cage` starts, `cog`
-      loads the shell and logs `Loaded successfully`, then wlroots fails its
-      output test and cog's DRM platform segfaults. Root cause is the host:
-      Homebrew's QEMU has no virglrenderer, so the guest has no working GL.
-      Needs a virgl-capable QEMU (Linux host, UTM, or a source build). Not a
-      SairiOS change.
+- [x] **The kiosk session renders on the VM's display.** Verified by screenshot
+      from inside the guest's compositor. `cage` cannot scan out without GL and
+      QEMU here provides none, so the session runs `weston --use-pixman` with
+      `kiosk-shell`; `SAIRIOS_COMPOSITOR=cage` remains for machines with real GL.
 - [ ] **OpenClaw provider** — connection lifecycle implemented and unit-tested
       against a fake transport; the wire protocol has never met a live gateway.
       See [docs/OPENCLAW.md](docs/OPENCLAW.md).

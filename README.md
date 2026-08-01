@@ -277,10 +277,12 @@ make vm-run             # boot it
 > through an SSH tunnel — guest shell, guest services, guest SQLite, real
 > contexts.
 >
-> The kiosk session cannot present on macOS QEMU: `cage` starts and `cog` loads
-> the shell successfully, but Homebrew's QEMU has no virglrenderer, so the guest
-> has no working GL and both presentation paths fail on the software fallback.
-> [vm/README.md](vm/README.md) has the full trace and the ways round it.
+> **The graphical session renders.** The kiosk shows the SairiOS desktop on the
+> VM's own display — verified by screenshotting inside the guest's compositor,
+> with no GPU: `weston --use-pixman` software rendering. `cage` could not do
+> this (it cannot scan out without GL, which QEMU does not provide here), so the
+> session uses weston with `kiosk-shell`. Same result: one fullscreen client, no
+> panel, no decorations. [vm/README.md](vm/README.md) has the trace.
 
 ---
 

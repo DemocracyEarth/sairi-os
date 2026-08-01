@@ -33,6 +33,10 @@ SAIRIOS_SHELL_POLL_INTERVAL="${SAIRIOS_SHELL_POLL_INTERVAL:-1}"
 # Where to shout when things go wrong. The journal is not enough: a user staring at a
 # black screen needs the text on the screen.
 SAIRIOS_SESSION_TTY="${SAIRIOS_SESSION_TTY:-/dev/tty1}"
+# Which compositor runs the session. See "compositor choice" below for why weston
+# is the default and cage is not.
+SAIRIOS_COMPOSITOR="${SAIRIOS_COMPOSITOR:-weston}"
+WESTON_BIN="${WESTON_BIN:-weston}"
 CAGE_BIN="${CAGE_BIN:-cage}"
 COG_BIN="${COG_BIN:-cog}"
 
@@ -153,7 +157,14 @@ export COG_PLATFORM_NAME="${COG_PLATFORM_NAME:-wl}"
 # 2. Binaries
 # ---------------------------------------------------------------------------
 
-if ! have "$CAGE_BIN"; then
+if [ "$SAIRIOS_COMPOSITOR" = weston ] && ! have "$WESTON_BIN"; then
+	fail \
+		"The Wayland compositor '$WESTON_BIN' is not installed." \
+		"    sudo apt-get install -y weston" \
+		"Or set SAIRIOS_COMPOSITOR=cage to use cage (which needs working GL)."
+fi
+
+if [ "$SAIRIOS_COMPOSITOR" = cage ] && ! have "$CAGE_BIN"; then
 	die \
 		"The Wayland kiosk compositor '$CAGE_BIN' is not installed." \
 		"" \
@@ -274,13 +285,62 @@ fi
 # 4. Start the session
 # ---------------------------------------------------------------------------
 
-log "starting: $CAGE_BIN -- $COG_BIN $SAIRIOS_SHELL_URL"
-
-# cage runs a single application fullscreen and exits when it exits. cog is the WebKit
-# kiosk browser. Deliberately no extra flags: every one of them is a compatibility risk
-# across cage/cog versions, and v0 needs none of them.
+# --- compositor choice ------------------------------------------------------
+# weston with kiosk-shell, not cage, and the reason is measured rather than
+# preferred.
 #
-# Useful additions once they have been tested on the target image:
-#   cage -s      allow VT switching out of the session
-#   cog -F       fullscreen hint to the platform plugin
-exec "$CAGE_BIN" -- "$COG_BIN" "$SAIRIOS_SHELL_URL"
+# cage cannot present without working GL. Under QEMU the guest has a plain
+# virtio-gpu with no virglrenderer, EGL fails to initialise, and cage's wlroots
+# falls back to software but then cannot scan out:
+#
+#   [ERROR] [types/output/output.c:656] Basic output test failed for Virtual-1
+#
+# It gets far enough to load the product - cog reports "Loaded successfully" -
+# and still shows nothing. weston's DRM backend has a supported software path
+# (--use-pixman) that does present on the same hardware, confirmed by taking a
+# screenshot inside the guest.
+#
+# kiosk-shell gives what cage gave: one fullscreen client, no panel, no
+# decorations. Set SAIRIOS_COMPOSITOR=cage on a machine with real GL if you
+# prefer the smaller compositor.
+if [ "$SAIRIOS_COMPOSITOR" = cage ]; then
+	log "starting: $CAGE_BIN -- $COG_BIN $SAIRIOS_SHELL_URL"
+	exec "$CAGE_BIN" -- "$COG_BIN" "$SAIRIOS_SHELL_URL"
+fi
+
+log "starting: $WESTON_BIN (kiosk-shell, pixman) with $COG_BIN $SAIRIOS_SHELL_URL"
+
+# weston does not launch a client itself, so cog is started once the compositor
+# socket appears, and is torn down with the session.
+WAYLAND_SOCKET_NAME="${WAYLAND_SOCKET_NAME:-wayland-1}"
+(
+	for _ in $(seq 1 60); do
+		[ -S "${XDG_RUNTIME_DIR}/${WAYLAND_SOCKET_NAME}" ] && break
+		sleep 0.2
+	done
+	WAYLAND_DISPLAY="$WAYLAND_SOCKET_NAME" exec "$COG_BIN" "$SAIRIOS_SHELL_URL"
+) &
+COG_PID=$!
+trap 'kill "$COG_PID" 2>/dev/null || true' EXIT INT TERM
+
+# weston --debug enables the screenshot protocol, which is how you get a picture
+# of what the machine is actually showing without a camera. It is OFF by default
+# and must stay that way: the protocol lets any client on the socket capture the
+# screen, which is a capture of whatever context is open.
+#
+#   sudo systemctl set-environment SAIRIOS_SESSION_DEBUG=1
+#   sudo systemctl restart sairios-session
+#   sudo -u sairi env XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-1 \
+#       weston-screenshooter
+#
+# Unset it and restart when you are done.
+WESTON_ARGS="--backend=drm-backend.so --shell=kiosk-shell.so --use-pixman --idle-time=0"
+if [ "${SAIRIOS_SESSION_DEBUG:-0}" = 1 ]; then
+	log "SAIRIOS_SESSION_DEBUG=1: enabling the weston debug protocol (screenshots)"
+	WESTON_ARGS="$WESTON_ARGS --debug"
+fi
+
+# Deliberately unquoted: WESTON_ARGS is a fixed set of flags built above, never
+# user input.
+# shellcheck disable=SC2086
+exec "$WESTON_BIN" $WESTON_ARGS

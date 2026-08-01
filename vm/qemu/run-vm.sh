@@ -42,6 +42,9 @@ DRY_RUN=0
 MEMORY=4096
 CPUS=4
 ACCEL_CHOICE="auto"
+QEMU_OVERRIDE=""
+WANT_GL=0
+GL_ACTIVE=0
 DISPLAY_CHOICE="auto"
 FORWARD_SHELL=0
 EPHEMERAL=0
@@ -108,6 +111,9 @@ while [ $# -gt 0 ]; do
 	--cpus=*) CPUS="${1#*=}" && shift ;;
 	--accel) ACCEL_CHOICE="${2:?--accel needs a value}" && shift 2 ;;
 	--accel=*) ACCEL_CHOICE="${1#*=}" && shift ;;
+	--qemu) QEMU_OVERRIDE="${2:?--qemu needs a path}" && shift 2 ;;
+	--qemu=*) QEMU_OVERRIDE="${1#*=}" && shift ;;
+	--gl) WANT_GL=1 && shift ;;
 	--display) DISPLAY_CHOICE="${2:?--display needs a value}" && shift 2 ;;
 	--display=*) DISPLAY_CHOICE="${1#*=}" && shift ;;
 	--firmware) FIRMWARE_OVERRIDE="${2:?--firmware needs a path}" && shift 2 ;;
@@ -192,6 +198,10 @@ case "$ARCH" in
 amd64) QEMU_BIN="qemu-system-x86_64" ;;
 arm64) QEMU_BIN="qemu-system-aarch64" ;;
 esac
+# A QEMU from elsewhere, for the case Homebrew's cannot cover. Its build without
+# virglrenderer gives the guest no GL, which is what stops the kiosk session from
+# presenting; UTM ships a QEMU that has it. See vm/README.md, "Seeing the desktop".
+[ -n "$QEMU_OVERRIDE" ] && QEMU_BIN="$QEMU_OVERRIDE"
 readonly QEMU_BIN
 
 if ! have "$QEMU_BIN"; then
@@ -391,11 +401,26 @@ arm64)
 	QEMU_ARGS+=(
 		-drive "if=pflash,format=raw,unit=0,readonly=on,file=${FIRMWARE_CODE_COPY}"
 		-drive "if=pflash,format=raw,unit=1,file=${FIRMWARE_VARS}"
-		# The virt machine has no legacy VGA, so virtio-gpu-pci is the only option.
-		# Nothing renders until the guest kernel binds the virtio-gpu DRM driver, which
-		# means an intentionally blank window for the first few seconds.
-		-device virtio-gpu-pci
 	)
+	# The virt machine has no legacy VGA, so a virtio GPU is the only option.
+	# Nothing renders until the guest kernel binds the DRM driver, which means an
+	# intentionally blank window for the first few seconds.
+	#
+	# virtio-gpu-gl-pci exposes virgl, which the guest needs for working GL. Without
+	# it the compositor falls back to software and cannot scan out: wlroots reports
+	# `Basic output test failed`. Most distribution QEMU builds, Homebrew's included,
+	# omit virglrenderer and therefore do not have this device at all, so it is only
+	# used when both requested and actually present.
+	if [ "$WANT_GL" -eq 1 ] && "$QEMU_BIN" -device help 2>/dev/null | grep -q virtio-gpu-gl-pci; then
+		QEMU_ARGS+=(-device virtio-gpu-gl-pci)
+		GL_ACTIVE=1
+	else
+		if [ "$WANT_GL" -eq 1 ]; then
+			warn "$QEMU_BIN has no virtio-gpu-gl-pci; falling back to virtio-gpu-pci"
+			warn "the guest will have no GL and the kiosk session will not present"
+		fi
+		QEMU_ARGS+=(-device virtio-gpu-pci)
+	fi
 	;;
 amd64)
 	QEMU_ARGS+=(-machine "q35,accel=${ACCEL}")

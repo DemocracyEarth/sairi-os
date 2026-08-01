@@ -164,6 +164,9 @@ packages:
   # Graphical session. cage is the kiosk Wayland compositor, cog is the WebKit kiosk
   # browser. See os/session/README.md for why these and not a custom compositor.
   - cage
+  # The compositor the session actually uses. cage cannot scan out without GL,
+  # which the guest does not have; weston --use-pixman can. See os/session/.
+  - weston
   - cog
   # cage (0.1.4, Debian 12) starts an Xwayland server unconditionally and aborts
   # if the binary is missing: "Cannot create XWayland server". Observed on a real
