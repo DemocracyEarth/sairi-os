@@ -14,8 +14,9 @@
 # It does NOT start the SairiOS services. Those are systemd user units. If they are not
 # running, this script's job is to say so clearly, not to paper over it.
 #
-# NOTE: this script has never been executed. The authoring host was macOS with no
-# Wayland, no cage and no cog. See os/README.md, "Verification status".
+# Verification status: this HAS been executed in the VM. cage starts, cog loads the
+# shell from http://127.0.0.1:7800 and reports "Loaded successfully". What has NOT
+# been seen is pixels: see the software-rendering block below and vm/README.md.
 
 set -euo pipefail
 
@@ -124,6 +125,23 @@ export XDG_SESSION_DESKTOP="${XDG_SESSION_DESKTOP:-sairios}"
 export XDG_CURRENT_DESKTOP="${XDG_CURRENT_DESKTOP:-SairiOS}"
 # Ask GTK-based and Qt-based helpers to prefer Wayland rather than falling back to X11,
 # which is not present.
+# --- software rendering -----------------------------------------------------
+# Defaults for a guest with no working GL, which is the normal case under QEMU:
+# a plain virtio-gpu with no virglrenderer gives no GL, EGL fails to initialise
+# and mesa falls back to kms_swrast. Observed in the VM:
+#
+#   libEGL warning: egl: failed to create dri2 screen
+#   [EGL] eglInitialize: EGL_NOT_INITIALIZED "DRI2: failed to create screen"
+#
+# WLR_RENDERER=pixman makes cage render in software rather than sitting on a
+# broken EGL, and disabling WebKit's compositing keeps cog off the GL path.
+#
+# These are defaults, not decisions: on hardware with a real GPU, export them
+# beforehand as empty or set WLR_RENDERER=gles2 to get accelerated rendering.
+export WLR_RENDERER="${WLR_RENDERER:-pixman}"
+export LIBGL_ALWAYS_SOFTWARE="${LIBGL_ALWAYS_SOFTWARE:-1}"
+export WEBKIT_DISABLE_COMPOSITING_MODE="${WEBKIT_DISABLE_COMPOSITING_MODE:-1}"
+
 export GDK_BACKEND="${GDK_BACKEND:-wayland}"
 export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-wayland}"
 export MOZ_ENABLE_WAYLAND=1

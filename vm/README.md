@@ -151,6 +151,65 @@ This keeps image builds independent of product builds, so a broken `npm run buil
 produce an unbootable image. See `vm/cloud-init/README.md` for how to deliver SairiOS to
 a running machine.
 
+## Seeing the desktop
+
+Two ways, and they answer different questions.
+
+### Through a tunnel (works today)
+
+The guest serves the desktop on its own loopback. Forward all four ports and open
+it in a browser on the host:
+
+```sh
+ssh -N -p 22022 -i vm/out/sairios_dev_key \
+    -L 7800:127.0.0.1:7800 -L 7801:127.0.0.1:7801 \
+    -L 7802:127.0.0.1:7802 -L 7803:127.0.0.1:7803 \
+    debian@127.0.0.1
+```
+
+Then open <http://127.0.0.1:7800>. This is the real thing: the shell binary in
+the guest, the guest's context service, its SQLite store and its seeded contexts.
+
+Use the SAME port numbers on the host. The services' CORS allowlist is loopback
+plus the shell's own port, so a tunnel on, say, 7900 loads the page and then
+fails every API call — which is the allowlist working, not a bug.
+
+`run-vm.sh --forward-shell` does NOT do this. QEMU's user-mode networking
+forwards to the guest's DHCP address, and the shell binds 127.0.0.1 by design,
+so the forward arrives where nothing is listening. The script says so when you
+pass the flag.
+
+### On the VM's own display (does not work on macOS QEMU yet)
+
+The kiosk session starts and gets as far as loading the page, then cannot present
+it. What happens, in order:
+
+1. `cage` starts and creates `wayland-0`.
+2. `cog` connects, fetches `http://127.0.0.1:7800` and logs
+   `Loaded successfully`. WPEWebProcess is running.
+3. Nothing reaches the screen. wlroots reports
+   `Basic output test failed for Virtual-1`, and cog's DRM platform segfaults in
+   its buffer pool.
+
+The cause is one level down: **Homebrew's QEMU is built without virglrenderer**.
+`qemu-system-aarch64 -device help` has no `virtio-gpu-gl-pci`, and `-display
+help` lists only `none`, `curses`, `cocoa` and `dbus`. The guest therefore has no
+working GL — EGL fails to initialise and mesa falls back to `kms_swrast` — and
+both presentation paths in this stack have bugs on that fallback.
+
+Two fixes were needed to get even this far, and both are in the image now:
+
+- `xwayland` must be installed. Debian 12's `cage` starts an Xwayland server
+  unconditionally and aborts with `Cannot create XWayland server` without it,
+  even though nothing here runs an X11 client.
+- The session exports `WLR_RENDERER=pixman`, `LIBGL_ALWAYS_SOFTWARE=1` and
+  `WEBKIT_DISABLE_COMPOSITING_MODE=1` so cage does not sit on a broken EGL.
+
+To get pixels, the host needs a QEMU with virgl. Options, roughly in order of
+effort: run the guest on a Linux host with `-device virtio-gpu-gl-pci -display
+gtk,gl=on`; use UTM on macOS, which bundles a virgl-enabled QEMU; or build QEMU
+from source against `virglrenderer`. None of that is a SairiOS change.
+
 ## Unverified
 
 **Nothing in this directory has ever been executed against a real virtual machine.**

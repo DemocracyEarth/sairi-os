@@ -34,8 +34,15 @@ subsystems.
       Debian 12 booted, cloud-init provisioned, guest self-check reported
       `ok: 18  warn: 6  fail: 0` / `DEGRADED` over the serial console. Four real
       faults were found and fixed by running it — see the commit history.
-- [ ] **The graphical session has not been watched come up.** `/dev/dri/card0`
-      exists so `cage` can start, but nothing has confirmed it renders.
+- [x] **The full stack runs in the guest** and the desktop is reachable through
+      an SSH tunnel: guest shell, guest context service, guest SQLite, real
+      contexts. See vm/README.md, "Seeing the desktop".
+- [ ] **The kiosk session cannot present on macOS QEMU.** `cage` starts, `cog`
+      loads the shell and logs `Loaded successfully`, then wlroots fails its
+      output test and cog's DRM platform segfaults. Root cause is the host:
+      Homebrew's QEMU has no virglrenderer, so the guest has no working GL.
+      Needs a virgl-capable QEMU (Linux host, UTM, or a source build). Not a
+      SairiOS change.
 - [ ] **OpenClaw provider** — connection lifecycle implemented and unit-tested
       against a fake transport; the wire protocol has never met a live gateway.
       See [docs/OPENCLAW.md](docs/OPENCLAW.md).

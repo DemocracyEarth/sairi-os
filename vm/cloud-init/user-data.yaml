@@ -165,6 +165,11 @@ packages:
   # browser. See os/session/README.md for why these and not a custom compositor.
   - cage
   - cog
+  # cage (0.1.4, Debian 12) starts an Xwayland server unconditionally and aborts
+  # if the binary is missing: "Cannot create XWayland server". Observed on a real
+  # boot. There is no flag to disable it in this version, so the package is required
+  # even though nothing here runs an X11 client.
+  - xwayland
   - seatd
   # Audio. Not used by v0, enabled now so that adding audio later is configuration
   # rather than a re-provision.

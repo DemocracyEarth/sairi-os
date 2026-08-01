@@ -273,10 +273,14 @@ make vm-run             # boot it
 > an image with no product tree delivered yet. The remaining warnings are all
 > "no product tree".
 >
-> Not yet verified: the graphical session actually rendering. The DRM device is
-> present so `cage` can start, but nobody has watched it come up.
-> [vm/README.md](vm/README.md) is precise about which checks have run on a real
-> boot and which have not.
+> The whole stack runs in the guest, and the desktop is reachable from the host
+> through an SSH tunnel — guest shell, guest services, guest SQLite, real
+> contexts.
+>
+> The kiosk session cannot present on macOS QEMU: `cage` starts and `cog` loads
+> the shell successfully, but Homebrew's QEMU has no virglrenderer, so the guest
+> has no working GL and both presentation paths fail on the software fallback.
+> [vm/README.md](vm/README.md) has the full trace and the ways round it.
 
 ---
 
