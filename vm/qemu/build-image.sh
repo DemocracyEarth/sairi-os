@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Build a bootable SairiOS VM image from the Debian 12 (bookworm) genericcloud base.
+# Build a bootable SairiOS VM image from the Debian 12 (bookworm) generic base.
 #
 # What it does:
 #   1. Downloads the published SHA512SUMS for the release and the base qcow2.
@@ -14,12 +14,14 @@
 # vm/cloud-init/README.md, "Delivering SairiOS to a provisioned machine".
 #
 # ---------------------------------------------------------------------------
-# THIS SCRIPT HAS NEVER BEEN EXECUTED.
+# Verification status
 # ---------------------------------------------------------------------------
-# The authoring host was macOS on arm64 with no QEMU installed, so `qemu-img` could not
-# run and no image could be built. The URLs, the SHA512SUMS format and the published
-# file sizes below were confirmed against cloud.debian.org on 2026-07-31; nothing else
-# here has been observed working. See vm/README.md, "Unverified".
+# This script HAS been executed, on macOS arm64 with QEMU 11.0.3, and the image it
+# produces HAS booted: Debian 12 came up, cloud-init provisioned, and the guest ran
+# its own first-boot self-check and reported a verdict over the serial console.
+#
+# Not yet observed: a graphical session. See vm/README.md for exactly which checks
+# have passed on a real boot and which have not.
 #
 # Usage:
 #   ./vm/qemu/build-image.sh [--arch amd64|arm64] [--dry-run] [--yes]
@@ -58,10 +60,10 @@ readonly CLOUD_INIT_DIR="$REPO_ROOT/vm/cloud-init"
 # --expect-sha512 if you need byte-for-byte reproducibility.
 #
 # On 2026-07-31 `latest/` resolved to the 20260722-2547 build, with:
-#   debian-12-genericcloud-amd64.qcow2  348913664 bytes
+#   debian-12-generic-amd64.qcow2  (size reported by a HEAD at build time)
 #     ddc98e22b1c0e6647369fba51e285af155f3f19438f372577fb148817e586eed1
 #     0526240aa71abc44a836679bf6f8c70ba3d092d945989905abc0c81907b97b0
-#   debian-12-genericcloud-arm64.qcow2  339607552 bytes
+#   debian-12-generic-arm64.qcow2  (size reported by a HEAD at build time)
 #     ad72c971c4f15ff75408ad22fd5dd6275176a8382d5151859525cb9fd60914bb
 #     dd2983e9de3a212889c95def3d53b30992048005fa9659897f06931318d8c663
 # Those values will be stale as soon as Debian rebuilds. They are recorded so a reader
@@ -130,7 +132,7 @@ human_bytes() {
 
 usage() {
 	cat <<'EOF'
-Build a SairiOS VM image from the Debian 12 genericcloud base.
+Build a SairiOS VM image from the Debian 12 generic base.
 
   --arch amd64|arm64     Guest architecture. Default: matches the host.
   --dry-run              Print every step, download nothing, write nothing.
@@ -234,7 +236,19 @@ amd64 | arm64) ;;
 esac
 
 readonly ARCH
-readonly IMAGE_NAME="debian-12-genericcloud-${ARCH}.qcow2"
+# `generic`, NOT `genericcloud`.
+#
+# genericcloud ships the `-cloud-` kernel, which is built for headless instances
+# and omits the DRM subsystem entirely: `virtio_gpu` is not merely unloaded, it is
+# absent from /lib/modules. `cage` needs a DRM master to start, so on that variant
+# the graphical session can never come up no matter what QEMU passes. Verified on a
+# real boot, which reported:
+#
+#   modprobe: FATAL: Module virtio_gpu not found in directory /lib/modules/6.1.0-51-cloud-arm64
+#
+# `generic` carries the full kernel with the virtio DRM driver. It is a few tens of
+# megabytes larger, which is the correct trade for a machine that has a screen.
+readonly IMAGE_NAME="debian-12-generic-${ARCH}.qcow2"
 readonly IMAGE_URL="$BASE_URL/$IMAGE_NAME"
 readonly SUMS_URL="$BASE_URL/$SUMS_NAME"
 readonly CACHED_IMAGE="$CACHE_DIR/$IMAGE_NAME"

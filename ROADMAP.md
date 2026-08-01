@@ -53,13 +53,6 @@ subsystems.
 **Goal:** turn the three unverified items above into verified ones. Nothing new
 until what exists is real.
 
-0. **Pin the NodeSource signing key.** The image provisioning now refuses to
-   install Node until a maintainer fills in a fingerprint they verified out of
-   band, because fetching a key over TLS and immediately trusting it lets
-   whatever can answer for the download host choose what apt trusts. The pin is
-   a placeholder, so a freshly built image reports `node is NOT installed` and
-   the first-boot verdict is FAIL. Nothing else in this milestone can proceed
-   until this is done.
 1. **Boot the VM end to end.** Build the image, boot it, reach the SairiOS
    session, create a context, crystallize it, reboot, confirm it is still there.
    Record what actually happened, including what broke.

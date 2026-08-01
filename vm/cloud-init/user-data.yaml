@@ -10,8 +10,8 @@
 # What this does, in order:
 #   1. Creates the unprivileged session user `sairi` and a locked maintenance account.
 #   2. Installs the graphical session stack (cage + cog + seatd) and Node.js 22 LTS.
-#      The Node step refuses to run until a maintainer pins the NodeSource signing key
-#      fingerprint in this file. Until then it aborts and Node is not installed.
+#      Node comes from the official nodejs.org tarball, verified against a pinned
+#      SHA-256, so no third-party apt repository is added to the machine.
 #   3. Creates /opt/sairios and the data directories with the right ownership.
 #   4. Installs the systemd units from /opt/sairios/os, if the product tree is present.
 #   5. Writes a legible self-check report to /var/log/sairios-firstboot.log and to the
@@ -48,7 +48,12 @@ hostname: sairios
 # which presents as a slow session start rather than as a name resolution error.
 manage_etc_hosts: true
 
-locale: en_US.UTF-8
+# C.UTF-8 rather than en_US.UTF-8. The Debian cloud image generates only C.UTF-8,
+# so asking for a locale that was never generated makes cloud-init's locale module
+# fail and `cloud-config.service` report FAILED on every boot. C.UTF-8 is a real
+# UTF-8 locale, which is all the shell and the terminal need; the interface language
+# is chosen in SairiOS, not by the system locale.
+locale: C.UTF-8
 timezone: UTC
 
 # ---------------------------------------------------------------------------
@@ -512,8 +517,12 @@ write_files:
 
         if [ -e /dev/dri/card0 ]; then
           ok "DRM device /dev/dri/card0 present"
+          note "drm: $(ls /sys/class/drm 2>/dev/null | tr '\n' ' ')"
         else
           fail "no /dev/dri/card0 - the guest has no GPU; cage cannot start"
+          note "virtio_gpu loaded: $(lsmod 2>/dev/null | grep -c '^virtio_gpu' || echo 0)"
+          note "module available: $(modinfo virtio_gpu >/dev/null 2>&1 && echo yes || echo NO)"
+          note "if the module is NO, the kernel lacks the driver and the image variant is wrong"
           note "start the VM with -device virtio-gpu-pci"
         fi
 
@@ -700,89 +709,115 @@ runcmd:
   - [sh, -c, 'getent group _seatd >/dev/null && usermod -aG _seatd sairi || true']
   - [sh, -c, 'systemctl enable --now seatd.service || true']
 
-  # -- Node.js 22 LTS from NodeSource ------------------------------------
+  # -- boot time ----------------------------------------------------------
+  # systemd-networkd-wait-online blocks network-online.target until EVERY managed
+  # link is configured. The guest has one NIC that DHCPs in seconds, but the unit
+  # keeps waiting for links that will never appear and eventually times out, adding
+  # one to two minutes of dead time to every boot and printing a FAILED line that
+  # looks like a real fault.
+  #
+  # `--any` makes it return as soon as one link is up, which is the actual
+  # requirement: cloud-init and the SairiOS services need working egress, not every
+  # possible interface.
+  - [sh, -c, 'install -d -m 0755 /etc/systemd/system/systemd-networkd-wait-online.service.d']
+  - - sh
+    - -c
+    - |
+      cat > /etc/systemd/system/systemd-networkd-wait-online.service.d/any.conf <<'EOF'
+      [Service]
+      ExecStart=
+      ExecStart=/usr/lib/systemd/systemd-networkd-wait-online --any --timeout=30
+      EOF
+      systemctl daemon-reload || true
+
+  # -- DRM for the kiosk session -----------------------------------------
+  # `cage` needs a DRM master (/dev/dri/card0) to start. QEMU provides the device
+  # (`-device virtio-gpu-pci`, see vm/qemu/run-vm.sh), but the Debian cloud kernel
+  # does not autoload the driver: cloud images are built for headless instances, so
+  # nothing triggers the modalias. Without this the first-boot check reports
+  # `no /dev/dri/card0` and the graphical session never comes up.
+  #
+  # Loaded now for this boot, and registered so every later boot has it.
+  - [sh, -c, 'printf "virtio_gpu\n" > /etc/modules-load.d/sairios-drm.conf']
+  - [sh, -c, 'modprobe virtio_gpu || echo "sairios: virtio_gpu modprobe failed" >&2']
+
+  # -- Node.js 22 LTS from the official tarball ---------------------------
   # Debian 12 ships Node 18, which is too old: the context service uses node:sqlite
-  # (Node >= 22.5). The key is fetched and dearmoured into a dedicated keyring rather
-  # than piping NodeSource's setup script into a root shell, so that what is trusted and
-  # what is executed are both visible here.
+  # (Node >= 22.5).
   #
-  # The fetched key is checked against a pinned fingerprint before anything trusts it.
-  # Fetching a key over TLS and immediately trusting it means that whatever can answer
-  # for deb.nodesource.com - a compromised mirror, an interception proxy, a bad DNS
-  # answer - chooses the key that apt trusts, and the next `apt-get install` runs that
-  # party's maintainer scripts as root. The pin is the only thing that turns "we got a
-  # key" into "we got the key".
+  # This installs the official nodejs.org tarball verified against a pinned SHA-256,
+  # rather than adding NodeSource as an apt repository. The difference is the shape of
+  # the trust, not the convenience:
   #
-  # The whole step is one `sh -c` so that a failed check skips the repository file, the
-  # `apt-get update` and the install together. cloud-init's runcmd has no `set -e` of
-  # its own, so splitting these across entries would let an abort be ignored.
-  - [sh, -c, 'install -d -m 0755 /etc/apt/keyrings']
+  #   An apt source is a STANDING grant. Once its key is in /etc/apt/keyrings, every
+  #   future `apt-get upgrade` will run whatever maintainer scripts that party ships,
+  #   as root, forever. Verifying the key at install time does not bound that.
+  #
+  #   A pinned tarball is a ONE-TIME, exact artifact. The hash names one specific file.
+  #   Nothing is added to the machine's package trust, and there is no channel through
+  #   which a later compromise of the publisher reaches this machine unattended.
+  #
+  # Upgrading Node is therefore a deliberate edit here - bump NODE_VERSION and both
+  # hashes together - which is the correct amount of friction for the runtime that
+  # executes agent-adjacent code.
+  #
+  # The hashes below are the published SHASUMS256.txt entries for the tarballs. Verify
+  # them yourself against https://nodejs.org/dist/<version>/SHASUMS256.txt before
+  # trusting this file; a hash you did not check is only a hash.
+  #
+  # The whole step is one `sh -c`: cloud-init's runcmd has no `set -e` of its own, so
+  # splitting these across entries would let a failed verification be ignored and leave
+  # a half-installed runtime.
   - - sh
     - -c
     - |
       set -eu
 
-      # #####################################################################
-      # #  A MAINTAINER MUST FILL THIS IN. IT IS NOT FILLED IN.             #
-      # #####################################################################
-      # Put the 40 hex characters of the NodeSource signing key fingerprint below,
-      # uppercase and unspaced. Obtain it from somewhere that is NOT this download:
-      # NodeSource's published documentation, a keyring on a machine you already trust,
-      # or the same fetch repeated from a different network, and compare. No value is
-      # written here because nobody working on this file has verified one, and an
-      # official-looking fingerprint that was never checked is worse than an empty one.
-      #
-      # Until it is filled in this step aborts, no NodeSource repository is configured,
-      # and the machine boots without Node. The first-boot self-check then reports
-      # `node is NOT installed`, which is the intended and legible failure.
-      NODESOURCE_KEY_FPR='FILL_IN_VERIFIED_NODESOURCE_KEY_FINGERPRINT'
+      NODE_VERSION='v22.23.2'
+      NODE_SHA256_arm64='fff4078c5def658577f92c88db7db3bc0072924bfb93fe52c1e744a54e94abb8'
+      NODE_SHA256_x64='d60acfe00a2932254bb0ad20e01b0d74397a0875595de719654b214f4b03f307'
 
       abort() {
-        printf 'sairios: NodeSource step ABORTED: %s\n' "$*" >&2
+        printf 'sairios: Node step ABORTED: %s\n' "$*" >&2
         printf 'sairios: Node.js was NOT installed; see vm/cloud-init/user-data.yaml\n' >&2
         exit 1
       }
 
-      case "$NODESOURCE_KEY_FPR" in
-      *[!0-9A-F]* | '') abort "no verified key fingerprint is pinned in user-data.yaml" ;;
+      # Debian's architecture names and Node's tarball names disagree.
+      case "$(dpkg --print-architecture)" in
+        arm64) NARCH=arm64; WANT="$NODE_SHA256_arm64" ;;
+        amd64) NARCH=x64;   WANT="$NODE_SHA256_x64" ;;
+        *) abort "unsupported architecture $(dpkg --print-architecture)" ;;
       esac
-      [ "${#NODESOURCE_KEY_FPR}" -eq 40 ] ||
-        abort "the pinned fingerprint is not 40 hex characters"
 
+      TARBALL="node-${NODE_VERSION}-linux-${NARCH}.tar.xz"
       tmp="$(mktemp -d)"
       trap 'rm -rf "$tmp"' EXIT
-      # A private GNUPGHOME: --show-keys still wants a home directory, and this keeps
-      # the check from touching root's keyring.
-      GNUPGHOME="$tmp/gnupg"
-      export GNUPGHOME
-      mkdir -m 0700 "$GNUPGHOME"
 
-      curl -fsSL --proto '=https' --tlsv1.2 --retry 3 \
-        https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
-        -o "$tmp/nodesource.asc" || abort "could not fetch the signing key"
+      curl -fsSL --proto '=https' --tlsv1.2 --retry 3 --retry-delay 2 \
+        "https://nodejs.org/dist/${NODE_VERSION}/${TARBALL}" \
+        -o "$tmp/$TARBALL" || abort "could not download $TARBALL"
 
-      gpg --dearmor -o "$tmp/nodesource.gpg" "$tmp/nodesource.asc" ||
-        abort "the fetched file is not a usable OpenPGP key"
-
-      # --with-colons is the machine-readable form; field 10 of the fpr record is the
-      # fingerprint. Parsing gpg's human output instead would depend on its locale and
-      # on a layout that has changed between versions.
-      got="$(gpg --show-keys --with-colons "$tmp/nodesource.gpg" |
-        awk -F: '$1 == "fpr" { print $10; exit }')"
-      [ -n "$got" ] || abort "could not read a fingerprint from the fetched key"
-
-      if [ "$got" != "$NODESOURCE_KEY_FPR" ]; then
-        abort "fingerprint mismatch: fetched $got, pinned $NODESOURCE_KEY_FPR"
+      got="$(sha256sum "$tmp/$TARBALL" | awk '{print $1}')"
+      if [ "$got" != "$WANT" ]; then
+        abort "checksum mismatch for $TARBALL: got $got, pinned $WANT"
       fi
 
-      install -m 0644 -o root -g root \
-        "$tmp/nodesource.gpg" /etc/apt/keyrings/nodesource.gpg
-      printf '%s\n' \
-        'deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main' \
-        >/etc/apt/sources.list.d/nodesource.list
+      # Unpack under /usr/local/lib so the tree is obviously not dpkg-managed, then
+      # link only the three entry points. /usr/bin is left to Debian.
+      install -d -m 0755 /usr/local/lib/nodejs
+      tar -xJf "$tmp/$TARBALL" -C /usr/local/lib/nodejs
+      NODE_HOME="/usr/local/lib/nodejs/node-${NODE_VERSION}-linux-${NARCH}"
+      [ -x "$NODE_HOME/bin/node" ] || abort "the tarball did not contain bin/node"
 
-      apt-get update
-      DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
+      for b in node npm npx; do
+        ln -sfn "$NODE_HOME/bin/$b" "/usr/local/bin/$b"
+      done
+
+      # Prove it runs on this machine rather than assuming the extract worked.
+      /usr/local/bin/node --version >/dev/null || abort "the installed node does not run"
+      printf 'sairios: node %s installed at %s\n' \
+        "$(/usr/local/bin/node --version)" "$NODE_HOME"
 
   # -- filesystem layout -------------------------------------------------
   # /opt/sairios is root-owned and world-readable, NOT writable by sairi.

@@ -30,7 +30,7 @@ Environment=SAIRIOS_DATA_DIR=/var/lib/sairios/broker
 Environment=SAIRIOS_SANDBOX_DIR=/var/lib/sairios/sandbox
 EnvironmentFile=-%h/.config/sairios/env
 
-ExecStart=/usr/bin/node /opt/sairios/services/permission-broker/dist/main.js
+ExecStart=/usr/local/bin/node /opt/sairios/services/permission-broker/dist/main.js
 
 Restart=on-failure
 RestartSec=2

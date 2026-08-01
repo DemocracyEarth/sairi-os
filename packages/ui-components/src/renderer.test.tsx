@@ -1,14 +1,23 @@
 /**
  * @vitest-environment jsdom
  */
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render as rtlRender, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SairiUIDocument } from '@sairios/adaptive-ui-schema';
 import { EMPTY_HOST, type SairiUIHost } from './host.js';
+import { LocaleProvider } from './i18n.js';
 import { renderMarkdown } from './markdown.js';
 import { SairiUIRenderer } from './renderer.js';
 
 afterEach(cleanup);
+
+/**
+ * The catalog renders in whichever language the desktop is in. These tests assert
+ * behaviour, not translation, so they pin English and read as plain sentences.
+ */
+function render(ui: Parameters<typeof rtlRender>[0]) {
+  return rtlRender(<LocaleProvider initialLocale="en">{ui}</LocaleProvider>);
+}
 
 const CONTEXT_ID = 'ctx_0123456789abcdef0123456789abcdef';
 const REQUEST_ID = 'req_0123456789abcdef0123456789abcdef';

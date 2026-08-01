@@ -1,12 +1,13 @@
 import { useState, type JSX } from 'react';
 import type { CrystallizationPreview } from '@sairios/context-schema';
+import { useT } from '@sairios/ui-components';
 
 /**
  * Crystallization preview.
  *
  * The user sees exactly what survives and exactly what is removed BEFORE the
  * template exists. A template is the artefact most likely to be shared, so the
- * moment it is created is the moment the user must be able to check it.
+ * moment it is created is the moment somebody must be able to check it.
  */
 
 export interface CrystallizeDialogProps {
@@ -16,31 +17,24 @@ export interface CrystallizeDialogProps {
   onCancel: () => void;
 }
 
-export function CrystallizeDialog({
-  preview,
-  busy,
-  onConfirm,
-  onCancel,
-}: CrystallizeDialogProps): JSX.Element {
-  const [name, setName] = useState(preview.proposedName);
+export function CrystallizeDialog(props: CrystallizeDialogProps): JSX.Element {
+  const t = useT();
+  const [name, setName] = useState(props.preview.proposedName);
 
   return (
     <div className="overlay" role="presentation">
       <div aria-modal="true" className="dialog" role="dialog">
-        <header className="dialog__header">
-          <h2 className="dialog__title">Crystallize context</h2>
+        <header className="dialog__head">
+          <h2 className="dialog__title">{t('crys.title')}</h2>
         </header>
+
         <div className="dialog__body">
-          <p
-            className="sairi-text sairi-text--muted"
-            style={{ marginBottom: 'var(--sairi-space-4)' }}
-          >
-            A crystallized context is a reusable workflow. It keeps the shape of the work and
-            deliberately leaves the contents of this run behind.
+          <p className="aside__muted" style={{ marginBottom: 'var(--sairi-space-4)' }}>
+            {t('crys.intro')}
           </p>
 
           <label className="intention__label" htmlFor="template-name">
-            Template name
+            {t('crys.name')}
           </label>
           <input
             className="intention__input"
@@ -53,23 +47,23 @@ export function CrystallizeDialog({
           <div className="split">
             <div>
               <h3 className="split__title split__title--keep">
-                Retained ({preview.retained.length})
+                {t('crys.retained', { count: props.preview.retained.length })}
               </h3>
               <ul className="split__list">
-                {preview.retained.map((item, i) => (
+                {props.preview.retained.map((item, i) => (
                   <li key={`keep-${i}`}>{item.label}</li>
                 ))}
               </ul>
             </div>
             <div>
               <h3 className="split__title split__title--drop">
-                Removed ({preview.discarded.length})
+                {t('crys.removed', { count: props.preview.discarded.length })}
               </h3>
-              {preview.discarded.length === 0 ? (
-                <p className="sairi-empty">Nothing to remove.</p>
+              {props.preview.discarded.length === 0 ? (
+                <p className="aside__muted">{t('crys.nothingRemoved')}</p>
               ) : (
                 <ul className="split__list">
-                  {preview.discarded.map((item, i) => (
+                  {props.preview.discarded.map((item, i) => (
                     <li key={`drop-${i}`}>
                       {item.label}
                       <span className="split__reason">{item.reason}</span>
@@ -80,17 +74,18 @@ export function CrystallizeDialog({
             </div>
           </div>
         </div>
-        <footer className="dialog__footer">
-          <button className="sairi-button" disabled={busy} onClick={onCancel} type="button">
-            Cancel
+
+        <footer className="dialog__foot">
+          <button className="btn" disabled={props.busy} onClick={props.onCancel} type="button">
+            {t('crys.cancel')}
           </button>
           <button
-            className="sairi-button sairi-button--primary"
-            disabled={busy || name.trim().length === 0}
-            onClick={() => onConfirm(name.trim())}
+            className="btn btn--primary"
+            disabled={props.busy || name.trim().length === 0}
+            onClick={() => props.onConfirm(name.trim())}
             type="button"
           >
-            {busy ? 'Crystallizing…' : 'Crystallize'}
+            {props.busy ? t('crys.working') : t('crys.confirm')}
           </button>
         </footer>
       </div>

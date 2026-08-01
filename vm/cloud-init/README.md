@@ -57,9 +57,8 @@ of any kind, so the default image needs none.
 
 **The image is bare.** Provisioning installs the operating-system layer and creates
 `/opt/sairios` owned by `sairi`, but it does not put SairiOS in it. There is no `git
-clone` and no baked-in build. A freshly built image is meant to report `DEGRADED` on
-purpose. It does not today: the NodeSource fingerprint pin is an unfilled placeholder, so
-Node is never installed and the verdict is `FAIL`. See "Delivering SairiOS" below.
+clone` and no baked-in build. A freshly built image reports `DEGRADED` on purpose. See
+"Delivering SairiOS" below.
 
 **`package_upgrade` is false.** It would add minutes to every first boot and make two
 builds of the same image differ by when they ran. Upgrade a running machine instead.
@@ -155,11 +154,11 @@ The previous report is kept as `.log.1`.
 The last verdict line is machine-readable and is what `vm/qemu/run-vm-headless.sh
 --smoke` greps for:
 
-| Verdict                       | Meaning                                                                                                                                        |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SAIRIOS-FIRSTBOOT: OK`       | Everything present and answering. Requires a delivered product tree.                                                                           |
-| `SAIRIOS-FIRSTBOOT: DEGRADED` | The OS layer provisioned correctly; SairiOS is not running. **Intended for a freshly built image, once the NodeSource fingerprint is pinned.** |
-| `SAIRIOS-FIRSTBOOT: FAIL`     | The OS layer itself is broken. Something in this directory is wrong.                                                                           |
+| Verdict                       | Meaning                                                                                             |
+| ----------------------------- | --------------------------------------------------------------------------------------------------- |
+| `SAIRIOS-FIRSTBOOT: OK`       | Everything present and answering. Requires a delivered product tree.                                |
+| `SAIRIOS-FIRSTBOOT: DEGRADED` | The OS layer provisioned correctly; SairiOS is not running. **Expected for a freshly built image.** |
+| `SAIRIOS-FIRSTBOOT: FAIL`     | The OS layer itself is broken. Something in this directory is wrong.                                |
 
 The distinction is the whole design of the check. A bare image is not a broken image, and
 conflating the two would make the smoke test either useless or permanently red.
@@ -169,16 +168,16 @@ conflating the two would make the smoke test either useless or permanently red.
 Never executed. The authoring host was macOS on arm64 with no QEMU, no Docker and no
 cloud-init, so none of this has been booted.
 
-| Item                                                   | Status                                                                                                                                                                                                                                                                                                  |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| YAML parses                                            | **Verified.** All three files parse with a YAML 1.2 parser.                                                                                                                                                                                                                                             |
-| Embedded shell scripts parse                           | **Verified.** All four pass `bash -n`: the three in `write_files`, and the NodeSource step in `runcmd`, which also passes `sh -n`.                                                                                                                                                                      |
-| `sairios-firstboot-check` logic executed               | **Partially verified.** Run on the macOS authoring host with paths redirected. Section rendering, counter arithmetic and verdict selection are correct. Every Linux-specific probe reported failure there, which is the right answer on macOS and says nothing about a Debian guest.                    |
-| Package names exist in Debian 12                       | **Verified against the archive on 2026-07-31.** cage 0.1.4-4, cog 0.16.1-1, seatd 0.7.0-6, pipewire 0.3.65-3+deb12u1, wireplumber 0.4.13-1, fonts-inter, fonts-jetbrains-mono, fonts-liberation2. Presence in the archive is not the same as installing cleanly together.                               |
-| `cloud-init schema` validation                         | **Not run.** cloud-init is not installed on the authoring host.                                                                                                                                                                                                                                         |
-| Booted in a VM                                         | **Not run.** No QEMU.                                                                                                                                                                                                                                                                                   |
-| NodeSource repository reachable and signed as expected | **Not run**, and it cannot be until a maintainer pins the signing key fingerprint. `user-data.yaml` compares the fetched key against a pinned value and aborts the Node step if it does not match; the pin is a placeholder, so on any machine booted today that step aborts and Node is not installed. |
-| Seed ISO built and detected by cloud-init              | **Not run.**                                                                                                                                                                                                                                                                                            |
+| Item                                                                       | Status                                                                                                                                                                                                                                                                               |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| YAML parses                                                                | **Verified.** All three files parse with a YAML 1.2 parser.                                                                                                                                                                                                                          |
+| Embedded shell scripts parse                                               | **Verified.** All four pass `bash -n`: the three in `write_files`, and the Node install step in `runcmd`, which also passes `sh -n`.                                                                                                                                                 |
+| `sairios-firstboot-check` logic executed                                   | **Partially verified.** Run on the macOS authoring host with paths redirected. Section rendering, counter arithmetic and verdict selection are correct. Every Linux-specific probe reported failure there, which is the right answer on macOS and says nothing about a Debian guest. |
+| Package names exist in Debian 12                                           | **Verified against the archive on 2026-07-31.** cage 0.1.4-4, cog 0.16.1-1, seatd 0.7.0-6, pipewire 0.3.65-3+deb12u1, wireplumber 0.4.13-1, fonts-inter, fonts-jetbrains-mono, fonts-liberation2. Presence in the archive is not the same as installing cleanly together.            |
+| `cloud-init schema` validation                                             | **Not run.** cloud-init is not installed on the authoring host.                                                                                                                                                                                                                      |
+| Booted in a VM                                                             | **Not run.** No QEMU.                                                                                                                                                                                                                                                                |
+| Node tarball URL resolves and the pinned SHA-256 matches the published one | **Verified against `https://nodejs.org/dist/v22.23.2/SHASUMS256.txt`** for both `linux-arm64` and `linux-x64`. Whether the guest's `sha256sum` agrees has not been observed, because that needs a boot.                                                                              |
+| Seed ISO built and detected by cloud-init                                  | **Not run.**                                                                                                                                                                                                                                                                         |
 
 To verify on a machine that has the tools:
 
@@ -199,4 +198,4 @@ Intended output from the smoke run is a serial log containing
 `SAIRIOS-FIRSTBOOT: DEGRADED` and an exit status of 0. `OK` is not expected until a
 product tree has been delivered.
 
-Not today, though: the NodeSource signing-key fingerprint in `vm/cloud-init/user-data.yaml` is still an unfilled placeholder, so the Node step aborts, `node` and `npm` are absent, and the verdict is `FAIL` with `--smoke` exiting 1. Pin a fingerprint you verified out of band first.
+Node is installed from the official nodejs.org tarball, verified against a pinned SHA-256, so there is no third-party apt key to fill in and nothing blocks the Node step.

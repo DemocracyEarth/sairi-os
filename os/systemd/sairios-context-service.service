@@ -37,7 +37,7 @@ EnvironmentFile=-%h/.config/sairios/env
 # --experimental-sqlite: node:sqlite is behind a flag on Node 22 LTS. This matches the
 # `start` script in services/context-service/package.json. Drop the flag once the target
 # runtime is Node 23.4+, where node:sqlite is unflagged.
-ExecStart=/usr/bin/node --experimental-sqlite /opt/sairios/services/context-service/dist/main.js
+ExecStart=/usr/local/bin/node --experimental-sqlite /opt/sairios/services/context-service/dist/main.js
 
 Restart=on-failure
 RestartSec=2

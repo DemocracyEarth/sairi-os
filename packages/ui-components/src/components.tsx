@@ -19,6 +19,7 @@ import type {
   TimelineProps,
 } from '@sairios/adaptive-ui-schema';
 import { renderMarkdown } from './markdown.js';
+import { useT } from './i18n.js';
 import { useHost } from './host.js';
 
 /**
@@ -75,10 +76,11 @@ function MarkdownView({ props }: { props: MarkdownProps }): JSX.Element {
 }
 
 function SourceListView({ props }: { props: SourceListProps }): JSX.Element {
+  const t = useT();
   return (
-    <Panel title={props.title ?? 'Sources'} kind="source-list">
+    <Panel title={props.title ?? t('empty.sources')} kind="source-list">
       {props.sources.length === 0 ? (
-        <Empty>No sources yet.</Empty>
+        <Empty>{t('empty.sources')}</Empty>
       ) : (
         <ul className="sairi-list">
           {props.sources.map((source, i) => (
@@ -88,7 +90,9 @@ function SourceListView({ props }: { props: SourceListProps }): JSX.Element {
                   <span className="sairi-source__kind">{source.kind}</span>
                   {source.label}
                   {/* Anything the user did not author is marked, every time. */}
-                  {source.trusted !== true && <span className="sairi-untrusted">untrusted</span>}
+                  {source.trusted !== true && (
+                    <span className="sairi-untrusted">{t('label.untrusted')}</span>
+                  )}
                 </span>
                 {source.detail && <span className="sairi-source__detail">{source.detail}</span>}
               </div>
@@ -101,10 +105,11 @@ function SourceListView({ props }: { props: SourceListProps }): JSX.Element {
 }
 
 function KeyValueListView({ props }: { props: KeyValueListProps }): JSX.Element {
+  const t = useT();
   return (
     <Panel title={props.title} kind="key-value-list">
       {props.items.length === 0 ? (
-        <Empty>Nothing recorded.</Empty>
+        <Empty>{t('empty.nothing')}</Empty>
       ) : (
         <ul className="sairi-list">
           {props.items.map((item, i) => (
@@ -122,7 +127,7 @@ function KeyValueListView({ props }: { props: KeyValueListProps }): JSX.Element 
 function EditorView({ regionId, props }: { regionId: string; props: EditorProps }): JSX.Element {
   const host = useHost();
   return (
-    <Panel title={props.title ?? 'Document'} kind="editor">
+    <Panel title={props.title} kind="editor">
       <textarea
         aria-label={props.title ?? 'Editable document'}
         className="sairi-editor"
@@ -137,11 +142,12 @@ function EditorView({ regionId, props }: { regionId: string; props: EditorProps 
 }
 
 function TableView({ props }: { props: TableProps }): JSX.Element {
+  const t = useT();
   return (
     <Panel title={props.title} kind="table">
       {props.caption && <p className="sairi-table__caption">{props.caption}</p>}
       {props.rows.length === 0 ? (
-        <Empty>No rows yet.</Empty>
+        <Empty>{t('empty.rows')}</Empty>
       ) : (
         <div className="sairi-table-wrap">
           <table className="sairi-table">
@@ -159,7 +165,7 @@ function TableView({ props }: { props: TableProps }): JSX.Element {
                 <tr key={`row-${i}`}>
                   {props.columns.map((column) => (
                     <td className={alignClass(column.align)} key={column.key}>
-                      {formatCell(row[column.key])}
+                      {formatCell(row[column.key], t('bool.yes'), t('bool.no'))}
                     </td>
                   ))}
                 </tr>
@@ -176,9 +182,13 @@ function alignClass(align?: 'left' | 'right' | 'center'): string {
   return align === 'right' ? 'is-right' : align === 'center' ? 'is-center' : '';
 }
 
-function formatCell(value: string | number | boolean | null | undefined): string {
+function formatCell(
+  value: string | number | boolean | null | undefined,
+  yes: string,
+  no: string,
+): string {
   if (value === null || value === undefined) return '—';
-  if (typeof value === 'boolean') return value ? 'yes' : 'no';
+  if (typeof value === 'boolean') return value ? yes : no;
   return String(value);
 }
 
@@ -189,11 +199,12 @@ function ChecklistView({
   regionId: string;
   props: ChecklistProps;
 }): JSX.Element {
+  const t = useT();
   const host = useHost();
   return (
-    <Panel title={props.title ?? 'Checklist'} kind="checklist">
+    <Panel title={props.title} kind="checklist">
       {props.items.length === 0 ? (
-        <Empty>Nothing to check yet.</Empty>
+        <Empty>{t('empty.checklist')}</Empty>
       ) : (
         <ul className="sairi-list">
           {props.items.map((item) => (
@@ -221,10 +232,11 @@ function ChecklistView({
 }
 
 function TimelineView({ props }: { props: TimelineProps }): JSX.Element {
+  const t = useT();
   return (
-    <Panel title={props.title ?? 'Timeline'} kind="timeline">
+    <Panel title={props.title} kind="timeline">
       {props.entries.length === 0 ? (
-        <Empty>No entries.</Empty>
+        <Empty>{t('empty.timeline')}</Empty>
       ) : (
         <ol className="sairi-timeline">
           {props.entries.map((entry, i) => (
@@ -246,7 +258,7 @@ function ProgressView({ props }: { props: ProgressProps }): JSX.Element {
   return (
     <Panel title={props.title} kind="progress">
       <div className="sairi-progress__label">
-        <span>{props.label ?? 'Progress'}</span>
+        <span>{props.label ?? ''}</span>
         <span>{props.indeterminate ? 'working' : `${percent}%`}</span>
       </div>
       <div
@@ -266,10 +278,11 @@ function ProgressView({ props }: { props: ProgressProps }): JSX.Element {
 }
 
 function StatusPanelView({ props }: { props: StatusPanelProps }): JSX.Element {
+  const t = useT();
   return (
-    <Panel title={props.title ?? 'Status'} kind="status-panel">
+    <Panel title={props.title} kind="status-panel">
       {props.items.length === 0 ? (
-        <Empty>No status reported.</Empty>
+        <Empty>{t('empty.status')}</Empty>
       ) : (
         <ul className="sairi-list">
           {props.items.map((item, i) => (
@@ -291,7 +304,7 @@ function StatusPanelView({ props }: { props: StatusPanelProps }): JSX.Element {
 
 function TerminalOutputView({ props }: { props: TerminalOutputProps }): JSX.Element {
   return (
-    <Panel title={props.title ?? 'Output'} kind="terminal-output">
+    <Panel title={props.title} kind="terminal-output">
       <pre className="sairi-terminal">
         {props.lines.join('\n')}
         {props.exitCode !== undefined && (
@@ -303,10 +316,11 @@ function TerminalOutputView({ props }: { props: TerminalOutputProps }): JSX.Elem
 }
 
 function FileListView({ props }: { props: FileListProps }): JSX.Element {
+  const t = useT();
   return (
-    <Panel title={props.title ?? 'Files'} kind="file-list">
+    <Panel title={props.title} kind="file-list">
       {props.files.length === 0 ? (
-        <Empty>No files in this context yet.</Empty>
+        <Empty>{t('empty.files')}</Empty>
       ) : (
         <ul className="sairi-list">
           {props.files.map((file, i) => (
@@ -314,7 +328,9 @@ function FileListView({ props }: { props: FileListProps }): JSX.Element {
               <div className="sairi-source">
                 <span className="sairi-source__label">
                   {file.name}
-                  {file.untrusted === true && <span className="sairi-untrusted">untrusted</span>}
+                  {file.untrusted === true && (
+                    <span className="sairi-untrusted">{t('label.untrusted')}</span>
+                  )}
                 </span>
                 <span className="sairi-source__detail">
                   {file.relativePath}
@@ -336,6 +352,7 @@ function formatBytes(bytes: number): string {
 }
 
 function ActionButtonView({ props }: { props: ActionButtonProps }): JSX.Element {
+  const t = useT();
   const host = useHost();
   const variant = props.variant ?? 'default';
   return (
@@ -351,7 +368,7 @@ function ActionButtonView({ props }: { props: ActionButtonProps }): JSX.Element 
       {props.description && <p className="sairi-button__description">{props.description}</p>}
       {props.capability && (
         <p className="sairi-button__description">
-          Requires <code>{props.capability}</code>. You will be asked before it runs.
+          {t('perm.needsCapability', { capability: props.capability })}
         </p>
       )}
     </Panel>
@@ -361,6 +378,7 @@ function ActionButtonView({ props }: { props: ActionButtonProps }): JSX.Element 
 // --- broker-backed component ----------------------------------------------
 
 function PermissionRequestView({ props }: { props: PermissionRequestProps }): JSX.Element {
+  const t = useT();
   const host = useHost();
   // The model supplies a requestId; the BROKER decides whether it is real. A
   // request the broker does not know about is never approvable.
@@ -368,12 +386,11 @@ function PermissionRequestView({ props }: { props: PermissionRequestProps }): JS
 
   if (!known) {
     return (
-      <Panel title="Permission request" kind="permission-request">
+      <Panel title={t('perm.request')} kind="permission-request">
         <div className="sairi-render-error">
-          <p className="sairi-render-error__title">Unverified permission request</p>
+          <p className="sairi-render-error__title">{t('perm.unverified')}</p>
           <p className="sairi-text sairi-text--muted">
-            The interface asked to approve <code>{props.capability}</code>, but the permission
-            broker has no matching request. Nothing can be approved from here.
+            {t('perm.unverifiedBody', { capability: props.capability })}
           </p>
         </div>
       </Panel>
@@ -383,15 +400,17 @@ function PermissionRequestView({ props }: { props: PermissionRequestProps }): JS
   const decided = known.status !== 'pending';
 
   return (
-    <Panel title={props.title ?? 'Permission request'} kind="permission-request">
+    <Panel title={props.title ?? t('perm.request')} kind="permission-request">
       <div className={`sairi-permission sairi-permission--${known.risk}`}>
         <div>
           <span className="sairi-permission__capability">{known.capability}</span>
-          <span className="sairi-permission__risk">{known.risk} risk</span>
+          <span className="sairi-permission__risk">{t('perm.risk', { level: known.risk })}</span>
         </div>
         <p className="sairi-permission__reason">{known.reason}</p>
         {decided ? (
-          <p className="sairi-text sairi-text--muted">Decided: {known.status}</p>
+          <p className="sairi-text sairi-text--muted">
+            {t('perm.decided', { status: known.status })}
+          </p>
         ) : (
           <div className="sairi-permission__actions">
             <button
@@ -404,7 +423,7 @@ function PermissionRequestView({ props }: { props: PermissionRequestProps }): JS
               }
               type="button"
             >
-              Allow once
+              {t('perm.allowOnce')}
             </button>
             <button
               className="sairi-button"
@@ -416,7 +435,7 @@ function PermissionRequestView({ props }: { props: PermissionRequestProps }): JS
               }
               type="button"
             >
-              Allow for this context
+              {t('perm.allowContext')}
             </button>
             <button
               className="sairi-button"
@@ -428,7 +447,7 @@ function PermissionRequestView({ props }: { props: PermissionRequestProps }): JS
               }
               type="button"
             >
-              Deny
+              {t('perm.deny')}
             </button>
             <button
               className="sairi-button sairi-button--danger"
@@ -440,7 +459,7 @@ function PermissionRequestView({ props }: { props: PermissionRequestProps }): JS
               }
               type="button"
             >
-              Deny and remember
+              {t('perm.denyRemember')}
             </button>
           </div>
         )}
@@ -452,38 +471,39 @@ function PermissionRequestView({ props }: { props: PermissionRequestProps }): JS
 // --- host-content components ----------------------------------------------
 
 function ContextMetadataView({ props }: { props: ContextMetadataProps }): JSX.Element {
+  const t = useT();
   const { context } = useHost();
   if (!context) {
     return (
-      <Panel title={props.title ?? 'Context'} kind="context-metadata">
-        <Empty>No context loaded.</Empty>
+      <Panel title={props.title} kind="context-metadata">
+        <Empty>{t('empty.noContext')}</Empty>
       </Panel>
     );
   }
   return (
-    <Panel title={props.title ?? 'Context'} kind="context-metadata">
+    <Panel title={props.title} kind="context-metadata">
       <ul className="sairi-list">
         <li className="sairi-list__row">
-          <span className="sairi-list__label">Name</span>
+          <span className="sairi-list__label">{t('label.name')}</span>
           <span className="sairi-list__value">{context.name}</span>
         </li>
         <li className="sairi-list__row">
-          <span className="sairi-list__label">Type</span>
+          <span className="sairi-list__label">{t('label.type')}</span>
           <span className="sairi-list__value">
             <span className={`sairi-badge sairi-badge--${context.type}`}>{context.type}</span>
           </span>
         </li>
         <li className="sairi-list__row">
-          <span className="sairi-list__label">Status</span>
+          <span className="sairi-list__label">{t('label.status')}</span>
           <span className="sairi-list__value">{context.status}</span>
         </li>
         <li className="sairi-list__row">
-          <span className="sairi-list__label">Updated</span>
+          <span className="sairi-list__label">{t('label.updated')}</span>
           <span className="sairi-list__value">{new Date(context.updatedAt).toLocaleString()}</span>
         </li>
         {props.showObjective !== false && (
           <li className="sairi-list__row">
-            <span className="sairi-list__label">Objective</span>
+            <span className="sairi-list__label">{t('label.objective')}</span>
             <span className="sairi-list__value">{context.objective || '—'}</span>
           </li>
         )}
@@ -493,13 +513,14 @@ function ContextMetadataView({ props }: { props: ContextMetadataProps }): JSX.El
 }
 
 function ActivityLogView({ props }: { props: ActivityLogProps }): JSX.Element {
+  const t = useT();
   const { context } = useHost();
   const limit = props.limit ?? 20;
   const events = context ? [...context.events].slice(-limit).reverse() : [];
   return (
-    <Panel title={props.title ?? 'Activity'} kind="activity-log">
+    <Panel title={props.title} kind="activity-log">
       {events.length === 0 ? (
-        <Empty>Nothing has happened in this context yet.</Empty>
+        <Empty>{t('empty.activity')}</Empty>
       ) : (
         <ol className="sairi-timeline">
           {events.map((event) => (

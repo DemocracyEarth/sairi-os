@@ -42,7 +42,7 @@ EnvironmentFile=-%h/.config/sairios/env
 #
 # Migration path: replace this with a small static server that has no dev dependency,
 # once one exists. The unit contract is only "something answers on 7800".
-ExecStart=/usr/bin/npm run preview --workspace @sairios/shell -- --host 127.0.0.1 --port 7800 --strictPort
+ExecStart=/usr/local/bin/npm run preview --workspace @sairios/shell -- --host 127.0.0.1 --port 7800 --strictPort
 
 Restart=on-failure
 RestartSec=2

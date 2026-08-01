@@ -144,8 +144,8 @@ all by design, and the serial console is the only channel.
 
 `build-image.sh` produces a provisioned operating-system layer with an **empty**
 `/opt/sairios`. It does not clone the repository and does not bake a build into the
-image. A freshly built image is meant to report `SAIRIOS-FIRSTBOOT: DEGRADED`, which is a pass.
-Not today, though: the NodeSource signing-key fingerprint in `vm/cloud-init/user-data.yaml` is still an unfilled placeholder, so the Node step aborts, `node` and `npm` are absent, and the verdict is `FAIL` with `--smoke` exiting 1. Pin a fingerprint you verified out of band first.
+image. A freshly built image reports `SAIRIOS-FIRSTBOOT: DEGRADED`, and that is a pass.
+Node is installed from the official nodejs.org tarball, verified against a pinned SHA-256, so there is no third-party apt key to fill in and nothing blocks the Node step.
 
 This keeps image builds independent of product builds, so a broken `npm run build` cannot
 produce an unbootable image. See `vm/cloud-init/README.md` for how to deliver SairiOS to
@@ -243,16 +243,10 @@ What correct output looks like:
 - **Step 4** ends with the paths of `vm/out/sairios-<arch>.qcow2` and
   `vm/out/seed-<arch>.iso`, and `qemu-img info` on the disk reports a 20 GiB virtual size
   with a much smaller actual size.
-- **Step 5** is intended to end with `SMOKE: PASSED after Ns (verdict DEGRADED).` and exit
-  status 0. Until the NodeSource fingerprint is pinned it ends with `FAIL` and exit 1,
-  because `node` and `npm` are absent. Once pinned,
+- **Step 5** ends with `SMOKE: PASSED after Ns (verdict DEGRADED).` and exit status 0.
   `DEGRADED` is the correct result for a bare image, and the printed guest report should
   show `[ ok ]` for node, cage, cog, the DRM device, the `seat` group, the data
   directories and lingering, with warnings only about the absent product tree.
-  **Not today for node.** `user-data.yaml` refuses to trust the NodeSource signing key
-  until a maintainer pins its fingerprint, and no fingerprint has been pinned, so that
-  step aborts and the report says `[fail ] node is NOT installed`, which makes the verdict
-  `FAIL` and step 5 exit 1. Pin the fingerprint first; the file says where.
 
 If step 5 reports `FAIL`, the operating-system layer is broken and the guest report names
 which check failed. If it times out, read `vm/out/serial-<arch>.log`. Triage for every

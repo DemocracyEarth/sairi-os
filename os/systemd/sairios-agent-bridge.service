@@ -43,7 +43,7 @@ Environment=SAIRIOS_AGENT_PROVIDER=mock
 # generated on the machine.
 EnvironmentFile=-%h/.config/sairios/env
 
-ExecStart=/usr/bin/node /opt/sairios/services/agent-bridge/dist/main.js
+ExecStart=/usr/local/bin/node /opt/sairios/services/agent-bridge/dist/main.js
 
 Restart=on-failure
 RestartSec=2

@@ -1,95 +1,23 @@
+@import './tokens.css';
+
 /*
- * SairiOS design language.
+ * The SairiUI component catalog.
  *
- * Early Macintosh clarity, late-80s UNIX workstation utility, modern typography.
- * Warm off-white surfaces, charcoal type, thin borders, one muted blue accent,
- * explicit system state, minimal animation.
+ * These are the sixteen components an agent may put on screen. They share the
+ * desktop's tokens so a context's contents and the window around it read as one
+ * environment rather than a web page embedded in a shell.
  *
- * Deliberately absent: gradients, glassmorphism, neon, chat bubbles, drop
- * shadows heavier than 2px, and anything that animates for its own sake.
+ * Everything here is calm on purpose: thin borders, one accent, no animation
+ * beyond a single indeterminate progress bar. The content is the agent's; the
+ * restraint is the system's.
  */
 
-:root {
-  --sairi-bg: #f2f0ec;
-  --sairi-surface: #fbfaf8;
-  --sairi-surface-raised: #ffffff;
-  --sairi-surface-sunken: #eae7e1;
-
-  --sairi-border: #d6d2ca;
-  --sairi-border-strong: #b4afa4;
-  --sairi-border-focus: #2f5d8c;
-
-  --sairi-text: #23252a;
-  --sairi-text-muted: #6a6c72;
-  --sairi-text-faint: #94969c;
-
-  --sairi-accent: #2f5d8c;
-  --sairi-accent-hover: #24496e;
-  --sairi-accent-soft: #e4ecf4;
-
-  --sairi-ok: #3a6b4c;
-  --sairi-warn: #8a6a1c;
-  --sairi-error: #8c3a2f;
-  --sairi-pending: #6a6c72;
-
-  --sairi-ephemeral: #7a6a45;
-  --sairi-persistent: #2f5d8c;
-  --sairi-crystallized: #55507a;
-
-  --sairi-font:
-    ui-sans-serif, -apple-system, 'Segoe UI', Inter, 'Helvetica Neue', Arial, sans-serif;
-  --sairi-font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
-
-  --sairi-radius: 3px;
-  --sairi-shadow: 0 1px 2px rgb(35 37 42 / 8%);
-  --sairi-shadow-raised: 0 2px 6px rgb(35 37 42 / 10%);
-
-  --sairi-space-1: 4px;
-  --sairi-space-2: 8px;
-  --sairi-space-3: 12px;
-  --sairi-space-4: 16px;
-  --sairi-space-5: 24px;
-  --sairi-space-6: 32px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --sairi-bg: #1a1b1e;
-    --sairi-surface: #212327;
-    --sairi-surface-raised: #282a2f;
-    --sairi-surface-sunken: #17181b;
-
-    --sairi-border: #35383e;
-    --sairi-border-strong: #4a4e56;
-
-    --sairi-text: #e6e4df;
-    --sairi-text-muted: #9b9da4;
-    --sairi-text-faint: #6e7078;
-
-    --sairi-accent: #7aa6d2;
-    --sairi-accent-hover: #93b8df;
-    --sairi-accent-soft: #23303d;
-
-    --sairi-ok: #6fa981;
-    --sairi-warn: #c2a04e;
-    --sairi-error: #cf7f72;
-
-    --sairi-ephemeral: #b8a578;
-    --sairi-persistent: #7aa6d2;
-    --sairi-crystallized: #9a94c4;
-
-    --sairi-shadow: 0 1px 2px rgb(0 0 0 / 40%);
-    --sairi-shadow-raised: 0 2px 6px rgb(0 0 0 / 45%);
-  }
-}
-
-/* --- primitives --------------------------------------------------------- */
+/* --- panel shell --------------------------------------------------------- */
 
 .sairi-panel {
   background: var(--sairi-surface);
   border: 1px solid var(--sairi-border);
-  border-radius: var(--sairi-radius);
-  box-shadow: var(--sairi-shadow);
+  border-radius: var(--sairi-radius-sm);
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -108,35 +36,34 @@
 
 .sairi-panel__title {
   color: var(--sairi-text);
-  font-size: 12px;
+  font-size: var(--sairi-text-sm);
   font-weight: 600;
-  letter-spacing: 0.04em;
   margin: 0;
-  text-transform: uppercase;
 }
 
 .sairi-panel__kind {
   color: var(--sairi-text-faint);
   font-family: var(--sairi-font-mono);
-  font-size: 10px;
+  font-size: var(--sairi-text-xs);
 }
 
 .sairi-panel__body {
   color: var(--sairi-text);
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: var(--sairi-text-base);
+  line-height: 1.5;
   overflow: auto;
   padding: var(--sairi-space-3);
 }
 
 .sairi-empty {
   color: var(--sairi-text-faint);
-  font-size: 12px;
+  font-size: var(--sairi-text-sm);
   font-style: italic;
-  padding: var(--sairi-space-2) 0;
+  margin: 0;
+  padding: var(--sairi-space-1) 0;
 }
 
-/* --- text / markdown ---------------------------------------------------- */
+/* --- text and markdown --------------------------------------------------- */
 
 .sairi-text {
   margin: 0;
@@ -156,9 +83,8 @@
 .sairi-markdown h1,
 .sairi-markdown h2,
 .sairi-markdown h3 {
-  font-size: 13px;
+  font-size: var(--sairi-text-md);
   font-weight: 600;
-  letter-spacing: 0.01em;
   margin: var(--sairi-space-4) 0 var(--sairi-space-2);
 }
 
@@ -178,10 +104,10 @@
 }
 
 .sairi-markdown code {
-  background: var(--sairi-surface-sunken);
+  background: var(--sairi-surface-inset);
   border-radius: 2px;
   font-family: var(--sairi-font-mono);
-  font-size: 12px;
+  font-size: var(--sairi-text-sm);
   padding: 1px 4px;
 }
 
@@ -189,7 +115,7 @@
   color: var(--sairi-accent);
 }
 
-/* --- lists -------------------------------------------------------------- */
+/* --- lists --------------------------------------------------------------- */
 
 .sairi-list {
   display: flex;
@@ -215,7 +141,7 @@
 .sairi-list__label {
   color: var(--sairi-text-muted);
   flex: 0 0 38%;
-  font-size: 12px;
+  font-size: var(--sairi-text-sm);
 }
 
 .sairi-list__value {
@@ -228,11 +154,13 @@
   display: flex;
   flex-direction: column;
   gap: 1px;
+  min-width: 0;
 }
 
 .sairi-source__label {
   align-items: center;
   display: flex;
+  flex-wrap: wrap;
   gap: var(--sairi-space-2);
 }
 
@@ -249,9 +177,10 @@
 
 .sairi-source__detail {
   color: var(--sairi-text-muted);
-  font-size: 12px;
+  font-size: var(--sairi-text-sm);
 }
 
+/* Anything the user did not author is marked, every time it appears. */
 .sairi-untrusted {
   border: 1px solid var(--sairi-warn);
   border-radius: 2px;
@@ -263,7 +192,7 @@
   text-transform: uppercase;
 }
 
-/* --- table -------------------------------------------------------------- */
+/* --- table --------------------------------------------------------------- */
 
 .sairi-table-wrap {
   overflow-x: auto;
@@ -271,7 +200,7 @@
 
 .sairi-table {
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: var(--sairi-text-sm);
   width: 100%;
 }
 
@@ -287,7 +216,6 @@
   border-bottom: 1px solid var(--sairi-border-strong);
   color: var(--sairi-text-muted);
   font-weight: 600;
-  letter-spacing: 0.03em;
   white-space: nowrap;
 }
 
@@ -307,37 +235,38 @@
 
 .sairi-table__caption {
   color: var(--sairi-text-muted);
-  font-size: 11px;
+  font-size: var(--sairi-text-xs);
   margin-bottom: var(--sairi-space-2);
 }
 
-/* --- checklist ---------------------------------------------------------- */
+/* --- checklist ----------------------------------------------------------- */
 
 .sairi-check {
   align-items: flex-start;
   display: flex;
   gap: var(--sairi-space-2);
-  padding: var(--sairi-space-1) 0;
+  padding: 2px 0;
 }
 
 .sairi-check__box {
   accent-color: var(--sairi-accent);
-  margin-top: 3px;
+  margin-top: 2px;
 }
 
 .sairi-check__note {
   color: var(--sairi-text-muted);
   display: block;
-  font-size: 11px;
+  font-size: var(--sairi-text-xs);
 }
 
-/* --- timeline ----------------------------------------------------------- */
+/* --- timeline ------------------------------------------------------------ */
 
 .sairi-timeline {
   border-left: 1px solid var(--sairi-border);
   display: flex;
   flex-direction: column;
   gap: var(--sairi-space-3);
+  list-style: none;
   margin: 0;
   padding: 0 0 0 var(--sairi-space-4);
 }
@@ -345,13 +274,13 @@
 .sairi-timeline__at {
   color: var(--sairi-text-faint);
   font-family: var(--sairi-font-mono);
-  font-size: 10px;
+  font-size: var(--sairi-text-xs);
 }
 
-/* --- progress ----------------------------------------------------------- */
+/* --- progress ------------------------------------------------------------ */
 
 .sairi-progress__track {
-  background: var(--sairi-surface-sunken);
+  background: var(--sairi-surface-inset);
   border: 1px solid var(--sairi-border);
   border-radius: 2px;
   height: 8px;
@@ -377,28 +306,21 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .sairi-progress__fill--indeterminate {
-    animation: none;
-    width: 100%;
-  }
-}
-
 .sairi-progress__label {
   color: var(--sairi-text-muted);
   display: flex;
-  font-size: 11px;
+  font-size: var(--sairi-text-xs);
   justify-content: space-between;
   margin-bottom: var(--sairi-space-1);
 }
 
-/* --- status ------------------------------------------------------------- */
+/* --- status panel -------------------------------------------------------- */
 
 .sairi-status {
   align-items: baseline;
   display: flex;
   gap: var(--sairi-space-2);
-  padding: var(--sairi-space-1) 0;
+  padding: 2px 0;
 }
 
 .sairi-status__dot {
@@ -422,34 +344,35 @@
   border: 1px solid var(--sairi-pending);
 }
 .sairi-status__dot--idle {
-  background: var(--sairi-border-strong);
+  background: var(--sairi-idle);
 }
 
 .sairi-status__detail {
   color: var(--sairi-text-muted);
-  font-size: 11px;
+  font-size: var(--sairi-text-xs);
 }
 
-/* --- permission --------------------------------------------------------- */
+/* --- permission request -------------------------------------------------- */
 
 .sairi-permission {
   background: var(--sairi-surface-raised);
   border: 1px solid var(--sairi-border-strong);
   border-left: 3px solid var(--sairi-accent);
-  border-radius: var(--sairi-radius);
+  border-radius: var(--sairi-radius-sm);
   padding: var(--sairi-space-3);
 }
 
 .sairi-permission--high {
   border-left-color: var(--sairi-error);
 }
+
 .sairi-permission--medium {
   border-left-color: var(--sairi-warn);
 }
 
 .sairi-permission__capability {
   font-family: var(--sairi-font-mono);
-  font-size: 12px;
+  font-size: var(--sairi-text-sm);
   font-weight: 600;
 }
 
@@ -465,32 +388,33 @@
 
 .sairi-permission__reason {
   color: var(--sairi-text-muted);
-  font-size: 12px;
+  font-size: var(--sairi-text-sm);
   margin: var(--sairi-space-2) 0;
 }
 
 .sairi-permission__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--sairi-space-2);
+  gap: var(--sairi-space-1);
   margin-top: var(--sairi-space-3);
 }
 
-/* --- buttons ------------------------------------------------------------ */
+/* --- buttons ------------------------------------------------------------- */
 
 .sairi-button {
   background: var(--sairi-surface-raised);
   border: 1px solid var(--sairi-border-strong);
-  border-radius: var(--sairi-radius);
+  border-radius: var(--sairi-radius-sm);
   color: var(--sairi-text);
-  cursor: pointer;
+  cursor: default;
   font-family: inherit;
-  font-size: 12px;
-  padding: 4px 10px;
+  font-size: var(--sairi-text-sm);
+  padding: 3px var(--sairi-space-3);
 }
 
-.sairi-button:hover {
+.sairi-button:hover:not(:disabled) {
   background: var(--sairi-accent-soft);
+  border-color: var(--sairi-accent-border);
 }
 
 .sairi-button:focus-visible {
@@ -500,7 +424,6 @@
 
 .sairi-button:disabled {
   color: var(--sairi-text-faint);
-  cursor: not-allowed;
 }
 
 .sairi-button--primary {
@@ -509,32 +432,32 @@
   color: #fff;
 }
 
-.sairi-button--primary:hover {
+.sairi-button--primary:hover:not(:disabled) {
   background: var(--sairi-accent-hover);
 }
 
 .sairi-button--danger {
-  border-color: var(--sairi-error);
+  border-color: color-mix(in srgb, var(--sairi-error) 55%, transparent);
   color: var(--sairi-error);
 }
 
 .sairi-button__description {
   color: var(--sairi-text-muted);
-  font-size: 11px;
-  margin-top: var(--sairi-space-1);
+  font-size: var(--sairi-text-xs);
+  margin: var(--sairi-space-1) 0 0;
 }
 
-/* --- editor / terminal -------------------------------------------------- */
+/* --- editor and terminal output ------------------------------------------ */
 
 .sairi-editor {
   background: var(--sairi-surface-raised);
   border: 1px solid var(--sairi-border);
-  border-radius: var(--sairi-radius);
+  border-radius: var(--sairi-radius-sm);
   color: var(--sairi-text);
   font-family: var(--sairi-font-mono);
-  font-size: 12px;
+  font-size: var(--sairi-text-sm);
   line-height: 1.6;
-  min-height: 140px;
+  min-height: 120px;
   padding: var(--sairi-space-3);
   resize: vertical;
   width: 100%;
@@ -546,26 +469,27 @@
 }
 
 .sairi-terminal {
-  background: var(--sairi-surface-sunken);
+  background: var(--sairi-term-bg);
   border: 1px solid var(--sairi-border);
-  border-radius: var(--sairi-radius);
+  border-radius: var(--sairi-radius-sm);
+  color: var(--sairi-term-text);
   font-family: var(--sairi-font-mono);
-  font-size: 11.5px;
+  font-size: var(--sairi-text-sm);
   line-height: 1.5;
   margin: 0;
-  max-height: 320px;
+  max-height: 300px;
   overflow: auto;
   padding: var(--sairi-space-3);
   white-space: pre-wrap;
 }
 
 .sairi-terminal__exit {
-  color: var(--sairi-text-muted);
+  color: var(--sairi-term-dim);
   display: block;
   margin-top: var(--sairi-space-2);
 }
 
-/* --- layout ------------------------------------------------------------- */
+/* --- layout -------------------------------------------------------------- */
 
 .sairi-layout {
   display: grid;
@@ -596,7 +520,8 @@
   grid-column: span 9;
 }
 
-@media (width <= 900px) {
+/* A context window can be narrow. Collapse rather than squeeze. */
+@container (width < 620px) {
   .sairi-layout {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -606,18 +531,18 @@
   }
 }
 
-/* --- renderer error state ----------------------------------------------- */
+/* --- rejected document --------------------------------------------------- */
 
 .sairi-render-error {
   background: var(--sairi-surface-raised);
   border: 1px solid var(--sairi-error);
-  border-radius: var(--sairi-radius);
+  border-radius: var(--sairi-radius-sm);
   padding: var(--sairi-space-4);
 }
 
 .sairi-render-error__title {
   color: var(--sairi-error);
-  font-size: 13px;
+  font-size: var(--sairi-text-md);
   font-weight: 600;
   margin: 0 0 var(--sairi-space-2);
 }
@@ -625,21 +550,18 @@
 .sairi-render-error__list {
   color: var(--sairi-text-muted);
   font-family: var(--sairi-font-mono);
-  font-size: 11px;
+  font-size: var(--sairi-text-xs);
   margin: var(--sairi-space-2) 0 0;
   padding-left: var(--sairi-space-4);
 }
 
-/* --- context type badge ------------------------------------------------- */
+/* --- context type badge --------------------------------------------------- */
 
 .sairi-badge {
   border: 1px solid currentcolor;
-  border-radius: 2px;
-  font-family: var(--sairi-font-mono);
-  font-size: 9px;
-  letter-spacing: 0.08em;
-  padding: 1px 4px;
-  text-transform: uppercase;
+  border-radius: 10px;
+  font-size: var(--sairi-text-xs);
+  padding: 1px 6px;
   white-space: nowrap;
 }
 

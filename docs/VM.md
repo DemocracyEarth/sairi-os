@@ -43,12 +43,11 @@ The smoke check's exit status is the signal:
 | 2    | Timeout expired with no verdict on the serial console. |
 | 3    | QEMU exited before the guest reported anything.        |
 
-`DEGRADED` is the intended pass for a freshly built image. The image ships the
-operating-system layer with an empty `/opt/sairios`; SairiOS is delivered separately. Use
-`--strict` only after delivering the product tree.
+`DEGRADED` is a pass for a freshly built image. The image ships the operating-system
+layer with an empty `/opt/sairios`; SairiOS is delivered separately. Use `--strict` only
+after delivering the product tree.
 
-Not today, though: the NodeSource signing-key fingerprint in `vm/cloud-init/user-data.yaml` is still an unfilled placeholder, so the Node step aborts, `node` and `npm` are absent, and the verdict is `FAIL` with `--smoke` exiting 1. Pin a fingerprint you verified out of band first. The sample report below shows the intended output, not what an image built today
-produces.
+Node is installed from the official nodejs.org tarball, verified against a pinned SHA-256, so there is no third-party apt key to fill in and nothing blocks the Node step.
 
 Under TCG (any cross-architecture run) raise the bound: `--smoke --timeout 2400`. The
 default 600s will time out, and the script warns before it starts.
@@ -73,7 +72,7 @@ cloud-init has nothing to read, and stage 4 will silently do nothing.
 
 **4. cloud-init.** Four stages announce themselves: `init-local`, `init`,
 `modules:config`, `modules:final`. This is where the time goes on a first boot: `apt-get
-update`, the package installs, the NodeSource repository, and `apt-get install nodejs`.
+update`, the package installs, and the pinned Node tarball download and checksum.
 Several minutes accelerated, considerably longer under TCG. On a subsequent boot of the
 same disk, cloud-init recognises the instance and skips all of it.
 
@@ -105,8 +104,8 @@ machine   : aarch64
 
 --- base system ---------------------------------------------------
 [ ok  ] distribution: Debian GNU/Linux 12 (bookworm)
-[ ok  ] node present: v22.x.x            <- only once the NodeSource key is pinned;
-[ ok  ] node major version 22 meets the >= 22 requirement      today both of these fail
+[ ok  ] node present: v22.23.2
+[ ok  ] node major version 22 meets the >= 22 requirement
 ...
 --- summary -------------------------------------------------------
 ok: 21   warn: 6   fail: 0
@@ -140,12 +139,16 @@ one.
 
 ### The report says `node is NOT installed`
 
-Expected on every image built today, and it makes the verdict `FAIL`. `user-data.yaml`
-compares the fetched NodeSource signing key against a pinned fingerprint before it trusts
-it, and the pin is still a placeholder, so the whole Node step aborts:
-`sairios: NodeSource step ABORTED: no verified key fingerprint is pinned`. The serial log
-carries that line during cloud-init. Pin a fingerprint you have verified out of band, in
-the block that says so in `vm/cloud-init/user-data.yaml`, then build a fresh image.
+The Node step aborted. It installs the official nodejs.org tarball and verifies it against
+a SHA-256 pinned in `vm/cloud-init/user-data.yaml`, so the serial log carries one of:
+
+- `sairios: Node step ABORTED: could not download ...` — the guest had no working egress
+  when cloud-init ran.
+- `sairios: Node step ABORTED: checksum mismatch ...` — the download did not match the pin.
+  Do not "fix" this by loosening the check. Either the pin is stale (someone bumped
+  `NODE_VERSION` without bumping both hashes) or you did not get the file you asked for.
+- `sairios: Node step ABORTED: unsupported architecture ...` — only arm64 and amd64 are
+  pinned.
 
 ### QEMU exits immediately (smoke exit 3)
 
