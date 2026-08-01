@@ -1,3 +1,19 @@
+# Runs as a SYSTEM unit with User=sairi, not as a user unit.
+#
+# This started life as a user unit and could not start. Most of the hardening
+# below - PrivateDevices, ProtectClock, ProtectKernelTunables/Modules/Logs,
+# ProtectControlGroups, RestrictSUIDSGID - implies a CapabilityBoundingSet
+# change, and a systemd USER manager is itself unprivileged, so it cannot drop
+# capabilities. The guest reported it exactly:
+#
+#   Failed to drop capabilities: Operation not permitted
+#   Failed at step CAPABILITIES spawning /usr/local/bin/node
+#
+# The choice was to strip the sandboxing or to move to a system unit. Stripping
+# it would have quietly falsified what SECURITY.md claims about these services,
+# so the unit moved instead. User=sairi keeps the process unprivileged; the
+# system manager applies the confinement.
+
 # SairiOS context service — systemd USER unit.
 #
 # Install to ~/.config/systemd/user/sairios-context-service.service
@@ -13,13 +29,15 @@
 Description=SairiOS context service (contexts, memory, events)
 Documentation=file:/opt/sairios/os/README.md
 # Nothing to order against: this is the first SairiOS unit to start.
-After=default.target
+After=network.target
 # Restart storm guard. If the service dies five times inside a minute, stop trying and
 # leave it failed so the failure is visible instead of being hidden by a restart loop.
 StartLimitIntervalSec=60
 StartLimitBurst=5
 
 [Service]
+User=sairi
+Group=sairi
 # Type=exec (not simple) so that a missing or non-executable ExecStart is reported as a
 # start failure rather than as a successful start followed by an immediate exit.
 Type=exec
@@ -32,7 +50,7 @@ Environment=NODE_ENV=production
 Environment=SAIRIOS_BIND_HOST=127.0.0.1
 Environment=SAIRIOS_CONTEXT_SERVICE_PORT=7801
 Environment=SAIRIOS_DATA_DIR=/var/lib/sairios/context
-EnvironmentFile=-%h/.config/sairios/env
+EnvironmentFile=-/home/sairi/.config/sairios/env
 
 # --experimental-sqlite: node:sqlite is behind a flag on Node 22 LTS. This matches the
 # `start` script in services/context-service/package.json. Drop the flag once the target
@@ -100,4 +118,4 @@ IPAddressDeny=any
 UMask=0077
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target

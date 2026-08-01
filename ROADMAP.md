@@ -30,9 +30,12 @@ subsystems.
 
 ### Built but NOT verified
 
-- [ ] **VM image** — cloud-init and QEMU scripts exist with a working `--dry-run`,
-      but have never been executed. No image has been built and nothing has
-      booted. See [vm/README.md](vm/README.md).
+- [x] **VM image builds and boots.** QEMU 11.0.3 on macOS arm64: image built,
+      Debian 12 booted, cloud-init provisioned, guest self-check reported
+      `ok: 18  warn: 6  fail: 0` / `DEGRADED` over the serial console. Four real
+      faults were found and fixed by running it — see the commit history.
+- [ ] **The graphical session has not been watched come up.** `/dev/dri/card0`
+      exists so `cage` can start, but nothing has confirmed it renders.
 - [ ] **OpenClaw provider** — connection lifecycle implemented and unit-tested
       against a fake transport; the wire protocol has never met a live gateway.
       See [docs/OPENCLAW.md](docs/OPENCLAW.md).

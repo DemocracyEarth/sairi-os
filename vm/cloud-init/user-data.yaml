@@ -151,6 +151,7 @@ packages:
   # Base tooling.
   - ca-certificates
   - curl
+  - rsync
   - gnupg
   - git
   - jq
@@ -304,17 +305,24 @@ write_files:
         fi
       done
 
-      # --- user units -------------------------------------------------------
-      # /etc/systemd/user is the system-wide equivalent of ~/.config/systemd/user and
-      # has identical semantics. Installing here means the units exist for the `sairi`
-      # user without writing into that user's home directory.
-      install -d -m 0755 /etc/systemd/user
+      # --- SairiOS service units --------------------------------------------
+      # System units that run as User=sairi, NOT user units.
+      #
+      # They were user units until a real boot proved they could not start: the
+      # sandboxing they carry implies a CapabilityBoundingSet change, and a systemd
+      # user manager is unprivileged, so it cannot drop capabilities. The guest
+      # reported `Failed at step CAPABILITIES`. Keeping the confinement mattered more
+      # than keeping them in the user session, so they moved here.
+      #
+      # Any stale user units from an earlier provision are removed, or systemd would
+      # try to start both copies.
       for unit in sairios-context-service sairios-permission-broker \
                   sairios-agent-bridge sairios-shell; do
+        rm -f "/etc/systemd/user/$unit.service"
         src="$OS_DIR/systemd/$unit.service"
         if [ -f "$src" ]; then
-          install -m 0644 -o root -g root "$src" "/etc/systemd/user/$unit.service"
-          log "installed user unit $unit.service"
+          install -m 0644 -o root -g root "$src" "/etc/systemd/system/$unit.service"
+          log "installed system unit $unit.service"
         else
           log "WARNING: missing $src"
         fi
@@ -358,14 +366,13 @@ write_files:
       # it here would remove exactly the diagnostic that matters on a broken machine.
 
       systemctl daemon-reload
-      # --global enable creates the symlinks in /etc/systemd/user/default.target.wants,
-      # which applies to every user and works even when no user manager is running yet.
-      systemctl --global enable \
+      # Ordinary system enablement now that these are system units.
+      systemctl enable \
         sairios-context-service.service \
         sairios-permission-broker.service \
         sairios-agent-bridge.service \
         sairios-shell.service >/dev/null 2>&1 || \
-        log "WARNING: systemctl --global enable failed"
+        log "WARNING: systemctl enable failed"
       systemctl enable sairios-session.service >/dev/null 2>&1 || \
         log "WARNING: could not enable sairios-session.service"
 

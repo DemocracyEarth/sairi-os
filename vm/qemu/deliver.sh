@@ -69,22 +69,28 @@ remote 'command -v node >/dev/null' || {
 printf '    node %s\n' "$(remote 'node --version')"
 
 step 'Copying the repository to /tmp/sairios'
+# tar over ssh rather than rsync: rsync is not in the guest's package set, and
+# adding a dependency to the image so the delivery script can run is the wrong
+# way round. tar is in every base system, and this is a full copy each time
+# anyway, so rsync's incremental advantage would not apply.
+#
 # /opt/sairios is root-owned (a privilege boundary: sairios-provision installs
 # systemd units from it), so the copy lands in /tmp first and root moves it.
-rsync -a --delete \
-	--exclude '.git' \
-	--exclude 'node_modules' \
-	--exclude 'vm/out' \
-	--exclude 'vm/.cache' \
-	--exclude 'var' \
-	--exclude 'dist' \
-	--exclude 'dist-types' \
+tar czf - \
+	--exclude './.git' \
+	--exclude './node_modules' \
+	--exclude '*/node_modules' \
+	--exclude './vm/out' \
+	--exclude './vm/.cache' \
+	--exclude './var' \
+	--exclude '*/dist' \
+	--exclude '*/dist-types' \
 	--exclude '*.tsbuildinfo' \
-	-e "ssh ${SSH_OPTS[*]}" \
-	"$REPO_ROOT/" "debian@$HOST:/tmp/sairios/"
+	-C "$REPO_ROOT" . |
+	remote 'rm -rf /tmp/sairios && mkdir -p /tmp/sairios && tar xzf - -C /tmp/sairios'
 
 step 'Installing into /opt/sairios'
-remote 'sudo rsync -a --delete /tmp/sairios/ /opt/sairios/ && sudo chown -R root:root /opt/sairios'
+remote 'sudo rm -rf /opt/sairios && sudo mkdir -p /opt/sairios && sudo cp -a /tmp/sairios/. /opt/sairios/ && sudo chown -R root:root /opt/sairios'
 
 step 'Installing dependencies (full install: vite is needed to serve the shell)'
 remote 'cd /opt/sairios && sudo npm ci --no-audit --no-fund 2>&1 | tail -3'
@@ -95,15 +101,18 @@ remote 'cd /opt/sairios && sudo npm run build 2>&1 | tail -5'
 step 'Provisioning systemd units'
 remote 'sudo /usr/local/sbin/sairios-provision'
 
-step 'Starting the SairiOS user services'
-remote 'sudo loginctl enable-linger sairi || true'
-remote 'sudo -u sairi XDG_RUNTIME_DIR=/run/user/$(id -u sairi) systemctl --user daemon-reload || true'
+step 'Starting the SairiOS services'
+# System units running as User=sairi. See os/systemd/ for why they are not user
+# units: the sandboxing needs a privileged manager to apply it.
+remote 'sudo systemctl daemon-reload'
 for unit in context-service permission-broker agent-bridge shell; do
-	remote "sudo -u sairi XDG_RUNTIME_DIR=/run/user/\$(id -u sairi) systemctl --user restart sairios-$unit.service || true"
+	remote "sudo systemctl restart sairios-$unit.service" ||
+		printf '    %s did not start; the journal is checked below\n' "$unit"
 done
 
 step 'Checking the services'
 sleep 8
+remote 'systemctl is-active sairios-context-service sairios-permission-broker sairios-agent-bridge sairios-shell || true'
 remote 'for p in 7800 7801 7802 7803; do
   if curl -sS -o /dev/null --max-time 4 "http://127.0.0.1:$p/" 2>/dev/null || \
      curl -sS -o /dev/null --max-time 4 "http://127.0.0.1:$p/healthz" 2>/dev/null; then

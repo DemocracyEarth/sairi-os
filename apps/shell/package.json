@@ -8,7 +8,8 @@
     "build": "vite build",
     "clean": "rm -rf dist *.tsbuildinfo",
     "dev": "vite",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "serve": "node serve.mjs"
   },
   "dependencies": {
     "@sairios/adaptive-ui-schema": "*",

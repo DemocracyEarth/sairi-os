@@ -304,7 +304,7 @@ Common causes:
   reports it explicitly.
 - **`node_modules` is missing.** The delivery instructions exclude it on purpose, because
   copying native modules from a macOS arm64 host to a Linux guest ships binaries for the
-  wrong platform. Run a full `sudo npm ci` in `/opt/sairios` inside the guest.
+  wrong platform. Run `sudo npm ci --omit=dev` in `/opt/sairios` inside the guest.
 - **`node_modules` was installed with `--omit=dev`.** Same symptom, different cause, and
   it looks like a sensible thing to have done. The shell unit's `ExecStart=` is
   `npm run preview --workspace @sairios/shell`, which is `vite preview`, and `vite` is a

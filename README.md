@@ -266,11 +266,17 @@ make vm-image           # build it
 make vm-run             # boot it
 ```
 
-> **The VM image has never been built or booted.** The machine this repository
-> was scaffolded on had no QEMU installed. The scripts verify checksums, detect
-> host acceleration (KVM, HVF, TCG fallback) and support `--dry-run`, but none of
-> that has been executed. [vm/README.md](vm/README.md) lists the exact commands
-> to verify it and what correct output looks like.
+> **The image builds and boots.** Verified on macOS arm64 with QEMU 11.0.3:
+> Debian 12 comes up, cloud-init provisions, and the guest runs its own
+> first-boot self-check and reports over the serial console —
+> `ok: 18  warn: 6  fail: 0`, verdict `DEGRADED`, which is the correct pass for
+> an image with no product tree delivered yet. The remaining warnings are all
+> "no product tree".
+>
+> Not yet verified: the graphical session actually rendering. The DRM device is
+> present so `cage` can start, but nobody has watched it come up.
+> [vm/README.md](vm/README.md) is precise about which checks have run on a real
+> boot and which have not.
 
 ---
 
