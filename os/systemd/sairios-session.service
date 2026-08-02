@@ -21,6 +21,13 @@ Description=SairiOS kiosk session (cage + cog)
 Documentation=file:/opt/sairios/os/session/README.md
 # Wait until user logins are permitted, otherwise PAMName=login below fails.
 After=systemd-user-sessions.service
+# Start the shell first. The session script waits for 127.0.0.1:7800 with a bounded
+# timeout and shows a legible banner if it never answers, so this is not required for
+# correctness - but without it a cold boot spends that wait budget racing the shell
+# instead of using it for a genuine fault. Wants= rather than Requires=: if the shell
+# is broken, the session should still come up and say so on the screen.
+Wants=sairios-shell.service
+After=sairios-shell.service
 # seatd hands out the DRM and input devices. cage will fail without a seat.
 Requires=seatd.service
 After=seatd.service
