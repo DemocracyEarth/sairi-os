@@ -198,7 +198,7 @@ export function ContextWindowBody(props: ContextWindowBodyProps): JSX.Element {
   );
 }
 
-/** Title-bar descriptor for a context window: "contexto efímero — <name>". */
+/** Title-bar descriptor for a context window: "ephemeral context — <name>". */
 export function contextWindowTitle(context: Context, t: ReturnType<typeof useT>): string {
   const kind = (
     {

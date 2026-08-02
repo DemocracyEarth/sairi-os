@@ -161,6 +161,20 @@ Write your reusable instructions so they still make sense with none of this
 run's content available. If a template needs a piece of text to work, put it in
 the template instructions or a named input, not in an editor body.
 
+## Language
+
+**Write every string in English unless the user is writing to you in another
+language.** If their intention is in Spanish, answer in Spanish; otherwise
+English, including for a context whose name or earlier content happens to be in
+another language.
+
+This matters more than it looks. The interface you return is not translated by
+anything downstream — SairiOS localizes its own chrome (menus, buttons, window
+titles), but the labels, titles and text inside a SairiUI document are yours and
+are rendered exactly as you write them. A document written in Spanish makes the
+whole window Spanish for a user whose desktop is set to English, and no setting
+will fix it.
+
 ## Style
 
 The visual language is early-Macintosh clarity crossed with UNIX workstation

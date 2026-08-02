@@ -2,7 +2,7 @@ import type { Context, ContextType } from '@sairios/context-schema';
 import type { Locale } from '@sairios/ui-components';
 
 /**
- * The `contexto` command line.
+ * The `context` command line (`contexto` in Spanish; both spellings always work).
  *
  * This drives the real context service. It is not a decorative terminal: every
  * command here goes through the same HTTP surface the windows use, so anything
@@ -32,13 +32,69 @@ export interface CliDeps {
   serviceHealth: () => { label: string; ok: boolean }[];
 }
 
+/**
+ * The command word in a given language. Both spellings are always accepted by
+ * the parser; this is what each language should *show* — in help text, and as
+ * the terminal input's accessible name, which a screen reader reads aloud.
+ */
+export function commandName(locale: Locale): string {
+  return STRINGS[locale].cmd;
+}
+
 /** Short, human-typeable handle for a context: `c-` plus six hex from its id. */
 export function shortId(context: Pick<Context, 'id'>): string {
   return `c-${context.id.replace(/^ctx_/, '').slice(0, 6)}`;
 }
 
+/**
+ * English first, and English messages name the English command.
+ *
+ * These tables used to say `contexto` inside the English strings, so an English
+ * user was told to type a Spanish word. Both spellings have always been accepted
+ * by the parser; only the advice was wrong. `cmd` now carries the name each
+ * language should show.
+ */
 const STRINGS = {
+  en: {
+    cmd: 'context',
+    mapName: 'context map',
+    unknown: (cmd: string) => `context: unknown command "${cmd}". Try "help".`,
+    notFound: (q: string) => `context: no context matches "${q}".`,
+    ambiguous: (q: string) => `context: "${q}" matches more than one context. Use the ID.`,
+    needsName: 'context create: missing name.',
+    needsTarget: (verb: string) => `context ${verb}: missing ID or name.`,
+    created: (s: string, n: string) => `context created: ${s}  ${n}`,
+    crystallized: (n: string) => `crystallized context created: ${n}`,
+    completed: (n: string) => `marked complete: ${n}`,
+    opened: (n: string) => `opening window: ${n}`,
+    total: (n: number) => `${n} contexts`,
+    headers: ['ID', 'NAME', 'TYPE', 'STATUS'],
+    noShell: 'context: no shell here. This environment manipulates contexts, not processes.',
+    help: [
+      'context list                         list every context',
+      'context open <id|name>               open the context window',
+      'context create <name> [--persistent]',
+      '                                     create a context (ephemeral by default)',
+      'context crystallize <id|name>        create a reusable template',
+      'context complete <id|name>           mark the context complete',
+      'context status                       system status',
+      'map                                  open the context map',
+      'clear                                clear the terminal',
+      'help                                 this help',
+    ],
+    typeNames: { ephemeral: 'ephemeral', persistent: 'persistent', crystallized: 'crystallized' },
+    statusNames: {
+      draft: 'draft',
+      active: 'active',
+      waiting: 'waiting',
+      completed: 'completed',
+      archived: 'archived',
+      failed: 'failed',
+    },
+  },
   es: {
+    cmd: 'contexto',
+    mapName: 'mapa de contextos',
     unknown: (cmd: string) => `contexto: orden desconocida "${cmd}". Probá "ayuda".`,
     notFound: (q: string) => `contexto: no se encontró ningún contexto que coincida con "${q}".`,
     ambiguous: (q: string) => `contexto: "${q}" coincide con más de un contexto. Usá el ID.`,
@@ -73,63 +129,34 @@ const STRINGS = {
       failed: 'fallido',
     },
   },
-  en: {
-    unknown: (cmd: string) => `contexto: unknown command "${cmd}". Try "help".`,
-    notFound: (q: string) => `contexto: no context matches "${q}".`,
-    ambiguous: (q: string) => `contexto: "${q}" matches more than one context. Use the ID.`,
-    needsName: 'contexto create: missing name.',
-    needsTarget: (verb: string) => `contexto ${verb}: missing ID or name.`,
-    created: (s: string, n: string) => `context created: ${s}  ${n}`,
-    crystallized: (n: string) => `crystallized context created: ${n}`,
-    completed: (n: string) => `marked complete: ${n}`,
-    opened: (n: string) => `opening window: ${n}`,
-    total: (n: number) => `${n} contexts`,
-    headers: ['ID', 'NAME', 'TYPE', 'STATUS'],
-    noShell: 'contexto: no shell here. This environment manipulates contexts, not processes.',
-    help: [
-      'contexto list                        list every context',
-      'contexto open <id|name>              open the context window',
-      'contexto create <name> [--persistent]',
-      '                                     create a context (ephemeral by default)',
-      'contexto crystallize <id|name>       create a reusable template',
-      'contexto complete <id|name>          mark the context complete',
-      'contexto status                      system status',
-      'map                                  open the context map',
-      'clear                                clear the terminal',
-      'help                                 this help',
-    ],
-    typeNames: { ephemeral: 'ephemeral', persistent: 'persistent', crystallized: 'crystallized' },
-    statusNames: {
-      draft: 'draft',
-      active: 'active',
-      waiting: 'waiting',
-      completed: 'completed',
-      archived: 'archived',
-      failed: 'failed',
-    },
-  },
 } as const;
 
-/** Command names accepted in either language, mapped to one internal verb. */
+/**
+ * Command names accepted in either language, mapped to one internal verb.
+ *
+ * Both languages are always accepted regardless of the interface language — a
+ * bilingual user should not have to remember which mode the desktop is in. The
+ * English spelling is listed first only to match how the help text reads.
+ */
 const VERBS: Record<string, string> = {
-  listar: 'list',
   list: 'list',
   ls: 'list',
-  abrir: 'open',
+  listar: 'list',
   open: 'open',
-  crear: 'create',
+  abrir: 'open',
   create: 'create',
+  crear: 'create',
   nuevo: 'create',
-  cristalizar: 'crystallize',
   crystallize: 'crystallize',
-  completar: 'complete',
+  cristalizar: 'crystallize',
   complete: 'complete',
-  fijar: 'pin',
+  completar: 'complete',
   pin: 'pin',
-  estado: 'status',
+  fijar: 'pin',
   status: 'status',
-  ayuda: 'help',
+  estado: 'status',
   help: 'help',
+  ayuda: 'help',
 };
 
 /** Splits a command line, honouring double quotes so names with spaces work. */
@@ -180,19 +207,19 @@ export async function runCommand(input: string, deps: CliDeps): Promise<CliResul
 
   const head = (tokens[0] ?? '').toLowerCase();
 
-  if (head === 'limpiar' || head === 'clear') return { lines: [], clear: true };
-  if (head === 'mapa' || head === 'map') {
+  if (head === 'clear' || head === 'limpiar') return { lines: [], clear: true };
+  if (head === 'map' || head === 'mapa') {
     deps.openMap();
-    return { lines: [{ text: s.opened('mapa de contextos'), tone: 'accent' }] };
+    return { lines: [{ text: s.opened(s.mapName), tone: 'accent' }] };
   }
-  if (head === 'ayuda' || head === 'help') {
+  if (head === 'help' || head === 'ayuda') {
     return { lines: s.help.map((text) => ({ text, tone: 'dim' as const })) };
   }
   // The one thing people will try that this deliberately does not do.
   if (['sh', 'bash', 'sudo', 'exec', 'ssh'].includes(head)) {
     return { lines: [{ text: s.noShell, tone: 'error' }] };
   }
-  if (head !== 'contexto' && head !== 'context') {
+  if (head !== 'context' && head !== 'contexto') {
     return { lines: [{ text: s.unknown(head), tone: 'error' }] };
   }
 
@@ -242,7 +269,7 @@ export async function runCommand(input: string, deps: CliDeps): Promise<CliResul
     case 'create': {
       if (!target) return { lines: [{ text: s.needsName, tone: 'error' }] };
       const type: ContextType =
-        flags.includes('--persistente') || flags.includes('--persistent')
+        flags.includes('--persistent') || flags.includes('--persistente')
           ? 'persistent'
           : 'ephemeral';
       const created = await deps.createContext(target, type, target);

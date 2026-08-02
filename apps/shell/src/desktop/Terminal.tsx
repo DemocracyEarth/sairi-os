@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useRef, useState, type JSX, type KeyboardEvent } from 'react';
 import { useLocale } from '@sairios/ui-components';
-import { runCommand, type CliDeps, type CliLine } from './cli.js';
+import { commandName, runCommand, type CliDeps, type CliLine } from './cli.js';
 
 /**
  * The terminal window.
  *
- * A real control surface for the `contexto` command line, not an ornament: it
- * talks to the same services the windows do. Command history with the arrow
- * keys, because a terminal without history is a text box.
+ * A real control surface for the `context` command line (`contexto` in Spanish;
+ * both spellings always work), not an ornament: it talks to the same services
+ * the windows do. Command history with the arrow keys, because a terminal
+ * without history is a text box.
  */
 
 const PROMPT = 'sairi@sairios:~$';
@@ -31,9 +32,9 @@ export function Terminal({ deps }: TerminalProps): JSX.Element {
     setLines([
       {
         text:
-          locale === 'es'
-            ? 'SairiOS — escribí "ayuda" para ver las órdenes disponibles.'
-            : 'SairiOS — type "help" to see the available commands.',
+          locale === 'en'
+            ? 'SairiOS — type "help" to see the available commands.'
+            : 'SairiOS — escribí "ayuda" para ver las órdenes disponibles.',
         tone: 'dim',
       },
     ]);
@@ -116,7 +117,7 @@ export function Terminal({ deps }: TerminalProps): JSX.Element {
       <div className="term__inputrow">
         <span className="term__prompt">{PROMPT}</span>
         <input
-          aria-label="contexto"
+          aria-label={commandName(locale)}
           autoComplete="off"
           autoCorrect="off"
           className="term__input"

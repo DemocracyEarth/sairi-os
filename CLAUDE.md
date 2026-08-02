@@ -108,7 +108,31 @@ A change that makes mock mode need a key, a socket or a running gateway is a
 bug. And a failing real provider must never fall back to mock output — a user
 who selected `openclaw` must not be shown fabricated results.
 
-### 7. Never commit secrets
+### 7. English is the default; Spanish stays supported
+
+English is the default interface language and is listed first everywhere a
+language is offered. `DEFAULT_LOCALE` is derived from `LOCALES[0]` in
+[packages/ui-components/src/i18n.tsx](packages/ui-components/src/i18n.tsx) —
+change the order there, not in a second constant.
+
+SairiOS was originally designed Spanish-first and that was deliberately
+reversed. Spanish is still a fully supported second language, not a leftover:
+every message key exists in both, the CLI accepts both languages' verbs
+regardless of which one the desktop is in, and a stored preference always beats
+the default. `i18n.test.tsx` asserts all of that, including placeholder parity
+between the dictionaries.
+
+Two mistakes to avoid, both of which have already happened once:
+
+- putting a Spanish literal on a shared code path, so it renders in English too
+  (`aria-label="contexto"`, `s.opened('mapa de contextos')`);
+- writing one language's word into the other's strings — the English help text
+  told people to type `contexto`.
+
+Agent-produced UI text is not translated by anything. See the Language section
+of [openclaw/skills/sairios-context/SKILL.md](openclaw/skills/sairios-context/SKILL.md).
+
+### 8. Never commit secrets
 
 No API key, token or credential in source, tests, fixtures, image layers,
 Dockerfiles or cloud-init files. `.env` is git-ignored; keep it that way.

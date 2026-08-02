@@ -4,19 +4,31 @@ import type { JSX, ReactNode } from 'react';
 /**
  * Localization.
  *
- * Spanish is the default because SairiOS is designed in Spanish and the product
- * has a voice; English exists so the project is legible to contributors who do
- * not read Spanish. Documentation and code stay English either way.
+ * English is the default and is offered first everywhere. Spanish is a fully
+ * supported second language, not an afterthought: every key exists in both, and
+ * a person who selects Spanish keeps it across restarts.
+ *
+ * SairiOS was originally designed Spanish-first, and the earlier version of this
+ * file said so. That was reversed deliberately — English default, English first
+ * in every list. The Spanish dictionary below is unchanged in scope; only which
+ * one you get without asking has changed.
  *
  * `en` is the source of truth for the key set: `es` is typed as the same shape,
  * so adding a key to one and forgetting the other fails the build rather than
  * silently rendering a key name on screen.
+ *
+ * ORDER MATTERS in the array below. It drives the language menu, so `en` stays
+ * first. `DEFAULT_LOCALE` is derived from it rather than written twice, because
+ * two independent constants would eventually disagree.
  */
 
-export const LOCALES = ['es', 'en'] as const;
+export const LOCALES = ['en', 'es'] as const;
 export type Locale = (typeof LOCALES)[number];
 
-export const LOCALE_LABELS: Record<Locale, string> = { es: 'Español', en: 'English' };
+/** What you get when nobody has chosen. */
+export const DEFAULT_LOCALE: Locale = LOCALES[0];
+
+export const LOCALE_LABELS: Record<Locale, string> = { en: 'English', es: 'Español' };
 
 const en = {
   // --- menu bar ---
@@ -422,7 +434,7 @@ const es: Dict = {
   'bool.no': 'no',
 };
 
-const DICTIONARIES: Record<Locale, Dict> = { es, en };
+const DICTIONARIES: Record<Locale, Dict> = { en, es };
 
 export type MessageKey = keyof typeof en;
 export type Translate = (key: MessageKey, vars?: Record<string, string | number>) => string;
@@ -448,17 +460,21 @@ export interface LocaleContextValue {
 }
 
 const LocaleCtx = createContext<LocaleContextValue>({
-  locale: 'es',
+  locale: DEFAULT_LOCALE,
   setLocale: () => {},
-  t: (key, vars) => translate('es', key, vars),
+  t: (key, vars) => translate(DEFAULT_LOCALE, key, vars),
 });
 
 const STORAGE_KEY = 'sairios.locale';
 
 function readStoredLocale(): Locale {
-  if (typeof localStorage === 'undefined') return 'es';
+  if (typeof localStorage === 'undefined') return DEFAULT_LOCALE;
   const stored = localStorage.getItem(STORAGE_KEY);
-  return stored === 'en' || stored === 'es' ? stored : 'es';
+  // A person who already chose Spanish keeps Spanish. Changing the default must
+  // not reach back and change a choice someone already made.
+  return (LOCALES as readonly string[]).includes(stored ?? '')
+    ? (stored as Locale)
+    : DEFAULT_LOCALE;
 }
 
 export interface LocaleProviderProps {
