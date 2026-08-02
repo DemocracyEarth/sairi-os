@@ -1,6 +1,10 @@
-# SairiOS
+<p align="center">
+  <img alt="SairiOS" src="os/branding/sairios-logo.svg" width="140" />
+</p>
 
-An experimental operating environment for the age of AI agents.
+<h1 align="center">SairiOS</h1>
+
+<p align="center">An experimental operating environment for the age of AI agents.</p>
 
 Traditional operating systems organize interaction around applications, files
 and fixed graphical interfaces. SairiOS organizes interaction around
@@ -11,8 +15,13 @@ and fixed graphical interfaces. SairiOS organizes interaction around
 
 **Status: milestone 0, a working vertical slice.** The desktop, the context
 runtime, the adaptive UI protocol and the permission broker run and are tested.
-The VM image has never been booted and the OpenClaw integration is unverified
-scaffolding. Both are marked as such throughout, and in [ROADMAP.md](ROADMAP.md).
+
+The VM image builds from scratch, boots, and comes up straight into the desktop
+on its own display — that is verified, not asserted. What is **not** verified:
+the OpenClaw gateway wire protocol is still placeholder scaffolding, and the
+first-run provider setup has never been run against the real `openclaw` binary.
+Both are marked as such throughout, in [docs/OPENCLAW.md](docs/OPENCLAW.md), and
+in [ROADMAP.md](ROADMAP.md).
 
 ---
 

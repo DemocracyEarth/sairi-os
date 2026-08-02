@@ -97,6 +97,47 @@ move is to add a token here, not to inline it there.
 The one deliberate exception is `sairios-wallpaper.svg`, which hardcodes literal values
 because it is rasterised outside any document that could define custom properties.
 
+### `sairios-logo.svg`
+
+The logo. Square `viewBox` (`0 0 640 640`): the word _sairi_ in a geometric lowercase
+under a blue-green-yellow-orange spectrum, _OS_ in grey beneath it, inside a rounded
+square outlined in the same spectrum.
+
+**It contains no text element.** Every letterform is drawn as geometry — full circles,
+vertical bars and two-lobed arcs, which is what a geometric sans is made of. A `<text>`
+element would render in whatever font the machine happens to have, and the guest is a
+minimal Debian carrying essentially DejaVu, a humanist face that would make the wordmark
+wrong exactly where it matters most. Drawn this way the logo is identical on the VM, in a
+browser, on GitHub and at favicon size, and it has no font dependency at all.
+
+**The interior is transparent, not white.** The original artwork sits on a white page,
+but a white plate becomes a bright card on the dark theme. Left open, the logo takes the
+surface it is placed on, so one file serves both themes.
+
+Two lockups, because one cannot serve the whole size range:
+
+| Variant   | Contains               | Use from |
+| --------- | ---------------------- | -------- |
+| `full`    | frame, _sairi_, _OS_   | ~96px    |
+| `compact` | frame and _sairi_ only | ~18px    |
+
+Below about 96px the grey _OS_ stops being type and becomes four smudged pixels, so
+`compact` drops it and scales the wordmark to fill the frame instead of shrinking
+everything together. The React component
+[`packages/ui-components/src/logo.tsx`](../../packages/ui-components/src/logo.tsx) carries
+the same geometry and takes a `variant` prop; this file is the `full` lockup and the
+source of truth for both.
+
+Where it appears: the menu bar (compact, 20px), first-run setup (full, 56px), the shell's
+favicon (inlined as a `data:` URI in `apps/shell/index.html`, because the desktop should
+not need a second request before it paints), the session icon installed to
+`/usr/share/icons/hicolor/scalable/apps/sairios.svg`, and the README.
+
+If you change the geometry, change it here first and port it to `logo.tsx`. There is no
+build step tying them together — a test would need a headless renderer to compare them
+meaningfully, and the geometry is stable enough that the comment in each file naming the
+other is the cheaper guard.
+
 ### `sairios-mark.svg`
 
 Square `viewBox` (`0 0 64 64`), `currentColor`, no gradients, no filters, no embedded
@@ -121,11 +162,15 @@ when you need the colour to follow the theme:
 }
 ```
 
-Uses: window chrome, the session splash, favicon source, documentation headers. The
-geometry was drawn so strokes land on whole or half pixels at 64px; it stays legible down
-to about 16px, below which the close box and the tile outline merge. Do not add a
-wordmark to this file. If a lockup is needed, compose it from this mark plus type set in
-`--sairi-font-sans` at `--sairi-weight-medium`.
+Uses: anywhere a single-colour glyph is wanted — a monochrome context, a mask, a place
+that must follow `currentColor`. The geometry was drawn so strokes land on whole or half
+pixels at 64px; it stays legible down to about 16px, below which the close box and the
+tile outline merge.
+
+Do not add a wordmark to this file. That is what `sairios-logo.svg` is for, and it
+superseded this file as the favicon and session-icon source — the mark remains installed
+alongside it and is still the right choice when the colour has to be inherited, which a
+gradient logo can never do.
 
 ### `sairios-wallpaper.svg`
 

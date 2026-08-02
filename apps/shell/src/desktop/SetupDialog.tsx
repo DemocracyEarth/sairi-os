@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent, type JSX } from 'react';
-import { useT } from '@sairios/ui-components';
+import { SairiLogo, useT } from '@sairios/ui-components';
 import { bridgeApi, type SetupStatusRecord } from '../api.js';
 
 /**
@@ -66,7 +66,11 @@ export function SetupDialog(props: SetupDialogProps): JSX.Element {
   return (
     <div className="overlay" role="presentation">
       <div aria-modal="true" className="dialog dialog--setup" role="dialog">
-        <header className="dialog__head">
+        {/* First-run setup is the first screen of a fresh machine, so it is
+            where the full lockup belongs — the one place the product introduces
+            itself before it asks for anything. */}
+        <header className="dialog__head dialog__head--brand">
+          <SairiLogo size={56} />
           <h2 className="dialog__title">{t('setup.title')}</h2>
         </header>
 

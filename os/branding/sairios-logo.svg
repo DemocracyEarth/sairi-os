@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="640" height="640" fill="none" role="img" aria-labelledby="sairios-logo-title sairios-logo-desc">
+  <title id="sairios-logo-title">SairiOS</title>
+  <desc id="sairios-logo-desc">The word "sairi" in a geometric lowercase, coloured by a spectrum running blue through green and yellow to orange, with "OS" in grey beneath it, inside a rounded square outlined in the same spectrum.</desc>
+  <!--
+    The SairiOS logo.
+
+    Drawn as geometry, not as text. A <text> element would render in whatever
+    font the machine happens to have, and the guest is a minimal Debian with
+    essentially DejaVu — a humanist face that would make the wordmark wrong
+    exactly where it matters most. Every letterform below is built from what a
+    geometric sans is built from: full circles, vertical bars, and two-lobed
+    arcs. So the logo is identical on the VM, in a browser, in the README and at
+    favicon size, with no font dependency at all.
+
+    The interior is TRANSPARENT, not white. The shared artwork sits on a white
+    page, but a white plate would become a bright card on the dark theme. Left
+    open, the mark takes the surface it is placed on.
+
+    Geometry, on a 640 x 640 field:
+      squircle   40..600, rx 108, stroke 8
+      wordmark   x 116..524 (centred on 320), x-height 234..354 (120), stroke 30
+                   s 116..204   a 220..340   i 356..386
+                   r 402..478   i 494..524     — 16 between each
+      tittles    r 17, centred y 200, over each i
+      "OS"       cap height 390..480 (90), stroke 17, centred on x 320
+
+    Both spectrums run left to right in USER SPACE, so a letter's colour falls
+    out of where it sits. That is why the wordmark and the frame agree without
+    either being coloured by hand, and why moving a letter recolours it
+    correctly.
+
+    The two tittles are the deliberate exception: they are set explicitly, each
+    a step ahead of the letter it sits over, because that is what the original
+    does — green over the first i, yellow over the second.
+  -->
+
+  <defs>
+    <linearGradient id="sairi-frame" gradientUnits="userSpaceOnUse" x1="36" y1="0" x2="604" y2="0">
+      <stop offset="0" stop-color="#6EA8E4" />
+      <stop offset="0.30" stop-color="#78C6A6" />
+      <stop offset="0.53" stop-color="#86D08A" />
+      <stop offset="0.74" stop-color="#F0C94F" />
+      <stop offset="1" stop-color="#F5A05C" />
+    </linearGradient>
+
+    <linearGradient id="sairi-word" gradientUnits="userSpaceOnUse" x1="116" y1="0" x2="524" y2="0">
+      <stop offset="0" stop-color="#6EA8E4" />
+      <stop offset="0.28" stop-color="#78C6A6" />
+      <stop offset="0.52" stop-color="#86D08A" />
+      <stop offset="0.72" stop-color="#F0C94F" />
+      <stop offset="1" stop-color="#F5A05C" />
+    </linearGradient>
+
+    <linearGradient id="sairi-os" gradientUnits="userSpaceOnUse" x1="241" y1="0" x2="399" y2="0">
+      <stop offset="0" stop-color="#9C9C9E" />
+      <stop offset="1" stop-color="#8B8B87" />
+    </linearGradient>
+  </defs>
+
+  <!-- The frame. -->
+  <rect x="40" y="40" width="560" height="560" rx="108" stroke="url(#sairi-frame)" stroke-width="8" />
+
+  <!-- s — two lobes on one stroked centreline. Both terminals leave on a
+       VERTICAL tangent, so the butt cap is cut horizontally, the way a
+       geometric sans cuts them. Ending anywhere the curve runs diagonally
+       puts a visible spur on the letter. -->
+  <path
+    d="M185 266C185 253 171 246 157 246C143 246 132 254 132 265C132 276 141 282 158 288C177 295 188 303 188 318C188 332 175 342 158 342C144 342 132 335 132 323"
+    stroke="url(#sairi-word)"
+    stroke-width="30"
+  />
+
+  <!-- a — a full circle with a stem down its right edge. -->
+  <circle cx="280" cy="294" r="45" stroke="url(#sairi-word)" stroke-width="30" />
+  <rect x="310" y="234" width="30" height="120" fill="url(#sairi-word)" />
+
+  <!-- i -->
+  <rect x="356" y="234" width="30" height="120" fill="url(#sairi-word)" />
+
+  <!-- r — stem plus a shoulder that lifts away to the right. -->
+  <rect x="402" y="234" width="30" height="120" fill="url(#sairi-word)" />
+  <path
+    d="M417 280C418 253 437 249 463 249"
+    stroke="url(#sairi-word)"
+    stroke-width="30"
+    stroke-linecap="round"
+  />
+
+  <!-- i -->
+  <rect x="494" y="234" width="30" height="120" fill="url(#sairi-word)" />
+
+  <!-- The tittles. Set by hand: each runs a step ahead of its letter. -->
+  <circle cx="371" cy="200" r="17" fill="#5FC9A0" />
+  <circle cx="509" cy="200" r="17" fill="#F4C544" />
+
+  <!-- OS -->
+  <circle cx="286" cy="435" r="36.5" stroke="url(#sairi-os)" stroke-width="17" />
+  <path
+    d="M389 412C389 403 382 398 374 398C366 398 357 403 357 412C357 421 364 426 375 431C386 436 391 442 391 452C391 462 383 468 374 468C365 468 357 463 357 454"
+    stroke="url(#sairi-os)"
+    stroke-width="17"
+  />
+</svg>

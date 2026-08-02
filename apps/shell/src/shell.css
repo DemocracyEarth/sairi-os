@@ -86,8 +86,17 @@ button {
 }
 
 .menubar__item--brand {
+  align-items: center;
+  display: inline-flex;
   font-weight: 650;
+  gap: var(--sairi-space-2);
   letter-spacing: -0.01em;
+}
+
+/* The mark keeps its own colours on hover, while the label inverts with the
+   item. A gradient logo turning white would stop being the logo. */
+.menubar__logo {
+  flex: 0 0 auto;
 }
 
 .menubar__item:hover,
@@ -925,6 +934,12 @@ button {
 
 .dialog--setup {
   max-width: 480px;
+}
+
+.dialog__head--brand {
+  align-items: center;
+  display: flex;
+  gap: var(--sairi-space-3);
 }
 
 .setup__hint,

@@ -379,15 +379,25 @@ write_files:
       # --- branding ---------------------------------------------------------
       if [ -d "$OS_DIR/branding" ]; then
         install -d -m 0755 /usr/share/sairios
-        for asset in sairios-mark.svg sairios-wallpaper.svg palette.css; do
+        for asset in sairios-logo.svg sairios-mark.svg sairios-wallpaper.svg palette.css; do
           [ -f "$OS_DIR/branding/$asset" ] &&
             install -m 0644 "$OS_DIR/branding/$asset" "/usr/share/sairios/$asset"
         done
         # Icon name `sairios`, referenced by sairios.desktop.
+        #
+        # The LOGO, not the monochrome mark. A session icon appears in a greeter
+        # at 48-64px against an unknown backdrop, which is the size the full
+        # lockup is drawn for and the reason its interior is transparent. The
+        # mark stays installed beside it for anywhere a single-colour glyph is
+        # wanted; it falls back to the mark if the logo is somehow absent.
         install -d -m 0755 /usr/share/icons/hicolor/scalable/apps
-        [ -f "$OS_DIR/branding/sairios-mark.svg" ] &&
-          install -m 0644 "$OS_DIR/branding/sairios-mark.svg" \
-            /usr/share/icons/hicolor/scalable/apps/sairios.svg
+        for candidate in sairios-logo.svg sairios-mark.svg; do
+          if [ -f "$OS_DIR/branding/$candidate" ]; then
+            install -m 0644 "$OS_DIR/branding/$candidate" \
+              /usr/share/icons/hicolor/scalable/apps/sairios.svg
+            break
+          fi
+        done
       fi
 
       # NOTE: /usr/local/bin/sairios-session is NOT installed from the product tree. It

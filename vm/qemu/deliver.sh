@@ -76,8 +76,16 @@ step 'Copying the repository to /tmp/sairios'
 #
 # /opt/sairios is root-owned (a privilege boundary: sairios-provision installs
 # systemd units from it), so the copy lands in /tmp first and root moves it.
-tar czf - \
+#
+# COPYFILE_DISABLE stops macOS bsdtar writing an AppleDouble `._name` sidecar
+# beside every file it archives. Without it the guest ends up with ._README.md,
+# ._sairios-logo.svg and so on scattered through /opt/sairios — 163 bytes of
+# resource fork each, meaningless on Linux. It is set unconditionally: the
+# variable is simply ignored by GNU tar, so this needs no host check.
+COPYFILE_DISABLE=1 tar czf - \
 	--exclude './.git' \
+	--exclude '._*' \
+	--exclude '*/._*' \
 	--exclude './node_modules' \
 	--exclude '*/node_modules' \
 	--exclude './vm/out' \

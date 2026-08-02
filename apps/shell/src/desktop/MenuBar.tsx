@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type JSX } from 'react';
-import { useLocale, useT } from '@sairios/ui-components';
+import { SairiLogo, useLocale, useT } from '@sairios/ui-components';
 import { Icon } from './icons.js';
 
 /**
@@ -101,6 +101,10 @@ export function MenuBar({ menus, services, onOpenSystemStatus }: MenuBarProps): 
             onPointerEnter={() => open && setOpen(menu.id)}
             type="button"
           >
+            {/* The logo sits on the brand item only, where the word "SairiOS"
+                is already beside it. Compact drops "OS" — at 18px the grey
+                letters are illegible and read as smudge rather than type. */}
+            {index === 0 && <SairiLogo className="menubar__logo" size={20} variant="compact" />}
             {menu.title}
           </button>
           {open === menu.id && (
