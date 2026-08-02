@@ -106,18 +106,20 @@ exists is real.
    against them, freeze the frames as fixture tests, then move
    `openclaw/config/version.json` from `pinned` to `verified`.
    Expect the placeholders to be wrong on first contact.
-2. **CI.** Written, never executed — this repository has never had a runner
-   trigger. `.github/workflows/ci.yml` gates every PR on four jobs: `make
-validate`, the boot path (shellcheck, cloud-init YAML, systemd unit parsing,
-   desktop entry), a credential scan, and generated-file freshness.
-   `vm-smoke.yml` builds an image and boots it nightly, off the required path
-   because it is slow.
+2. ~~**CI.**~~ Done for the fast gate, and green on a real runner.
+   `.github/workflows/ci.yml` runs on every push and PR: `make validate`, the
+   boot path (shellcheck, `bash -n`, cloud-init YAML, `systemd-analyze verify`
+   on all seven units, `desktop-file-validate`), a credential scan, and
+   generated-file freshness. Verified: run 30769693247, all four jobs green.
 
-   Still to do: watch the first run. shellcheck and the YAML parse were verified
-   locally; `systemd-analyze verify` and `desktop-file-validate` were not,
-   because neither exists on the authoring machine. The VM smoke workflow has
-   never run at all and its timeout is a guess — and no local build has ever
-   been amd64, which is the only architecture a standard runner offers.
+   It found a real fault on its first run — `desktop-file-validate` rejects
+   `DesktopNames`, which session files need and the base Desktop Entry Spec does
+   not cover. Allowed by exact key name, so any other non-standard key still
+   fails.
+
+   Still outstanding: `vm-smoke.yml` has never run. It builds an image and boots
+   it nightly, its timeout is a guess, and no local build has ever been amd64 —
+   the only architecture a standard runner offers.
 
 3. **Persistence across a reboot.** Create a context in the guest, crystallize
    it, reboot, and confirm both survive. The boot is verified; this specific
