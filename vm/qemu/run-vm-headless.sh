@@ -335,6 +335,8 @@ amd64)
 	;;
 esac
 
+# shellcheck disable=SC2054  # QEMU option strings use commas internally;
+# `-device virtio-net-pci,netdev=net0` is a single argument, not two.
 QEMU_ARGS+=(
 	-m "$MEMORY"
 	-smp "$CPUS"
@@ -447,10 +449,9 @@ QEMU_PID=""
 # Must always succeed: an EXIT trap whose last command fails overwrites the script's
 # exit status, which would destroy the verdict this whole script exists to report.
 cleanup() {
-	local i
 	if [ -n "${QEMU_PID:-}" ] && kill -0 "$QEMU_PID" 2>/dev/null; then
 		kill -TERM "$QEMU_PID" 2>/dev/null || true
-		for i in 1 2 3 4 5 6 7 8 9 10; do
+		for _ in 1 2 3 4 5 6 7 8 9 10; do
 			kill -0 "$QEMU_PID" 2>/dev/null || break
 			sleep 1
 		done

@@ -44,7 +44,6 @@ CPUS=4
 ACCEL_CHOICE="auto"
 QEMU_OVERRIDE=""
 WANT_GL=0
-GL_ACTIVE=0
 DISPLAY_CHOICE="auto"
 FORWARD_SHELL=0
 EPHEMERAL=0
@@ -413,7 +412,6 @@ arm64)
 	# used when both requested and actually present.
 	if [ "$WANT_GL" -eq 1 ] && "$QEMU_BIN" -device help 2>/dev/null | grep -q virtio-gpu-gl-pci; then
 		QEMU_ARGS+=(-device virtio-gpu-gl-pci)
-		GL_ACTIVE=1
 	else
 		if [ "$WANT_GL" -eq 1 ]; then
 			warn "$QEMU_BIN has no virtio-gpu-gl-pci; falling back to virtio-gpu-pci"
@@ -436,6 +434,8 @@ amd64)
 	;;
 esac
 
+# shellcheck disable=SC2054  # QEMU option strings use commas internally;
+# `-device virtio-net-pci,netdev=net0` is a single argument, not two.
 QEMU_ARGS+=(
 	-m "$MEMORY"
 	-smp "$CPUS"

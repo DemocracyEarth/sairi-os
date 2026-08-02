@@ -73,7 +73,9 @@ readonly SUMS_NAME="SHA512SUMS"
 
 # Fallback sizes for --dry-run when the network is unavailable. Bytes, measured
 # 2026-07-31.
+# shellcheck disable=SC2034  # both are read indirectly as APPROX_SIZE_${ARCH}, below.
 readonly APPROX_SIZE_amd64=348913664
+# shellcheck disable=SC2034
 readonly APPROX_SIZE_arm64=339607552
 
 # ---------------------------------------------------------------------------

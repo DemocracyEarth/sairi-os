@@ -109,7 +109,7 @@ this directory has been executed, parsed by systemd, or booted.
 | Sandboxing directives confirmed effective            | **Not run.** See the caveat below.                                                                  |
 | `session/sairios-session.sh` executed                | **Not run.** No `cage`, no `cog`, no Wayland.                                                       |
 | `session/sairios-session.sh` checked by `shellcheck` | **Not run.** `shellcheck` is not installed on the authoring host. Written to be clean; unconfirmed. |
-| Desktop entry validated by `desktop-file-validate`   | **Not run.**                                                                                        |
+| Desktop entry validated by `desktop-file-validate`   | **Not run locally**; the CI `os-layer` job runs it, and CI has not run yet.                         |
 | SVG assets rendered                                  | **Not run.** Written by hand; geometry is arithmetic, not observation.                              |
 | `palette.css` contrast ratios measured               | **Not run.** Values were chosen to clear WCAG AA by construction and have not been measured.        |
 

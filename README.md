@@ -6,6 +6,12 @@
 
 <p align="center">An experimental operating environment for the age of AI agents.</p>
 
+<p align="center">
+  <a href="https://github.com/DemocracyEarth/sairi-os/actions/workflows/ci.yml">
+    <img alt="CI" src="https://github.com/DemocracyEarth/sairi-os/actions/workflows/ci.yml/badge.svg" />
+  </a>
+</p>
+
 Traditional operating systems organize interaction around applications, files
 and fixed graphical interfaces. SairiOS organizes interaction around
 **contexts**.

@@ -1,0 +1,202 @@
+# The gate every change passes.
+#
+# Four jobs, split by what they protect rather than by convenience — a red job
+# should tell you what kind of thing broke before you open the log.
+#
+#   validate   the product: format, lint, types, tests, build
+#   os-layer   the boot path: shell scripts, systemd units, cloud-init YAML
+#   secrets    the one rule with no exceptions
+#   assets     generated files that must not drift from their sources
+#
+# The os-layer job exists because of how this repository actually broke. Several
+# boot-path changes were verified only by hand, and two of them needed a full
+# image rebuild — minutes each — to surface a fault that a parser would have
+# found in under a second. cloud-init YAML in particular is only exercised on a
+# guest's first boot, which is the slowest feedback loop in the project.
+#
+# What this deliberately does NOT do is boot a VM. That lives in vm-smoke.yml,
+# on a schedule, because it is slow and because a required check that takes half
+# an hour stops being a gate and starts being an obstacle.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Matches package.json engines (>=22.5.0, for node:sqlite) and the version the
+  # VM image pins. CI running a different major than the guest would let a
+  # runtime difference through.
+  NODE_VERSION: '22'
+
+jobs:
+  validate:
+    name: Product (make validate)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      # `npm ci` and not `npm install`: the lockfile is the input, and a build
+      # that silently resolves a different tree is not reproducing anything.
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      # format-check + lint + typecheck + test + build, the same target a
+      # contributor runs locally. One command so the two cannot diverge.
+      - name: make validate
+        run: make validate
+
+  # NOTE: shellcheck and the YAML parse were run locally against this tree and
+  # are clean. `systemd-analyze verify` and `desktop-file-validate` were NOT —
+  # neither tool exists on the macOS machine this was written on. Their steps are
+  # blocking on purpose, but if the first run goes red there, suspect the filter
+  # or the tool's warning behaviour before suspecting the units.
+  os-layer:
+    name: Boot path (scripts, units, cloud-init)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install linters
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq shellcheck desktop-file-utils python3-yaml
+
+      # Syntax first: bash -n catches what shellcheck cannot report on, because
+      # a file that does not parse gives shellcheck nothing to analyse.
+      - name: Shell syntax
+        run: |
+          set -euo pipefail
+          find . -name '*.sh' -not -path './node_modules/*' -print0 |
+            xargs -0 -n1 bash -n
+          echo "all shell scripts parse"
+
+      # Severity=warning, not error. The scripts are clean at this level today;
+      # the false positives that remain carry a `# shellcheck disable=` with the
+      # reason next to them, so a NEW warning means something real.
+      - name: shellcheck
+        run: |
+          set -euo pipefail
+          find . -name '*.sh' -not -path './node_modules/*' -print0 |
+            xargs -0 shellcheck --severity=warning
+
+      # The slowest fault in this project to discover by hand: a YAML error here
+      # surfaces only when a guest first boots, minutes into an image build.
+      - name: cloud-init YAML parses
+        run: |
+          set -euo pipefail
+          for f in vm/cloud-init/*.yaml; do
+            python3 -c "import sys, yaml; yaml.safe_load(open(sys.argv[1])); print('ok  ' + sys.argv[1])" "$f"
+          done
+
+      # cloud-init reads the `#cloud-config` first line to decide what the file
+      # is. Without it the whole configuration is silently treated as a script
+      # and nothing in it runs — a failure with no error message.
+      - name: user-data declares itself as cloud-config
+        run: |
+          head -n 1 vm/cloud-init/user-data.yaml | grep -qx '#cloud-config' ||
+            { echo 'user-data.yaml must begin with #cloud-config'; exit 1; }
+
+      # systemd will not tell you a unit is malformed until it tries to start it,
+      # on a machine you have to boot to find out. `systemd-analyze verify` is
+      # the same parser, run here for free.
+      #
+      # Unit files reference absolute paths under /opt/sairios that do not exist
+      # on a runner, so "not found" complaints about ExecStart and
+      # EnvironmentFile are expected and filtered. Everything else fails the job.
+      - name: systemd units are well-formed
+        run: |
+          set -uo pipefail
+          status=0
+          for unit in os/systemd/*.service os/systemd/*.path; do
+            out="$(systemd-analyze verify "$unit" 2>&1 |
+              grep -vE "Command .* is not executable|Failed to open .*/opt/sairios|EnvironmentFile|not found|Unknown group|Unit .* not found" || true)"
+            if [ -n "$out" ]; then
+              echo "FAIL $unit"; echo "$out"; status=1
+            else
+              echo "ok   $unit"
+            fi
+          done
+          exit "$status"
+
+      - name: Desktop entry is valid
+        run: desktop-file-validate os/session/sairios.desktop
+
+  secrets:
+    name: No credentials in the tree
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      # SECURITY.md and CLAUDE.md both state this as an absolute. An absolute
+      # nobody checks is a wish, so it is checked.
+      #
+      # Shape-based, deliberately narrow: broad entropy scanning on a repository
+      # full of hashes and hex colours produces noise, and a check people learn
+      # to ignore is worse than no check. The patterns below match the actual
+      # credential formats this project could plausibly leak.
+      - name: Scan for credential-shaped strings
+        run: |
+          set -uo pipefail
+          patterns='sk-ant-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9]{32,}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|AKIA[A-Z0-9]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----'
+          if git grep -nIE "$patterns" -- . ':(exclude).github/workflows/ci.yml'; then
+            echo
+            echo 'A credential-shaped string is committed. Remove it and rotate the key.'
+            exit 1
+          fi
+          echo 'no credential-shaped strings found'
+
+      # .env holds real keys on a developer's machine. It is git-ignored; this
+      # asserts that it stayed that way, because the ignore rule is one careless
+      # `git add -f` from being bypassed.
+      - name: .env is not tracked
+        run: |
+          if git ls-files --error-unmatch .env >/dev/null 2>&1; then
+            echo '.env is tracked. It must never be committed.'; exit 1
+          fi
+          echo '.env is not tracked'
+
+  assets:
+    name: Generated files match their sources
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      # Both of these are also asserted by unit tests, and both are repeated here
+      # on purpose: they fail with a one-line fix instruction instead of a diff
+      # buried in a test report, and this job stays green in seconds.
+      - name: Design tokens (palette.css)
+        run: node os/branding/build-palette.mjs --check
+
+      - name: Precompiled SairiUI validator
+        run: |
+          npm run build:validator -w @sairios/adaptive-ui-schema
+          git diff --exit-code -- packages/adaptive-ui-schema/src/generated ||
+            { echo 'The precompiled validator is stale. Run: npm run build:validator -w @sairios/adaptive-ui-schema'; exit 1; }

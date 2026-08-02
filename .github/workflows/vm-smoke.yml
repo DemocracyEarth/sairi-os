@@ -1,0 +1,128 @@
+# Builds the VM image from scratch and boots it.
+#
+# Kept out of ci.yml on purpose. A required check that takes half an hour stops
+# being a gate and becomes an obstacle people learn to route around, and this one
+# is slow for a reason that will not go away: it installs a Debian userland,
+# downloads a pinned Node tarball, installs OpenClaw, and waits for cloud-init.
+#
+# So it runs nightly and on demand. What it protects is the one thing unit tests
+# structurally cannot reach — cloud-init only ever executes on a guest's first
+# boot, so a mistake there is invisible until a machine is built. Every fault
+# found in the VM path so far was found exactly this way.
+#
+# ---------------------------------------------------------------------------
+# STATUS: this workflow has never run.
+# ---------------------------------------------------------------------------
+# It was written on a macOS/arm64 machine with no GitHub Actions runner. The
+# scripts it calls DO work — the image has been built from scratch and booted to
+# a desktop several times locally — but on macOS with HVF acceleration, on
+# arm64, not on a Linux x86_64 runner under KVM or TCG.
+#
+# Specifically unverified here:
+#   - whether /dev/kvm exists on a standard GitHub runner. The script falls back
+#     to TCG when it does not, which is correct but far slower, and the timeout
+#     below is a guess rather than a measurement.
+#   - whether the amd64 image path works at all. Every local build has been
+#     arm64; APPROX_SIZE_amd64 in build-image.sh is a recorded constant, not
+#     something this project has downloaded.
+#   - how long a TCG first boot actually takes.
+#
+# The first run will tell us. Expect to adjust the timeout, and do not treat a
+# red result here as a product regression until the workflow itself is trusted.
+
+name: VM smoke
+
+on:
+  schedule:
+    # 04:00 UTC daily. Nothing depends on the hour; it is simply out of the way.
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+    inputs:
+      accel:
+        description: 'QEMU accelerator'
+        required: false
+        default: 'auto'
+        type: choice
+        options: [auto, kvm, tcg]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vm-smoke
+  cancel-in-progress: true
+
+jobs:
+  boot:
+    name: Build image, boot it, read the self-check
+    runs-on: ubuntu-latest
+    # Generous because the accelerator is unknown. Under KVM a local build and
+    # boot is roughly seven minutes; under TCG it could be several times that.
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Report what this runner can do
+        run: |
+          echo "arch:     $(uname -m)"
+          echo "kvm:      $([ -r /dev/kvm ] && [ -w /dev/kvm ] && echo present || echo ABSENT — will fall back to TCG)"
+          echo "cpus:     $(nproc)"
+          echo "memory:   $(free -h | awk '/^Mem:/ {print $2}')"
+          echo "disk:     $(df -h / | awk 'NR==2 {print $4}') free"
+
+      - name: Install QEMU and image tooling
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq qemu-system-x86 qemu-utils xorriso curl
+          qemu-system-x86_64 --version | head -n 1
+
+      # Membership in kvm is what makes /dev/kvm usable when the device exists.
+      # Harmless when it does not — the script detects and falls back.
+      - name: Allow KVM if the runner has it
+        run: |
+          if [ -e /dev/kvm ]; then
+            sudo chmod 666 /dev/kvm || true
+            ls -l /dev/kvm
+          else
+            echo "no /dev/kvm; the boot will run under TCG emulation and be slow"
+          fi
+
+      # An SSH key so the guest is reachable if the smoke run needs triage. It is
+      # generated here and thrown away with the runner: nothing persists, and no
+      # key from this repository is involved.
+      - name: Generate a throwaway guest key
+        run: |
+          mkdir -p vm/out
+          ssh-keygen -t ed25519 -N '' -f vm/out/sairios_dev_key -C 'ci-ephemeral'
+
+      - name: Build the image
+        run: |
+          bash vm/qemu/build-image.sh --yes --force --ssh-key vm/out/sairios_dev_key.pub
+
+      # --smoke boots, waits for the guest's first-boot self-check on the serial
+      # console, and exits non-zero unless the report reaches a verdict with
+      # `fail: 0`. DEGRADED is the expected verdict: the image carries the OS
+      # layer only, /opt/sairios is empty, and the service checks warn.
+      # The accelerator goes through the environment rather than being
+      # interpolated into the script. A `${{ }}` expanded directly inside a run
+      # block is substituted as text before the shell ever sees it, which is
+      # both a quoting trap and the standard injection footgun.
+      - name: Boot and read the self-check
+        env:
+          ACCEL: ${{ inputs.accel || 'auto' }}
+        run: |
+          bash vm/qemu/run-vm-headless.sh --smoke --accel "$ACCEL" --timeout 3000
+
+      # The serial log is the only record of what a guest did, and it is what
+      # every VM fault so far has been diagnosed from.
+      - name: Upload the serial log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: serial-log
+          path: |
+            vm/out/*.log
+            vm/out/serial*
+          if-no-files-found: warn
+          retention-days: 14

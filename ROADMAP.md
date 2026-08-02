@@ -106,10 +106,19 @@ exists is real.
    against them, freeze the frames as fixture tests, then move
    `openclaw/config/version.json` from `pinned` to `verified`.
    Expect the placeholders to be wrong on first contact.
-2. **CI, which does not exist.** There is no `.github/` in this repository at
-   all. Run `make validate` plus a headless VM boot smoke test on every PR.
-   Several boot-path changes have been verified only by hand, twice needing a
-   full image rebuild to catch something a test would have caught in seconds.
+2. **CI.** Written, never executed — this repository has never had a runner
+   trigger. `.github/workflows/ci.yml` gates every PR on four jobs: `make
+validate`, the boot path (shellcheck, cloud-init YAML, systemd unit parsing,
+   desktop entry), a credential scan, and generated-file freshness.
+   `vm-smoke.yml` builds an image and boots it nightly, off the required path
+   because it is slow.
+
+   Still to do: watch the first run. shellcheck and the YAML parse were verified
+   locally; `systemd-analyze verify` and `desktop-file-validate` were not,
+   because neither exists on the authoring machine. The VM smoke workflow has
+   never run at all and its timeout is a guess — and no local build has ever
+   been amd64, which is the only architecture a standard runner offers.
+
 3. **Persistence across a reboot.** Create a context in the guest, crystallize
    it, reboot, and confirm both survive. The boot is verified; this specific
    round trip is not.
