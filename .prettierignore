@@ -9,3 +9,10 @@ CHANGELOG.md
 
 # Generated: a precompiled AJV validator, checked by a staleness test.
 packages/adaptive-ui-schema/src/generated/sairi-ui-validator.js
+
+# Generated from packages/ui-components/src/tokens.css by
+# os/branding/build-palette.mjs, checked by os/branding/palette.test.ts.
+# Ignored so that formatting can never fight the generator: if prettier
+# reformatted it, `npm run format` would break the staleness test and
+# regenerating would break format:check.
+os/branding/palette.css

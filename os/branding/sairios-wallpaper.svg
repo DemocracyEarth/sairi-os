@@ -17,9 +17,18 @@
     correct image. The <style> block, which wins on specificity where it is supported,
     adds the dark variant.
 
-    Palette source: os/branding/palette.css. These are literal values rather than
-    CSS custom property references because a wallpaper is rasterised outside any document
-    that would define those variables.
+    Palette source: these literals were taken from the hand-written palette.css that
+    existed BEFORE the tokens were consolidated, and they have not been refreshed. They
+    no longer match the canonical values in packages/ui-components/src/tokens.css — the
+    light background here is #e3ddd0 where --sairi-desktop is now #eceae5.
+
+    That mismatch is currently invisible: the v0 session runs the shell fullscreen under
+    cog, so no wallpaper is ever drawn. Refresh these against tokens.css before anything
+    actually displays it, and re-check the composition as a whole rather than swapping
+    values one at a time — they were chosen as a set.
+
+    They are literals rather than var() references because a wallpaper is rasterised
+    outside any document that would define custom properties.
   -->
   <style>
     @media (prefers-color-scheme: dark) {

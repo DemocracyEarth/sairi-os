@@ -30,18 +30,19 @@ would be a layering violation.
 
 ## Contents
 
-| Path                                        | What it is                             | Installed to                                |
-| ------------------------------------------- | -------------------------------------- | ------------------------------------------- |
-| `systemd/sairios-context-service.service`   | user unit, context store               | `~/.config/systemd/user/`                   |
-| `systemd/sairios-agent-bridge.service`      | user unit, agent transport             | `~/.config/systemd/user/`                   |
-| `systemd/sairios-permission-broker.service` | user unit, capability broker           | `~/.config/systemd/user/`                   |
-| `systemd/sairios-shell.service`             | user unit, shell HTTP server           | `~/.config/systemd/user/`                   |
-| `systemd/sairios-session.service`           | **system** unit, kiosk session on a VT | `/etc/systemd/system/`                      |
-| `session/sairios-session.sh`                | session launcher (`cage` + `cog`)      | not installed; run in place from the tree   |
-| `session/sairios.desktop`                   | Wayland session entry                  | `/usr/share/wayland-sessions/`              |
-| `branding/palette.css`                      | design tokens                          | session chrome reference; unused by product |
-| `branding/sairios-mark.svg`                 | monochrome mark                        | session chrome, docs, favicon source        |
-| `branding/sairios-wallpaper.svg`            | 16:9 wallpaper                         | session background                          |
+| Path                                        | What it is                             | Installed to                              |
+| ------------------------------------------- | -------------------------------------- | ----------------------------------------- |
+| `systemd/sairios-context-service.service`   | user unit, context store               | `~/.config/systemd/user/`                 |
+| `systemd/sairios-agent-bridge.service`      | user unit, agent transport             | `~/.config/systemd/user/`                 |
+| `systemd/sairios-permission-broker.service` | user unit, capability broker           | `~/.config/systemd/user/`                 |
+| `systemd/sairios-shell.service`             | user unit, shell HTTP server           | `~/.config/systemd/user/`                 |
+| `systemd/sairios-session.service`           | **system** unit, kiosk session on a VT | `/etc/systemd/system/`                    |
+| `session/sairios-session.sh`                | session launcher (`cage` + `cog`)      | not installed; run in place from the tree |
+| `session/sairios.desktop`                   | Wayland session entry                  | `/usr/share/wayland-sessions/`            |
+| `branding/palette.css`                      | design tokens (generated)              | `/usr/share/sairios/`                     |
+| `branding/sairios-logo.svg`                 | the logo                               | `/usr/share/sairios/`, session icon       |
+| `branding/sairios-mark.svg`                 | monochrome mark                        | `/usr/share/sairios/`; for `currentColor` |
+| `branding/sairios-wallpaper.svg`            | 16:9 wallpaper                         | session background                        |
 
 In a VM built from `vm/`, these are installed system-wide by
 `/usr/local/sbin/sairios-provision` (written by cloud-init): the four user units go to
@@ -56,12 +57,15 @@ overwrite the shim with the tree's launcher, because on a machine whose product 
 missing the shim is the only thing that explains the missing tree instead of showing a
 black screen.
 
-`branding/palette.css` is the reference for OS-level and session chrome. No product code
-imports it. The shell renders with its own copy of the tokens in
-`packages/ui-components/src/styles.css`, and the two are kept in step by hand. They are
-not in step today: nine tokens are declared in both files and all nine differ, including
-`--sairi-surface` (`#f4f1ea` here, `#fbfaf8` there) and `--sairi-accent` (`#3a6ea5` here,
-`#2f5d8c` there). The full list is in `os/branding/README.md`.
+`branding/palette.css` is **generated** from `packages/ui-components/src/tokens.css`,
+which is the one canonical set of design tokens. It exists so OS-level chrome can use the
+shell's exact values without importing from a workspace package, and it adds the
+`prefers-color-scheme` query the shell does not need (the shell resolves the theme in
+JavaScript; a greeter cannot).
+
+Regenerate with `npm run build:palette`; `os/branding/palette.test.ts` fails if it has
+drifted. Previously the two files were maintained by hand, shared eighteen token names and
+disagreed on every one of them.
 
 ## Design decisions worth stating once
 

@@ -3,20 +3,26 @@
 The visual constants of SairiOS: the palette, the mark, the wallpaper.
 
 These live in `os/` because the OS layer needs them at boot, before any product code
-runs. `palette.css` is the reference for OS-level and session chrome. Nothing imports it:
-the shell renders with its own copy of the tokens in
-`packages/ui-components/src/styles.css` (`apps/shell/src/main.tsx` imports
-`@sairios/ui-components/styles.css`). The two files are kept in step by hand.
+runs.
 
-They are not in step today. Nine tokens are declared in both files and all nine have
-different values: `--sairi-surface` (`#f4f1ea` here, `#fbfaf8` there),
-`--sairi-surface-raised` (`#fbf9f4` / `#ffffff`), `--sairi-surface-sunken` (`#e9e4d9` /
-`#eae7e1`), `--sairi-border` (`#d5cfc2` / `#d6d2ca`), `--sairi-border-strong` (`#b0a999` /
-`#b4afa4`), `--sairi-accent` (`#3a6ea5` / `#2f5d8c`), `--sairi-ok` (`#3f6b4a` / `#3a6b4c`),
-`--sairi-warn` (`#8a6a1f` / `#8a6a1c`) and `--sairi-font-mono` (different font stack
-order). No other name appears in both: this file calls text `--sairi-ink*`, the shell's
-file calls it `--sairi-text*`. Until one file imports the other, or a build step generates
-one from the other, expect them to drift.
+**There is one set of design tokens, and it is not in this directory.**
+`packages/ui-components/src/tokens.css` is canonical — it is what the shell and the
+component catalog actually render from. `palette.css` here is **generated from it** by
+`build-palette.mjs` and exists only so that OS-level chrome can use the same values
+without importing from a workspace package.
+
+This used to be two hand-maintained files. They shared eighteen token names and disagreed
+on all eighteen values — `--sairi-accent` was `#3a6ea5` here and `#3b6ea5` there — and
+because nothing imported this one, nothing ever caught it. A greeter styled from this file
+would not have matched the desktop it was a greeter for.
+
+It also carried sixty-five tokens the product does not use: a parallel vocabulary
+(`--sairi-ink`, `--sairi-space-md`, `--sairi-radius-md`) that appeared nowhere outside
+this file and the examples in this README. Those are gone. The shell calls text
+`--sairi-text*`; there is no `--sairi-ink*`.
+
+Regenerate with `npm run build:palette`. `os/branding/palette.test.ts` fails if the
+committed file has drifted from its source, so the two cannot come apart again.
 
 ## The language, stated once
 
@@ -50,49 +56,56 @@ What it explicitly is not:
 
 ### `palette.css`
 
-Every design token, prefixed `--sairi-`. Light values on `:root`, dark values in a
-`prefers-color-scheme: dark` block, and explicit `:root[data-theme="light"]` /
-`:root[data-theme="dark"]` blocks so a manual theme toggle beats the system preference in
-both directions.
+**Generated. Do not edit.** Source: `packages/ui-components/src/tokens.css`.
+Generator: `build-palette.mjs`. Regenerate with `npm run build:palette`.
 
-Token groups:
+Every design token the shell uses, prefixed `--sairi-`, with light values on `:root` and
+dark values on `:root[data-theme='dark']` — identical to the source, because they are
+copied from it rather than written twice.
 
-| Prefix                                                                                            | Covers                                            |
-| ------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| `--sairi-surface-*`                                                                               | backgrounds, from sunken well to overlay          |
-| `--sairi-ink-*`                                                                                   | text, from strong headings to faint timestamps    |
-| `--sairi-border-*`                                                                                | rules and their widths                            |
-| `--sairi-accent-*`                                                                                | the single accent hue and its tints               |
-| `--sairi-ok/warn/danger-*`                                                                        | status                                            |
-| `--sairi-policy-*`                                                                                | permission policy: allow, ask, deny               |
-| `--sairi-context-*`                                                                               | context type: ephemeral, persistent, crystallized |
-| `--sairi-shadow-*`                                                                                | three elevations, no more                         |
-| `--sairi-font-*`, `--sairi-text-*`, `--sairi-leading-*`, `--sairi-weight-*`, `--sairi-tracking-*` | typography                                        |
-| `--sairi-space-*`                                                                                 | a 4px grid                                        |
-| `--sairi-radius-*`                                                                                | 0, 2, 3, 5px, and one full for status dots        |
-| `--sairi-focus-ring-*`                                                                            | focus, always visible                             |
-| `--sairi-duration-*`, `--sairi-easing-*`                                                          | motion, zeroed under `prefers-reduced-motion`     |
-| `--sairi-titlebar-height`, `--sairi-statusbar-height`, `--sairi-indicator-size`                   | fixed chrome metrics                              |
+It differs from its source in exactly one way, and that difference is the reason the file
+exists at all. `tokens.css` has no `prefers-color-scheme` block on purpose: the shell
+resolves "match system" in JavaScript and always writes a concrete `data-theme`, so there
+is one source of truth and the user can override the system. Session chrome — a greeter, a
+login screen, a splash — has no JavaScript to do that with, so this file adds the media
+query, scoped `:root:not([data-theme='light'])` so an explicit light choice still survives
+a dark system setting. The `prefers-reduced-motion` reset is carried across too.
+
+Token groups, as they actually exist:
+
+| Prefix                                                                                                | Covers                                      |
+| ----------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| `--sairi-desktop*`, `--sairi-chrome`, `--sairi-surface*`                                              | backgrounds, furthest back to nearest front |
+| `--sairi-text*`                                                                                       | type, from strong to faint, plus inverse    |
+| `--sairi-border*`                                                                                     | rules, including the focus ring             |
+| `--sairi-accent*`                                                                                     | the single accent hue and its tints         |
+| `--sairi-ok`, `--sairi-warn`, `--sairi-error`, `--sairi-pending`, `--sairi-idle`                      | status                                      |
+| `--sairi-ephemeral*`, `--sairi-persistent*`, `--sairi-crystallized*`                                  | context type                                |
+| `--sairi-shadow*`                                                                                     | three elevations, no more                   |
+| `--sairi-term*`                                                                                       | terminal colours                            |
+| `--sairi-font*`, `--sairi-text-*` sizes                                                               | typography                                  |
+| `--sairi-space-1`…`-6`                                                                                | a 4px grid                                  |
+| `--sairi-radius*`                                                                                     | small, default, large                       |
+| `--sairi-menubar-height`, `--sairi-titlebar-height`, `--sairi-statusbar-height`, `--sairi-dock-width` | fixed chrome metrics                        |
 
 Use it by importing the file and then referring only to tokens:
 
 ```css
-@import url('/branding/palette.css');
+@import url('/usr/share/sairios/palette.css');
 
 .panel {
   background: var(--sairi-surface-raised);
-  color: var(--sairi-ink);
-  border: var(--sairi-border-width) solid var(--sairi-border);
-  border-radius: var(--sairi-radius-md);
-  box-shadow: var(--sairi-shadow-sm);
-  padding: var(--sairi-space-md);
-  font: var(--sairi-weight-regular) var(--sairi-text-sm) / var(--sairi-leading-normal)
-    var(--sairi-font-sans);
+  color: var(--sairi-text);
+  border: 1px solid var(--sairi-border);
+  border-radius: var(--sairi-radius);
+  box-shadow: var(--sairi-shadow);
+  padding: var(--sairi-space-4);
+  font: var(--sairi-text-base) var(--sairi-font);
 }
 ```
 
-Never write a hex value in a component. If a colour you need is not a token, the right
-move is to add a token here, not to inline it there.
+Never write a hex value in a component. If a colour you need is not a token, add it to
+`tokens.css` and regenerate — not to this file, which is overwritten, and not inline.
 
 The one deliberate exception is `sairios-wallpaper.svg`, which hardcodes literal values
 because it is rasterised outside any document that could define custom properties.
@@ -147,7 +160,7 @@ one of them in focus.
 Colour it by setting `color` on an ancestor:
 
 ```html
-<span style="color: var(--sairi-ink)">
+<span style="color: var(--sairi-text)">
   <img src="/branding/sairios-mark.svg" width="24" height="24" alt="SairiOS" />
 </span>
 ```

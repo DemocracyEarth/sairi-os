@@ -37,7 +37,7 @@ subsystems.
 - [x] The logo, drawn as geometry rather than text so it has no font dependency:
       menu bar, first-run setup, favicon, session icon, README
 - [x] End-to-end test of the full flow in mock mode against the real services
-- [x] 294 tests, none requiring a credential or the network
+- [x] 302 tests, none requiring a credential or the network
 
 ### Verified by actually running it
 
@@ -80,9 +80,9 @@ Not bugs to be discovered later; they are listed because they are already known.
   flag is accurate and surfaced in the UI, but a user's first real task will
   meet it.
 - **A granted permission cannot be revoked.** See Milestone 2.
-- **The seeded "SairiOS development" context is stale.** It still says the VM
-  image was never booted and OpenClaw is not connected. It is the first thing a
-  new user reads.
+- ~~The seeded "SairiOS development" context is stale.~~ Fixed: it now reports
+  the VM as booting, OpenClaw as pinned-but-unverified, and 3 of 11 capabilities
+  as real.
 
 ### Deliberately not in this milestone
 
@@ -115,13 +115,13 @@ exists is real.
    round trip is not.
 4. **Build and run the containers.** Confirm the hardening directives do what
    the comments claim.
-5. **One palette, not two.** `os/branding/palette.css` declares 83 `--sairi-*`
-   tokens and `packages/ui-components/src/tokens.css` declares 58. They share
-   **18**, and all 18 disagree — `--sairi-accent` is `#3a6ea5` in one and
-   `#3b6ea5` in the other, `--sairi-border` differs outright. Nothing imports
-   `palette.css`, so it is dead code that reads as authoritative: a trap for
-   whoever styles the login screen next. Pick the canonical file and derive the
-   other from it.
+5. ~~**One palette, not two.**~~ Done. `tokens.css` is canonical and
+   `os/branding/palette.css` is generated from it by `build-palette.mjs`, with
+   `palette.test.ts` failing on drift. The 65-token parallel vocabulary that
+   existed only in the old file is gone. One thing left behind:
+   `sairios-wallpaper.svg` still holds literals from the pre-consolidation
+   palette and does not match — harmless while the session draws no wallpaper,
+   and recorded in the file itself.
 
 Exit criterion: the "Built but NOT verified" list is empty and every claim in
 the README has been demonstrated.

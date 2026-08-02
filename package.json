@@ -15,6 +15,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
+    "build:palette": "node os/branding/build-palette.mjs",
     "clean": "node scripts/clean.mjs",
     "dev": "node scripts/dev.mjs",
     "doctor": "node scripts/doctor.mjs",

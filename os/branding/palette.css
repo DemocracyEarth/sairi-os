@@ -1,303 +1,225 @@
 /*
- * SairiOS design tokens.
+ * SairiOS design tokens for session chrome.
  *
- * The visual language is early Macintosh clarity, late-80s UNIX workstation utility, and
- * modern typography. Warm off-white surfaces, charcoal type, thin borders, subtle
- * shadows, one muted blue accent. Nothing glows.
+ * GENERATED FILE — DO NOT EDIT.
  *
- * Rules that these tokens exist to enforce:
- *   - Colour carries meaning, never decoration. There is exactly one accent hue.
- *   - Borders are 1px and do the work that shadows do elsewhere.
- *   - Radii are small. A 16px radius is a different operating system.
- *   - Motion is short and linear-ish. Nothing eases in over 400ms.
+ *   Source:    packages/ui-components/src/tokens.css
+ *   Generator: os/branding/build-palette.mjs
+ *   Regenerate: npm run build:palette
  *
- * Consumed by the shell, by ui-components, and by any session chrome in os/.
- * Every token is prefixed --sairi-.
+ * Edit the source. A change made here is overwritten by the next build, and
+ * os/branding/palette.test.ts fails until this file matches the source again.
  *
- * NOT VERIFIED: contrast ratios below were chosen to clear WCAG AA (4.5:1 for body text,
- * 3:1 for large text and UI boundaries) by construction. They have not been measured.
- * Measure before shipping anything that matters.
+ * This exists so that OS-level chrome — a greeter, a login screen, a splash —
+ * uses exactly the values the desktop uses. The one difference from the source
+ * is the `prefers-color-scheme` block below: the shell resolves the theme in
+ * JavaScript and writes `data-theme`, and session chrome has no JavaScript to
+ * do that with.
+ *
+ * Installed to /usr/share/sairios/palette.css by sairios-provision.
+ *
+ * NOT VERIFIED: contrast ratios were chosen to clear WCAG AA (4.5:1 for body
+ * text, 3:1 for large text and UI boundaries) by construction. They have not
+ * been measured. Measure before shipping anything that matters.
  */
 
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 
-  /* ---------------------------------------------------------------------
-   * Surfaces. Warm off-white, not grey. The warmth is the whole point: it
-   * reads as paper and as an early Mac, not as a dark-mode-first web app.
-   * ------------------------------------------------------------------- */
-  --sairi-surface: #f4f1ea; /* window / page background */
-  --sairi-surface-raised: #fbf9f4; /* panels, cards, popovers */
-  --sairi-surface-sunken: #e9e4d9; /* wells, inset fields, code blocks */
-  --sairi-surface-overlay: #ffffff; /* modals, menus that must sit above all */
-  --sairi-surface-selected: #e2e9f2; /* selected row, active tab */
-  --sairi-scrim: rgb(31 29 26 / 32%); /* behind a modal */
+  /* --- surfaces, furthest back to nearest front ------------------------ */
+  --sairi-desktop: #eceae5;
+  --sairi-desktop-grid: #e3e0da;
+  --sairi-chrome: #f4f2ef;
+  --sairi-surface: #ffffff;
+  --sairi-surface-raised: #ffffff;
+  --sairi-surface-sunken: #f7f6f3;
+  --sairi-surface-inset: #efedea;
 
-  /* ---------------------------------------------------------------------
-   * Ink. Charcoal, never pure black; #000 on warm paper looks like a hole.
-   * ------------------------------------------------------------------- */
-  --sairi-ink: #1f1d1a; /* body text, primary */
-  --sairi-ink-strong: #100f0d; /* headings only */
-  --sairi-ink-muted: #55514a; /* secondary text, labels */
-  --sairi-ink-faint: #7d7870; /* placeholders, disabled, timestamps */
-  --sairi-ink-inverse: #f8f6f1; /* text on accent or on ink */
+  /* --- borders --------------------------------------------------------- */
+  --sairi-border: #e2dfd9;
+  --sairi-border-strong: #cfcbc3;
+  --sairi-border-focus: #3b6ea5;
 
-  /* ---------------------------------------------------------------------
-   * Borders. Thin and visible. A SairiOS panel is defined by its edge.
-   * ------------------------------------------------------------------- */
-  --sairi-border: #d5cfc2; /* default 1px rule */
-  --sairi-border-strong: #b0a999; /* focused panel, table header rule */
-  --sairi-border-faint: #e6e1d6; /* internal separators inside a panel */
-  --sairi-border-width: 1px;
-  --sairi-border-width-strong: 2px;
+  /* --- type ------------------------------------------------------------ */
+  --sairi-text: #1d1d1f;
+  --sairi-text-muted: #6b6b70;
+  --sairi-text-faint: #9a9a9f;
+  --sairi-text-inverse: #ffffff;
 
-  /* ---------------------------------------------------------------------
-   * Accent. One muted blue, close to the workstation blues of the period.
-   * Used for focus, selection, links and the single primary action.
-   * ------------------------------------------------------------------- */
-  --sairi-accent: #3a6ea5;
-  --sairi-accent-strong: #2b5480; /* hover / pressed */
-  --sairi-accent-weak: #6f97c4; /* disabled primary, decorative rules */
-  --sairi-accent-surface: #e3ebf4; /* accent-tinted background */
-  --sairi-accent-border: #a8c0dc;
-  --sairi-accent-ink: #ffffff; /* text on --sairi-accent */
+  /* --- accent ---------------------------------------------------------- */
+  --sairi-accent: #3b6ea5;
+  --sairi-accent-hover: #2f5a87;
+  --sairi-accent-soft: #e8eff6;
+  --sairi-accent-border: #b9cee2;
 
-  /* ---------------------------------------------------------------------
-   * Status. Desaturated on purpose. A warning should read as a note, not
-   * as an alarm; the permission dialogs are where attention is spent.
-   * ------------------------------------------------------------------- */
-  --sairi-ok: #3f6b4a;
-  --sairi-ok-surface: #e4ece5;
-  --sairi-warn: #8a6a1f;
-  --sairi-warn-surface: #f2eada;
-  --sairi-danger: #9b3b2e;
-  --sairi-danger-surface: #f3e2de;
-  --sairi-info: var(--sairi-accent);
-  --sairi-info-surface: var(--sairi-accent-surface);
-  /* Permission policy colours map onto the three states directly. */
-  --sairi-policy-allow: var(--sairi-ok);
-  --sairi-policy-ask: var(--sairi-warn);
-  --sairi-policy-deny: var(--sairi-danger);
-  /* Context type indicators. */
-  --sairi-context-ephemeral: #7d7870;
-  --sairi-context-persistent: var(--sairi-accent);
-  --sairi-context-crystallized: #6a5a86;
+  /* --- state ----------------------------------------------------------- */
+  --sairi-ok: #4a8c5c;
+  --sairi-warn: #9a7420;
+  --sairi-error: #a8452f;
+  --sairi-pending: #8a8a8f;
+  --sairi-idle: #c2c0bb;
 
-  /* ---------------------------------------------------------------------
-   * Shadows. Barely there. One offset, one blur, low alpha. No spread, no
-   * coloured shadows, no second layer.
-   * ------------------------------------------------------------------- */
-  --sairi-shadow-color: 31 29 26;
-  --sairi-shadow-sm: 0 1px 2px rgb(var(--sairi-shadow-color) / 8%);
-  --sairi-shadow-md: 0 2px 6px rgb(var(--sairi-shadow-color) / 10%);
-  --sairi-shadow-lg: 0 6px 20px rgb(var(--sairi-shadow-color) / 14%);
+  /* --- context types --------------------------------------------------- */
+  --sairi-ephemeral: #8a6d33;
+  --sairi-ephemeral-soft: #f6f0e4;
+  --sairi-persistent: #3b6ea5;
+  --sairi-persistent-soft: #e8eff6;
+  --sairi-crystallized: #5c5590;
+  --sairi-crystallized-soft: #eeecf6;
 
-  /* ---------------------------------------------------------------------
-   * Typography. System stack first so a machine without the packaged fonts
-   * still looks deliberate rather than defaulting to Times.
-   * ------------------------------------------------------------------- */
-  --sairi-font-sans:
-    Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
-    Arial, sans-serif;
-  --sairi-font-mono:
-    'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', ui-monospace, Menlo, Consolas, 'DejaVu Sans Mono',
-    monospace;
+  /* --- terminal (identical in both themes: a terminal is a terminal) ---- */
+  --sairi-term-bg: #1c1c1e;
+  --sairi-term-text: #e6e4e0;
+  --sairi-term-dim: #85858d;
+  --sairi-term-prompt: #7fb0e0;
+  --sairi-term-accent: #a8c98f;
+  --sairi-term-error: #d08575;
 
-  --sairi-text-2xs: 0.6875rem; /* 11px: status strips, capability chips */
-  --sairi-text-xs: 0.75rem; /* 12px: metadata, table cells */
-  --sairi-text-sm: 0.8125rem; /* 13px: UI default, the workstation size */
-  --sairi-text-md: 0.9375rem; /* 15px: body prose */
-  --sairi-text-lg: 1.125rem; /* 18px */
-  --sairi-text-xl: 1.375rem; /* 22px */
-  --sairi-text-2xl: 1.75rem; /* 28px: page title, rarely */
+  /* --- typography ------------------------------------------------------ */
+  --sairi-font:
+    ui-sans-serif, -apple-system, 'SF Pro Text', 'Segoe UI', Inter, 'Helvetica Neue', Arial,
+    sans-serif;
+  --sairi-font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+  --sairi-text-xs: 10.5px;
+  --sairi-text-sm: 11.5px;
+  --sairi-text-base: 12.5px;
+  --sairi-text-md: 13.5px;
+  --sairi-text-lg: 15px;
 
-  --sairi-leading-tight: 1.25;
-  --sairi-leading-normal: 1.45;
-  --sairi-leading-loose: 1.65;
+  /* --- geometry -------------------------------------------------------- */
+  --sairi-radius-sm: 3px;
+  --sairi-radius: 5px;
+  --sairi-radius-lg: 8px;
 
-  --sairi-weight-regular: 400;
-  --sairi-weight-medium: 500;
-  --sairi-weight-bold: 600; /* 700 is too loud against these surfaces */
+  --sairi-space-1: 4px;
+  --sairi-space-2: 6px;
+  --sairi-space-3: 10px;
+  --sairi-space-4: 14px;
+  --sairi-space-5: 20px;
+  --sairi-space-6: 28px;
 
-  /* Slight negative tracking at display sizes, slight positive on small caps. */
-  --sairi-tracking-tight: -0.011em;
-  --sairi-tracking-normal: 0;
-  --sairi-tracking-wide: 0.04em;
+  /* --- elevation ------------------------------------------------------- */
+  /* Two levels only. A desktop with five shadow depths reads as a toy. */
+  --sairi-shadow: 0 1px 2px rgb(28 28 30 / 6%);
+  --sairi-shadow-window:
+    0 1px 1px rgb(28 28 30 / 5%), 0 6px 16px rgb(28 28 30 / 10%), 0 12px 40px rgb(28 28 30 / 6%);
+  --sairi-shadow-focused:
+    0 1px 1px rgb(28 28 30 / 6%), 0 10px 24px rgb(28 28 30 / 14%), 0 20px 56px rgb(28 28 30 / 10%);
 
-  /* ---------------------------------------------------------------------
-   * Space. A 4px grid, because 13px type sits on a 4px rhythm cleanly.
-   * ------------------------------------------------------------------- */
-  --sairi-space-3xs: 2px;
-  --sairi-space-2xs: 4px;
-  --sairi-space-xs: 6px;
-  --sairi-space-sm: 8px;
-  --sairi-space-md: 12px;
-  --sairi-space-lg: 16px;
-  --sairi-space-xl: 24px;
-  --sairi-space-2xl: 32px;
-  --sairi-space-3xl: 48px;
+  /* --- chrome metrics -------------------------------------------------- */
+  --sairi-menubar-height: 30px;
+  --sairi-statusbar-height: 24px;
+  --sairi-titlebar-height: 30px;
+  --sairi-dock-width: 78px;
+}
 
-  /* ---------------------------------------------------------------------
-   * Radii. Small. This is the token most likely to be wrongly increased.
-   * ------------------------------------------------------------------- */
-  --sairi-radius-none: 0;
-  --sairi-radius-sm: 2px; /* inputs, chips, buttons */
-  --sairi-radius-md: 3px; /* panels, cards */
-  --sairi-radius-lg: 5px; /* window frames, modals */
-  --sairi-radius-full: 999px; /* status dots only */
+/* An explicit choice always wins. Written by the shell, or by anything else
+   that can run code. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
 
-  /* ---------------------------------------------------------------------
-   * Focus. Always visible, always the accent, never removed.
-   * ------------------------------------------------------------------- */
-  --sairi-focus-ring-width: 2px;
-  --sairi-focus-ring-offset: 1px;
-  --sairi-focus-ring-color: var(--sairi-accent);
+  --sairi-desktop: #17171a;
+  --sairi-desktop-grid: #1e1e22;
+  --sairi-chrome: #232327;
+  --sairi-surface: #202024;
+  --sairi-surface-raised: #26262b;
+  --sairi-surface-sunken: #1b1b1f;
+  --sairi-surface-inset: #191a1d;
 
-  /* ---------------------------------------------------------------------
-   * Motion. Short enough that it reads as feedback, not as animation.
-   * ------------------------------------------------------------------- */
-  --sairi-duration-instant: 60ms;
-  --sairi-duration-fast: 110ms;
-  --sairi-duration-normal: 180ms;
-  --sairi-easing-standard: cubic-bezier(0.2, 0, 0, 1);
-  --sairi-easing-linear: linear;
+  --sairi-border: #34343a;
+  --sairi-border-strong: #47474f;
+  --sairi-border-focus: #7fb0e0;
 
-  /* ---------------------------------------------------------------------
-   * Fixed metrics for the chrome that must not drift.
-   * ------------------------------------------------------------------- */
-  --sairi-titlebar-height: 26px;
-  --sairi-statusbar-height: 22px;
-  --sairi-indicator-size: 7px; /* the compact status dot */
+  --sairi-text: #e8e6e2;
+  --sairi-text-muted: #9d9da4;
+  --sairi-text-faint: #6e6e76;
+  --sairi-text-inverse: #17171a;
+
+  --sairi-accent: #7fb0e0;
+  --sairi-accent-hover: #9ac4ec;
+  --sairi-accent-soft: #22303c;
+  --sairi-accent-border: #395067;
+
+  --sairi-ok: #74b183;
+  --sairi-warn: #c9a95e;
+  --sairi-error: #d08575;
+  --sairi-pending: #85858d;
+  --sairi-idle: #3e3e45;
+
+  --sairi-ephemeral: #c4a56b;
+  --sairi-ephemeral-soft: #2b2619;
+  --sairi-persistent: #7fb0e0;
+  --sairi-persistent-soft: #1e2a35;
+  --sairi-crystallized: #a49cd4;
+  --sairi-crystallized-soft: #26243a;
+
+  --sairi-shadow: 0 1px 2px rgb(0 0 0 / 40%);
+  --sairi-shadow-window:
+    0 1px 1px rgb(0 0 0 / 40%), 0 6px 16px rgb(0 0 0 / 45%), 0 12px 40px rgb(0 0 0 / 35%);
+  --sairi-shadow-focused:
+    0 1px 1px rgb(0 0 0 / 45%), 0 10px 24px rgb(0 0 0 / 55%), 0 20px 56px rgb(0 0 0 / 45%);
 }
 
 /*
- * Dark. Warm dark, not blue-black: the surfaces keep a trace of the same hue so the
- * palette reads as one family. Ink never goes to pure white.
+ * The system preference, for chrome that cannot run JavaScript.
+ *
+ * Scoped with :not([data-theme='light']) so that an explicit light choice is not
+ * overridden by a dark system setting. Without the guard, a user who picked
+ * light on a dark-configured machine would get dark chrome anyway.
  */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --sairi-surface: #1b1a17;
-    --sairi-surface-raised: #24221e;
-    --sairi-surface-sunken: #131210;
-    --sairi-surface-overlay: #2a2823;
-    --sairi-surface-selected: #26303c;
-    --sairi-scrim: rgb(0 0 0 / 55%);
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
 
-    --sairi-ink: #e7e3d9;
-    --sairi-ink-strong: #f6f3ec;
-    --sairi-ink-muted: #a8a297;
-    --sairi-ink-faint: #7b756b;
-    --sairi-ink-inverse: #16150f;
+    --sairi-desktop: #17171a;
+    --sairi-desktop-grid: #1e1e22;
+    --sairi-chrome: #232327;
+    --sairi-surface: #202024;
+    --sairi-surface-raised: #26262b;
+    --sairi-surface-sunken: #1b1b1f;
+    --sairi-surface-inset: #191a1d;
 
-    --sairi-border: #37342e;
-    --sairi-border-strong: #524d45;
-    --sairi-border-faint: #292722;
+    --sairi-border: #34343a;
+    --sairi-border-strong: #47474f;
+    --sairi-border-focus: #7fb0e0;
 
-    /* Lifted and slightly desaturated so it holds contrast on a dark surface. */
-    --sairi-accent: #7ba7d6;
-    --sairi-accent-strong: #9cc0e6;
-    --sairi-accent-weak: #4d6f96;
-    --sairi-accent-surface: #1e2a36;
-    --sairi-accent-border: #3c5a7a;
-    --sairi-accent-ink: #0f1720;
+    --sairi-text: #e8e6e2;
+    --sairi-text-muted: #9d9da4;
+    --sairi-text-faint: #6e6e76;
+    --sairi-text-inverse: #17171a;
 
-    --sairi-ok: #82b58e;
-    --sairi-ok-surface: #1b2820;
-    --sairi-warn: #d3ab5c;
-    --sairi-warn-surface: #2b2418;
-    --sairi-danger: #d98a78;
-    --sairi-danger-surface: #2e1d19;
+    --sairi-accent: #7fb0e0;
+    --sairi-accent-hover: #9ac4ec;
+    --sairi-accent-soft: #22303c;
+    --sairi-accent-border: #395067;
 
-    --sairi-context-ephemeral: #8b857a;
-    --sairi-context-crystallized: #a996c4;
+    --sairi-ok: #74b183;
+    --sairi-warn: #c9a95e;
+    --sairi-error: #d08575;
+    --sairi-pending: #85858d;
+    --sairi-idle: #3e3e45;
 
-    /* Shadows barely register on dark surfaces; borders carry the separation. */
-    --sairi-shadow-color: 0 0 0;
-    --sairi-shadow-sm: 0 1px 2px rgb(var(--sairi-shadow-color) / 40%);
-    --sairi-shadow-md: 0 2px 6px rgb(var(--sairi-shadow-color) / 46%);
-    --sairi-shadow-lg: 0 6px 20px rgb(var(--sairi-shadow-color) / 55%);
+    --sairi-ephemeral: #c4a56b;
+    --sairi-ephemeral-soft: #2b2619;
+    --sairi-persistent: #7fb0e0;
+    --sairi-persistent-soft: #1e2a35;
+    --sairi-crystallized: #a49cd4;
+    --sairi-crystallized-soft: #26243a;
+
+    --sairi-shadow: 0 1px 2px rgb(0 0 0 / 40%);
+    --sairi-shadow-window:
+      0 1px 1px rgb(0 0 0 / 40%), 0 6px 16px rgb(0 0 0 / 45%), 0 12px 40px rgb(0 0 0 / 35%);
+    --sairi-shadow-focused:
+      0 1px 1px rgb(0 0 0 / 45%), 0 10px 24px rgb(0 0 0 / 55%), 0 20px 56px rgb(0 0 0 / 45%);
   }
 }
 
-/*
- * Explicit overrides for a manual theme switch. These must beat the media query in both
- * directions, so both blocks are written out in full rather than relying on the cascade.
- */
-:root[data-theme='light'] {
-  --sairi-surface: #f4f1ea;
-  --sairi-surface-raised: #fbf9f4;
-  --sairi-surface-sunken: #e9e4d9;
-  --sairi-surface-overlay: #ffffff;
-  --sairi-surface-selected: #e2e9f2;
-  --sairi-scrim: rgb(31 29 26 / 32%);
-  --sairi-ink: #1f1d1a;
-  --sairi-ink-strong: #100f0d;
-  --sairi-ink-muted: #55514a;
-  --sairi-ink-faint: #7d7870;
-  --sairi-ink-inverse: #f8f6f1;
-  --sairi-border: #d5cfc2;
-  --sairi-border-strong: #b0a999;
-  --sairi-border-faint: #e6e1d6;
-  --sairi-accent: #3a6ea5;
-  --sairi-accent-strong: #2b5480;
-  --sairi-accent-weak: #6f97c4;
-  --sairi-accent-surface: #e3ebf4;
-  --sairi-accent-border: #a8c0dc;
-  --sairi-accent-ink: #ffffff;
-  --sairi-ok: #3f6b4a;
-  --sairi-ok-surface: #e4ece5;
-  --sairi-warn: #8a6a1f;
-  --sairi-warn-surface: #f2eada;
-  --sairi-danger: #9b3b2e;
-  --sairi-danger-surface: #f3e2de;
-  --sairi-context-ephemeral: #7d7870;
-  --sairi-context-crystallized: #6a5a86;
-  --sairi-shadow-color: 31 29 26;
-  --sairi-shadow-sm: 0 1px 2px rgb(var(--sairi-shadow-color) / 8%);
-  --sairi-shadow-md: 0 2px 6px rgb(var(--sairi-shadow-color) / 10%);
-  --sairi-shadow-lg: 0 6px 20px rgb(var(--sairi-shadow-color) / 14%);
-}
-
-:root[data-theme='dark'] {
-  --sairi-surface: #1b1a17;
-  --sairi-surface-raised: #24221e;
-  --sairi-surface-sunken: #131210;
-  --sairi-surface-overlay: #2a2823;
-  --sairi-surface-selected: #26303c;
-  --sairi-scrim: rgb(0 0 0 / 55%);
-  --sairi-ink: #e7e3d9;
-  --sairi-ink-strong: #f6f3ec;
-  --sairi-ink-muted: #a8a297;
-  --sairi-ink-faint: #7b756b;
-  --sairi-ink-inverse: #16150f;
-  --sairi-border: #37342e;
-  --sairi-border-strong: #524d45;
-  --sairi-border-faint: #292722;
-  --sairi-accent: #7ba7d6;
-  --sairi-accent-strong: #9cc0e6;
-  --sairi-accent-weak: #4d6f96;
-  --sairi-accent-surface: #1e2a36;
-  --sairi-accent-border: #3c5a7a;
-  --sairi-accent-ink: #0f1720;
-  --sairi-ok: #82b58e;
-  --sairi-ok-surface: #1b2820;
-  --sairi-warn: #d3ab5c;
-  --sairi-warn-surface: #2b2418;
-  --sairi-danger: #d98a78;
-  --sairi-danger-surface: #2e1d19;
-  --sairi-context-ephemeral: #8b857a;
-  --sairi-context-crystallized: #a996c4;
-  --sairi-shadow-color: 0 0 0;
-  --sairi-shadow-sm: 0 1px 2px rgb(var(--sairi-shadow-color) / 40%);
-  --sairi-shadow-md: 0 2px 6px rgb(var(--sairi-shadow-color) / 46%);
-  --sairi-shadow-lg: 0 6px 20px rgb(var(--sairi-shadow-color) / 55%);
-}
-
-/* Respect the setting. Nothing in SairiOS needs to move. */
 @media (prefers-reduced-motion: reduce) {
-  :root {
-    --sairi-duration-instant: 0ms;
-    --sairi-duration-fast: 0ms;
-    --sairi-duration-normal: 0ms;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

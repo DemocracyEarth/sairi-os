@@ -51,7 +51,9 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: false,
-    include: ['{packages,services,apps,tests,examples}/**/*.test.{ts,tsx}'],
+    // `os` is in the list for os/branding/palette.test.ts, which guards the
+    // generated palette against drifting from the tokens it derives from.
+    include: ['{packages,services,apps,tests,examples,os}/**/*.test.{ts,tsx}'],
     exclude: ['**/node_modules/**', '**/dist/**', 'vm/**', 'containers/**'],
     // No test may reach the network or a paid API. A slow test is a broken test.
     testTimeout: 15_000,
