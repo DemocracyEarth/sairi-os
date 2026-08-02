@@ -19,7 +19,7 @@ import type {
   TimelineProps,
 } from '@sairios/adaptive-ui-schema';
 import { renderMarkdown } from './markdown.js';
-import { useT } from './i18n.js';
+import { useLocale, useT } from './i18n.js';
 import { useHost } from './host.js';
 
 /**
@@ -472,6 +472,10 @@ function PermissionRequestView({ props }: { props: PermissionRequestProps }): JS
 
 function ContextMetadataView({ props }: { props: ContextMetadataProps }): JSX.Element {
   const t = useT();
+  // Dates go through the SairiOS locale, not the runtime's. Without the argument
+  // a machine whose system locale is Spanish renders Spanish dates on an English
+  // desktop, which is exactly the split the language setting exists to prevent.
+  const { locale } = useLocale();
   const { context } = useHost();
   if (!context) {
     return (
@@ -499,7 +503,9 @@ function ContextMetadataView({ props }: { props: ContextMetadataProps }): JSX.El
         </li>
         <li className="sairi-list__row">
           <span className="sairi-list__label">{t('label.updated')}</span>
-          <span className="sairi-list__value">{new Date(context.updatedAt).toLocaleString()}</span>
+          <span className="sairi-list__value">
+            {new Date(context.updatedAt).toLocaleString(locale)}
+          </span>
         </li>
         {props.showObjective !== false && (
           <li className="sairi-list__row">
@@ -514,6 +520,7 @@ function ContextMetadataView({ props }: { props: ContextMetadataProps }): JSX.El
 
 function ActivityLogView({ props }: { props: ActivityLogProps }): JSX.Element {
   const t = useT();
+  const { locale } = useLocale();
   const { context } = useHost();
   const limit = props.limit ?? 20;
   const events = context ? [...context.events].slice(-limit).reverse() : [];
@@ -526,7 +533,7 @@ function ActivityLogView({ props }: { props: ActivityLogProps }): JSX.Element {
           {events.map((event) => (
             <li key={event.id}>
               <div className="sairi-timeline__at">
-                {new Date(event.at).toLocaleTimeString()} · {event.kind}
+                {new Date(event.at).toLocaleTimeString(locale)} · {event.kind}
               </div>
               <div>{event.summary}</div>
             </li>

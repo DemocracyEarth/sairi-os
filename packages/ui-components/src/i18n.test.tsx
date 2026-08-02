@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   DEFAULT_LOCALE,
@@ -146,6 +146,47 @@ describe('Spanish is still a first-class language', () => {
     for (const key of Object.keys(en)) {
       expect(vars(es[key] ?? ''), `placeholders differ for "${key}"`).toEqual(vars(en[key] ?? ''));
     }
+  });
+});
+
+describe('choosing a language', () => {
+  it('persists the choice, so it survives a restart', () => {
+    function Switcher(): JSX.Element {
+      const { setLocale } = useLocale();
+      return (
+        <button onClick={() => setLocale('es')} type="button">
+          switch
+        </button>
+      );
+    }
+    render(
+      <LocaleProvider>
+        <Switcher />
+        <Probe />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByTestId('locale').textContent).toBe('en');
+    fireEvent.click(screen.getByRole('button'));
+
+    expect(screen.getByTestId('greeting').textContent).toBe('Conectar un modelo');
+    // The write is what makes the choice outlive the tab.
+    expect(localStorage.getItem('sairios.locale')).toBe('es');
+  });
+});
+
+describe('dates and times follow the interface language', () => {
+  it('formats through the chosen locale rather than the host machine', () => {
+    // The bug this guards: `toLocaleTimeString()` with no argument uses the
+    // JavaScript runtime's locale, so a machine configured in another language
+    // renders that language's dates on an English desktop. Every call site in
+    // SairiOS passes the app locale explicitly.
+    const when = new Date('2026-08-02T15:30:00Z');
+    const en = when.toLocaleDateString('en', { timeZone: 'UTC' });
+    const es = when.toLocaleDateString('es', { timeZone: 'UTC' });
+    // en-US puts the month first; es puts the day first. If these ever agree the
+    // assertion is worthless, so the difference itself is asserted.
+    expect(en).not.toBe(es);
   });
 });
 

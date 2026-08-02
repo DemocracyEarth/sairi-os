@@ -372,3 +372,29 @@ describe('restricted markdown', () => {
     expect(container.querySelector('.sairi-markdown')).not.toBeNull();
   });
 });
+
+describe('the catalog in Spanish', () => {
+  /**
+   * The other tests in this file pin English so their assertions read as plain
+   * sentences. That leaves the Spanish path unrendered, which is how a broken
+   * translation would reach a user without any test noticing. One case is
+   * enough to prove the components go through `t()` rather than embedding
+   * English, and the dictionary-parity checks in i18n.test.tsx cover the rest.
+   */
+  it('renders catalog chrome in Spanish when the desktop is set to it', () => {
+    rtlRender(
+      <LocaleProvider initialLocale="es">
+        <SairiUIRenderer
+          document={doc([
+            {
+              id: 'a',
+              component: { type: 'activity-log', props: { title: 'Actividad' } },
+            },
+          ])}
+          host={EMPTY_HOST}
+        />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText('Todavía no pasó nada en este contexto.')).toBeTruthy();
+  });
+});

@@ -1,6 +1,12 @@
 import type { JSX } from 'react';
 import type { Context } from '@sairios/context-schema';
-import { SairiUIRenderer, useT, type MessageKey, type SairiUIHost } from '@sairios/ui-components';
+import {
+  SairiUIRenderer,
+  useLocale,
+  useT,
+  type MessageKey,
+  type SairiUIHost,
+} from '@sairios/ui-components';
 import type { PermissionRequestRecord } from '../api.js';
 import { relativeTime } from './ContextMapWindow.js';
 
@@ -31,6 +37,7 @@ export interface ContextWindowBodyProps {
 
 export function ContextWindowBody(props: ContextWindowBodyProps): JSX.Element {
   const t = useT();
+  const { locale } = useLocale();
   const { context } = props;
   const pending = props.requests.filter((r) => r.status === 'pending');
   const settled = props.requests.filter((r) => r.status !== 'pending');
@@ -143,7 +150,7 @@ export function ContextWindowBody(props: ContextWindowBodyProps): JSX.Element {
           </div>
           <div className="panel__body">
             <p className="aside__muted">
-              {t('map.updated', { time: relativeTime(context.updatedAt, t) })}
+              {t('map.updated', { time: relativeTime(context.updatedAt, t, locale) })}
             </p>
             <div className="aside__actions">
               {context.type === 'crystallized' ? (
@@ -182,7 +189,7 @@ export function ContextWindowBody(props: ContextWindowBodyProps): JSX.Element {
                 .map((event) => (
                   <li key={event.id}>
                     <span className="log__at">
-                      {new Date(event.at).toLocaleTimeString([], {
+                      {new Date(event.at).toLocaleTimeString(locale, {
                         hour: '2-digit',
                         minute: '2-digit',
                       })}{' '}

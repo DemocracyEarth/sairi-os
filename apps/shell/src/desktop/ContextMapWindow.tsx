@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type JSX } from 'react';
 import type { Context, ContextType } from '@sairios/context-schema';
-import { useT, type MessageKey } from '@sairios/ui-components';
+import { useLocale, useT, type Locale, type MessageKey } from '@sairios/ui-components';
 import { Icon } from './icons.js';
 
 /**
@@ -38,7 +38,7 @@ const GROUPS: {
   },
 ];
 
-export function relativeTime(iso: string, t: ReturnType<typeof useT>): string {
+export function relativeTime(iso: string, t: ReturnType<typeof useT>, locale: Locale): string {
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return t('time.unknown');
   const seconds = Math.round((Date.now() - then) / 1000);
@@ -49,7 +49,9 @@ export function relativeTime(iso: string, t: ReturnType<typeof useT>): string {
   if (hours < 24) return t('time.hours', { n: hours });
   const days = Math.round(hours / 24);
   if (days < 30) return t('time.days', { n: days });
-  return new Date(iso).toLocaleDateString();
+  // The four branches above are localized through t(); this one must be too,
+  // or a date older than a month silently switches to the host's language.
+  return new Date(iso).toLocaleDateString(locale);
 }
 
 export interface ContextMapWindowProps {
@@ -63,6 +65,7 @@ export interface ContextMapWindowProps {
 
 export function ContextMapWindow(props: ContextMapWindowProps): JSX.Element {
   const t = useT();
+  const { locale } = useLocale();
   const [value, setValue] = useState('');
   const [type, setType] = useState<Exclude<ContextType, 'crystallized'>>('ephemeral');
 
@@ -170,7 +173,9 @@ export function ContextMapWindow(props: ContextMapWindowProps): JSX.Element {
                       <span className={`dot dot--${dotFor(context.status)}`} />
                       <span>{t(`status.${context.status}` as MessageKey)}</span>
                       <span>·</span>
-                      <span>{t('map.updated', { time: relativeTime(context.updatedAt, t) })}</span>
+                      <span>
+                        {t('map.updated', { time: relativeTime(context.updatedAt, t, locale) })}
+                      </span>
                     </div>
                   </button>
                 ))}

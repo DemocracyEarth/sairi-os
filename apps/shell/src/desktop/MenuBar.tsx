@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type JSX } from 'react';
-import { useT } from '@sairios/ui-components';
+import { useLocale, useT } from '@sairios/ui-components';
 import { Icon } from './icons.js';
 
 /**
@@ -39,6 +39,10 @@ export interface MenuBarProps {
 
 export function MenuBar({ menus, services, onOpenSystemStatus }: MenuBarProps): JSX.Element {
   const t = useT();
+  // The clock follows the SairiOS language, not the host's. Passing no locale
+  // would render 16:50 or 4:50 PM according to the machine rather than the
+  // desktop, on the one element visible in every single screenshot.
+  const { locale } = useLocale();
   const [open, setOpen] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
   const barRef = useRef<HTMLDivElement>(null);
@@ -150,7 +154,7 @@ export function MenuBar({ menus, services, onOpenSystemStatus }: MenuBarProps): 
           <Icon.network size={14} />
         </span>
         <time className="menubar__clock" dateTime={now.toISOString()}>
-          {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {now.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
         </time>
       </div>
     </div>
