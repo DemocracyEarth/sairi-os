@@ -136,8 +136,30 @@ jobs:
           done
           exit "$status"
 
+      # One documented divergence is allowed, and only one.
+      #
+      # `DesktopNames` is how a display manager learns what to put in
+      # XDG_CURRENT_DESKTOP for a session, and GNOME's own wayland-session
+      # files carry it. It is not in the base Desktop Entry Specification that
+      # desktop-file-validate checks, because session files are not what that
+      # spec covers - so the tool reports it as an error on essentially every
+      # session file in existence, including ones shipped by desktop
+      # environments.
+      #
+      # Dropping the key to satisfy the linter would break what the file is
+      # for. Filtered by exact key name rather than by message shape, so any
+      # OTHER non-standard key still fails the job.
+      #
+      # Found by the first CI run this repository ever had.
       - name: Desktop entry is valid
-        run: desktop-file-validate os/session/sairios.desktop
+        run: |
+          set -uo pipefail
+          out="$(desktop-file-validate os/session/sairios.desktop 2>&1 || true)"
+          out="$(printf '%s' "$out" | grep -v 'key "DesktopNames"' || true)"
+          if [ -n "$out" ]; then
+            echo "$out"; exit 1
+          fi
+          echo 'sairios.desktop is valid (DesktopNames divergence allowed)'
 
   secrets:
     name: No credentials in the tree

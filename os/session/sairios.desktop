@@ -17,6 +17,11 @@ Comment=Every window is a context
 Exec=/usr/local/bin/sairios-session
 TryExec=/usr/local/bin/sairios-session
 Icon=sairios
+# Not in the base Desktop Entry Specification, so desktop-file-validate
+# reports it as an error - it validates that spec, and session files are not
+# what that spec covers. Keep it anyway: this is how a display manager knows
+# what to put in XDG_CURRENT_DESKTOP, and GNOME's own session files carry it.
+# The CI check allows this one key by name and nothing else.
 DesktopNames=SairiOS
 Keywords=sairios;context;agent;kiosk;
 X-LightDM-DesktopName=SairiOS
