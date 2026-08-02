@@ -166,11 +166,26 @@ Nothing else in SairiOS may build a path from agent input.
 
 ## Secrets
 
-- **SairiOS never authenticates to a model provider.** It holds no provider API
-  key and makes no provider call. Credentials belong to OpenClaw's own
-  configuration. See [docs/OPENCLAW.md](docs/OPENCLAW.md).
-- The only secret SairiOS may hold is `OPENCLAW_GATEWAY_TOKEN`, for a gateway on
-  the same machine.
+- **SairiOS never authenticates to a model provider.** No line of SairiOS code
+  makes a request to a provider. Credentials are OpenClaw's business. See
+  [docs/OPENCLAW.md](docs/OPENCLAW.md).
+- **It does take custody of one key, briefly and only when asked.** First-run
+  setup accepts a provider key and writes it to exactly one file — mode 0600,
+  owned by the service account, at
+  `${SAIRIOS_DATA_DIR}/agent-bridge/provider.env`. It is never read back: no
+  route returns a key, a prefix, or a length. `GET /setup` answers
+  `keyPresent: true` and stops there. This is written custody, not use.
+  ([services/agent-bridge/src/setup.ts](services/agent-bridge/src/setup.ts))
+- OpenClaw gets a pointer, not a copy. Onboarding runs with
+  `--secret-input-mode ref`, so its config holds `{source:"env", id:"<VAR>"}` and
+  the value is resolved at run time from the environment systemd provides.
+- A key is never a command-line argument, because `argv` is world-readable
+  through `ps`. It reaches `openclaw onboard` in the child's environment.
+- A key containing whitespace is refused. In a systemd environment file a
+  newline would let a pasted value define further variables for the gateway
+  process; the validation exists for that case specifically.
+- The only other secret SairiOS may hold is `OPENCLAW_GATEWAY_TOKEN`, for a
+  gateway on the same machine.
 - No secret is ever baked into an image layer, a Dockerfile or a cloud-init file.
 - Every structured log field passes through redaction
   ([packages/shared/src/redact.ts](packages/shared/src/redact.ts)) before it can

@@ -92,14 +92,15 @@ Small corrections (a broken link, a typo, a wrong path) are fine.
 
 ## Index
 
-| ADR                                                | Title                                                     | Status   |
-| -------------------------------------------------- | --------------------------------------------------------- | -------- |
-| [0001](0001-linux-distribution-not-kernel-fork.md) | Build on a Linux distribution, not a kernel fork          | Accepted |
-| [0002](0002-qemu-for-system-testing.md)            | QEMU for full-system testing, Docker for services         | Accepted |
-| [0003](0003-declarative-adaptive-ui.md)            | Declarative adaptive UI, never generated code             | Accepted |
-| [0004](0004-openclaw-behind-agent-bridge.md)       | OpenClaw as a pinned dependency behind the agent bridge   | Accepted |
-| [0005](0005-contexts-as-primary-abstraction.md)    | Contexts as the primary abstraction                       | Accepted |
-| [0006](0006-permission-broker.md)                  | A permission broker mediates every privileged action      | Accepted |
-| [0007](0007-cloud-sync-boundary.md)                | Define the cloud boundary now, ship local-only            | Accepted |
-| [0008](0008-npm-workspaces-and-typescript.md)      | npm workspaces and TypeScript, Rust where it earns it     | Accepted |
-| [0009](0009-precompiled-schema-validator.md)       | Precompile the SairiUI validator instead of allowing eval | Accepted |
+| ADR                                                | Title                                                        | Status   |
+| -------------------------------------------------- | ------------------------------------------------------------ | -------- |
+| [0001](0001-linux-distribution-not-kernel-fork.md) | Build on a Linux distribution, not a kernel fork             | Accepted |
+| [0002](0002-qemu-for-system-testing.md)            | QEMU for full-system testing, Docker for services            | Accepted |
+| [0003](0003-declarative-adaptive-ui.md)            | Declarative adaptive UI, never generated code                | Accepted |
+| [0004](0004-openclaw-behind-agent-bridge.md)       | OpenClaw as a pinned dependency behind the agent bridge      | Accepted |
+| [0005](0005-contexts-as-primary-abstraction.md)    | Contexts as the primary abstraction                          | Accepted |
+| [0006](0006-permission-broker.md)                  | A permission broker mediates every privileged action         | Accepted |
+| [0007](0007-cloud-sync-boundary.md)                | Define the cloud boundary now, ship local-only               | Accepted |
+| [0008](0008-npm-workspaces-and-typescript.md)      | npm workspaces and TypeScript, Rust where it earns it        | Accepted |
+| [0009](0009-precompiled-schema-validator.md)       | Precompile the SairiUI validator instead of allowing eval    | Accepted |
+| [0010](0010-provider-credential-custody.md)        | SairiOS takes custody of a provider key, and what that costs | Accepted |

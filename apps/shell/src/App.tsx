@@ -16,8 +16,10 @@ import {
   serviceEndpoints,
   type PermissionRequestRecord,
   type ProviderStatusRecord,
+  type SetupStatusRecord,
 } from './api.js';
 import { CrystallizeDialog } from './desktop/CrystallizeDialog.js';
+import { SetupDialog } from './desktop/SetupDialog.js';
 import { ContextMapWindow, dotFor } from './desktop/ContextMapWindow.js';
 import {
   ContextWindowBody,
@@ -78,6 +80,16 @@ export function App(): JSX.Element {
     contextId: string;
     preview: CrystallizationPreview;
   } | null>(null);
+  const [setup, setSetup] = useState<SetupStatusRecord | null>(null);
+  // Starts closed so nothing flashes before the bridge has answered. It opens by
+  // itself exactly once — when the status comes back unconfigured — and can be
+  // reopened from the SairiOS menu.
+  //
+  // Dismissal is remembered for the session only. A person who says "not now"
+  // should not be asked again while they work, but the next boot is a fresh
+  // chance to connect a model rather than a decision made permanently by
+  // accident.
+  const [setupDismissed, setSetupDismissed] = useState(true);
   const [showArchived, setShowArchived] = useState(false);
   const [dock, setDock] = useState<DockTarget>('contexts');
   const [viewport, setViewport] = useState<Viewport>(() => ({
@@ -134,6 +146,14 @@ export function App(): JSX.Element {
       }
     });
     void brokerApi.health().then((r) => setHealth((h) => ({ ...h, broker: r.ok ? 'ok' : 'down' })));
+    // A bridge that does not manage credentials answers 501 here; setup stays
+    // null and the dialog never appears.
+    void bridgeApi.setupStatus().then((r) => {
+      if (!r.ok) return;
+      setSetup(r.value);
+      // The one automatic opening: a machine with no model yet.
+      if (!r.value.configured) setSetupDismissed(false);
+    });
   }, []);
 
   // The map is the entry point; open it once the desktop has a size to place it in.
@@ -369,6 +389,16 @@ export function App(): JSX.Element {
             onSelect: () => wm.open({ id: STATUS_WINDOW, kind: 'system-status' }, viewport),
             separatorBefore: true,
           },
+          // Reachable after "Not now", and the way to change providers later.
+          // Absent entirely when the bridge does not manage credentials.
+          ...(setup
+            ? [
+                {
+                  label: setup.configured ? t('setup.change') : t('setup.title'),
+                  onSelect: () => setSetupDismissed(false),
+                },
+              ]
+            : []),
           { label: t('menu.appearance'), heading: t('menu.appearance'), separatorBefore: true },
           ...THEME_PREFERENCES.map((pref) => ({
             label: t(`menu.theme.${pref}` as MessageKey),
@@ -525,6 +555,19 @@ export function App(): JSX.Element {
           {t('sys.provider')} {provider?.provider ?? '…'}
         </span>
       </StatusBar>
+
+      {setup && !setupDismissed && (
+        <SetupDialog
+          onDismiss={() => setSetupDismissed(true)}
+          onDone={(next) => {
+            setSetup(next);
+            setSetupDismissed(true);
+            // The provider banner in the status bar reflects the new reality.
+            void bridgeApi.provider().then((r) => r.ok && setProvider(r.value));
+          }}
+          status={setup}
+        />
+      )}
 
       {preview && (
         <CrystallizeDialog

@@ -336,6 +336,28 @@ write_files:
         fi
       done
 
+      # --- OpenClaw gateway -------------------------------------------------
+      # The gateway unit plus the path unit that starts it. See
+      # os/systemd/sairios-openclaw.path: the agent bridge is unprivileged and
+      # cannot call systemctl, so the credential file appearing is what starts
+      # the gateway. Installing the path unit is what makes first-run setup take
+      # effect without granting the bridge anything.
+      #
+      # The gateway itself is ConditionPathExists-guarded, so on a machine where
+      # nobody has configured a provider it simply never runs.
+      for unit in sairios-openclaw.service sairios-openclaw.path; do
+        src="$OS_DIR/systemd/$unit"
+        if [ -f "$src" ]; then
+          install -m 0644 -o root -g root "$src" "/etc/systemd/system/$unit"
+          log "installed system unit $unit"
+        fi
+      done
+
+      # OpenClaw's own state directory, created here rather than by the bridge:
+      # the bridge's ReadWritePaths= names this path, and a systemd bind mount
+      # for a directory that does not exist yet is not created on the fly.
+      install -d -m 0700 -o sairi -g sairi /home/sairi/.openclaw
+
       # --- system unit ------------------------------------------------------
       if [ -f "$OS_DIR/systemd/sairios-session.service" ]; then
         install -m 0644 -o root -g root \
@@ -383,6 +405,14 @@ write_files:
         log "WARNING: systemctl enable failed"
       systemctl enable sairios-session.service >/dev/null 2>&1 || \
         log "WARNING: could not enable sairios-session.service"
+      # The PATH unit is enabled, not the service. The service starts when a
+      # provider credential exists; enabling it directly would make it try on
+      # every boot of an unconfigured machine and log a condition failure each
+      # time, which reads like a fault when it is the normal state.
+      if [ -f /etc/systemd/system/sairios-openclaw.path ]; then
+        systemctl enable sairios-openclaw.path >/dev/null 2>&1 ||
+          log "WARNING: could not enable sairios-openclaw.path"
+      fi
 
       log "provisioning complete"
 
@@ -523,6 +553,33 @@ write_files:
           else
             fail "node major version ${major:-unknown} is below the required 22"
           fi
+        fi
+
+        emit ""
+        emit "--- agent runtime -------------------------------------------------"
+        # OpenClaw is optional: without it SairiOS runs the mock agent, which is
+        # a complete system, just not a thinking one. So this warns and never
+        # fails — a machine deliberately kept offline should not report a fault.
+        if have openclaw; then
+          ok "openclaw present: $(openclaw --version 2>&1 | head -n 1)"
+        else
+          warn "openclaw is not installed; SairiOS will run the mock agent"
+          note "first-run setup will say so rather than offering a broken connection"
+        fi
+
+        if [ -f /var/lib/sairios/agent/agent-bridge/provider.env ]; then
+          # The MODE is checked, never the contents. This file holds the only
+          # real secret on the machine and nothing here reads it.
+          local pmode
+          pmode="$(stat -c '%a' /var/lib/sairios/agent/agent-bridge/provider.env 2>/dev/null || echo '?')"
+          if [ "$pmode" = 600 ]; then
+            ok "a model provider is configured (credential file mode $pmode)"
+          else
+            fail "the provider credential file is mode $pmode, not 600"
+            note "fix with: sudo chmod 600 /var/lib/sairios/agent/agent-bridge/provider.env"
+          fi
+        else
+          warn "no model provider configured yet; open SairiOS and connect one"
         fi
 
         emit ""
@@ -834,6 +891,34 @@ runcmd:
       printf 'sairios: node %s installed at %s\n' \
         "$(/usr/local/bin/node --version)" "$NODE_HOME"
 
+      # --- OpenClaw ---------------------------------------------------------
+      # The upstream agent runtime, pinned to the version recorded in
+      # openclaw/config/version.json. Installed globally so the gateway unit and
+      # first-run setup both find it at /usr/local/bin/openclaw.
+      #
+      # Pinned exactly, never `@latest`: an image rebuilt next month must contain
+      # the same software as one built today, and the agent bridge's protocol
+      # assumptions are version-specific.
+      #
+      # NOT fatal if it fails. A machine without OpenClaw is a working SairiOS
+      # machine running the mock agent, and first-run setup says so plainly
+      # rather than the boot failing over an optional component.
+      OPENCLAW_VERSION='2026.7.1-2'
+      printf 'sairios: installing openclaw@%s\n' "$OPENCLAW_VERSION"
+      if /usr/local/bin/npm install -g --no-audit --no-fund \
+        "openclaw@${OPENCLAW_VERSION}" >/tmp/openclaw-install.log 2>&1; then
+        ln -sfn "$NODE_HOME/bin/openclaw" /usr/local/bin/openclaw 2>/dev/null || true
+        if /usr/local/bin/openclaw --version >/dev/null 2>&1; then
+          printf 'sairios: openclaw %s installed\n' \
+            "$(/usr/local/bin/openclaw --version 2>/dev/null | head -1)"
+        else
+          printf 'sairios: WARNING openclaw installed but does not run\n' >&2
+        fi
+      else
+        printf 'sairios: WARNING openclaw install failed; the machine will run the mock agent\n' >&2
+        tail -5 /tmp/openclaw-install.log >&2 || true
+      fi
+
   # -- filesystem layout -------------------------------------------------
   # /opt/sairios is root-owned and world-readable, NOT writable by sairi.
   #
@@ -855,6 +940,10 @@ runcmd:
   # names this directory rather than /var/lib/sairios.
   - [install, -d, -m, '0700', -o, sairi, -g, sairi, /var/lib/sairios/broker]
   - [install, -d, -m, '0700', -o, sairi, -g, sairi, /var/lib/sairios/sandbox]
+  # OpenClaw's config, credential store and workspace. Named in the
+  # ReadWritePaths= of both sairios-agent-bridge and sairios-openclaw: systemd
+  # does not create a bind-mount source, so the directory must exist first.
+  - [install, -d, -m, '0700', -o, sairi, -g, sairi, /home/sairi/.openclaw]
 
   # -- per-user environment file (no secrets; a documented template) -----
   - [install, -d, -m, '0700', -o, sairi, -g, sairi, /home/sairi/.config]

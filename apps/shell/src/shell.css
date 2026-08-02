@@ -921,6 +921,50 @@ button {
   padding: var(--sairi-space-3) var(--sairi-space-4);
 }
 
+/* --- provider setup ------------------------------------------------------ */
+
+.dialog--setup {
+  max-width: 480px;
+}
+
+.setup__hint,
+.setup__privacy {
+  color: var(--sairi-text-muted);
+  font-size: var(--sairi-text-xs);
+  line-height: 1.5;
+  margin: var(--sairi-space-2) 0 0;
+}
+
+.setup__privacy {
+  border-left: 2px solid var(--sairi-border-strong);
+  margin-top: var(--sairi-space-4);
+  padding-left: var(--sairi-space-3);
+}
+
+.setup__hint a {
+  color: var(--sairi-accent);
+}
+
+.setup__warning,
+.setup__error {
+  border-radius: var(--sairi-radius-sm);
+  font-size: var(--sairi-text-xs);
+  line-height: 1.5;
+  margin: 0 0 var(--sairi-space-4);
+  padding: var(--sairi-space-3);
+}
+
+.setup__warning {
+  background: color-mix(in srgb, var(--sairi-warn) 12%, transparent);
+  color: var(--sairi-text);
+}
+
+.setup__error {
+  background: color-mix(in srgb, var(--sairi-error) 12%, transparent);
+  color: var(--sairi-text);
+  margin: var(--sairi-space-4) 0 0;
+}
+
 .split {
   display: grid;
   gap: var(--sairi-space-4);

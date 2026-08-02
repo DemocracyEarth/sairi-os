@@ -110,6 +110,13 @@ for unit in context-service permission-broker agent-bridge shell; do
 		printf '    %s did not start; the journal is checked below\n' "$unit"
 done
 
+# The path unit that watches for a provider credential. Enabling it during
+# provisioning is not enough: enable takes effect at the next boot, and a machine
+# that was just delivered to should be fully live now. Starting it does not start
+# the gateway - the gateway only runs once a credential exists.
+remote 'sudo systemctl start sairios-openclaw.path' 2>/dev/null ||
+	printf '    sairios-openclaw.path not started (OpenClaw may not be installed)\n'
+
 step 'Checking the services'
 sleep 8
 remote 'systemctl is-active sairios-context-service sairios-permission-broker sairios-agent-bridge sairios-shell || true'

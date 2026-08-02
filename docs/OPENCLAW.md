@@ -3,12 +3,20 @@
 OpenClaw is the agent runtime SairiOS talks to. It is an **upstream dependency**
 reached over its local gateway, never vendored into this repository.
 
-> **Status: scaffolding.**
-> The `openclaw` provider has never been run against a live OpenClaw Gateway on
-> the machine this repository was scaffolded on. The connection lifecycle
-> (configuration, dial, timeout, teardown, error reporting) is implemented and
-> unit-tested against a fake transport. The wire message shapes are placeholders.
-> `SAIRIOS_AGENT_PROVIDER=mock` is fully working and is the default.
+> **Status: partly real, partly scaffolding. The split matters, so it is stated
+> precisely rather than summarised.**
+>
+> | Piece                                   | State                                                                                                                                             |
+> | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+> | Version pin (`openclaw@2026.7.1-2`)     | **Real.** Read from the registry; engines checked against the guest's Node.                                                                       |
+> | Guest install (cloud-init)              | **Real.** Installs the pinned version; a failure degrades to mock rather than breaking the boot.                                                  |
+> | `sairios-openclaw.service` / `.path`    | **Real, and boot-tested as units.** The gateway process itself has not been run.                                                                  |
+> | First-run setup (this document, path 0) | **Written and unit-tested; never executed against the real binary.** The flags come from upstream's CLI automation reference, read on 2026-08-01. |
+> | Gateway wire protocol                   | **Scaffolding.** The frame shapes in `services/agent-bridge/src/providers/openclaw.ts` are placeholders.                                          |
+>
+> `SAIRIOS_AGENT_PROVIDER=mock` is fully working and remains the default. The
+> first person to complete first-run setup on a real machine is the first person
+> to execute `openclaw onboard` from SairiOS; expect to correct something.
 
 ## The two provider modes
 
@@ -23,17 +31,63 @@ mock mode is a bug.
 
 ## Where credentials live
 
-**SairiOS never authenticates to a model provider.** It holds no API key, makes
-no provider call, and bakes no credential into an image layer.
+**SairiOS never authenticates to a model provider.** It makes no provider API
+call and bakes no credential into an image layer.
 
-Provider credentials belong to OpenClaw's own configuration. SairiOS holds at
-most one secret, `OPENCLAW_GATEWAY_TOKEN`, which authenticates it to a gateway
-running on the same machine.
+Earlier versions of this document also said SairiOS "holds no API key". First-run
+setup made that sentence imprecise, so here is the exact claim:
 
-That is why `.env.example` leaves `SAIRIOS_LLM_*` empty and tells you to prefer
-OpenClaw onboarding.
+- SairiOS **accepts** a key, once, in a form the user opened deliberately.
+- It **writes** it to exactly one file, mode 0600, owned by the service account:
+  `/var/lib/sairios/agent/agent-bridge/provider.env`.
+- It **never reads it back**. No HTTP route returns a key, a key prefix, or a key
+  length. `GET /setup` reports `keyPresent: true` and nothing more.
+- It **never uses** it. Not one line of SairiOS code makes a request to a model
+  provider. The file exists so systemd can hand it to the OpenClaw gateway.
+- It **never logs** it, never puts it in a context, never carries it into a
+  crystallized template, and never syncs it.
 
-## Setup path 1 — interactive OpenClaw onboarding (preferred)
+OpenClaw does not receive a copy either. Onboarding runs with
+`--secret-input-mode ref`, so OpenClaw's config stores
+`{ source: "env", id: "ANTHROPIC_API_KEY" }` — a pointer to the variable name.
+The value is resolved at run time from the environment systemd supplies via
+`EnvironmentFile=`.
+
+So on a configured machine the secret exists in one file and in the memory of the
+one process that needs it. If you want to revoke it, delete that file and
+`systemctl stop sairios-openclaw.service`.
+
+The key is also never a command-line argument. `argv` is readable by every user
+on the machine through `ps`; the key travels to `openclaw onboard` in the child
+process environment instead.
+
+## Setup path 0 — first-run setup in the OS (what a user actually does)
+
+On a booted SairiOS machine, the desktop opens with **Connect a model** when no
+provider is configured. Choose a provider, choose a model, paste your key, press
+Connect. That is the whole flow, and it is the intended one.
+
+What happens behind it:
+
+1. The shell POSTs to the agent bridge on loopback. This is the only request in
+   the entire product that carries a secret.
+2. The bridge validates provider, model and key shape **before** touching the
+   filesystem. A key containing whitespace is refused outright — a newline would
+   otherwise let a pasted value define extra variables in a systemd environment
+   file.
+3. The bridge writes the 0600 credential file and runs `openclaw onboard` in ref
+   mode.
+4. `sairios-openclaw.path` notices the file and starts the gateway.
+
+Step 4 is why the bridge needs no privilege. It runs with `NoNewPrivileges=yes`
+and cannot call `systemctl`; granting a network-facing HTTP service the ability
+to start units would be a much larger concession than this feature is worth. The
+file appearing is the signal instead.
+
+Pressing **Not now** is a supported answer. The machine keeps running the mock
+agent, which is a complete system — everything works except the thinking.
+
+## Setup path 1 — interactive OpenClaw onboarding
 
 1. Install OpenClaw following its own documentation. Do not install it from this
    repository; there is nothing here to install.

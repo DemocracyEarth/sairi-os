@@ -151,6 +151,27 @@ const en = {
   'crys.working': 'Crystallizing…',
   'crys.cancel': 'Cancel',
 
+  // --- first-run provider setup ---
+  'setup.title': 'Connect a model',
+  'setup.intro':
+    'SairiOS runs on your own model provider account. Until you connect one, contexts work with the built-in mock agent: everything is real except the thinking.',
+  'setup.provider': 'Provider',
+  'setup.model': 'Model',
+  'setup.key': 'API key',
+  'setup.keyWhere': 'Get a key at {url}',
+  'setup.privacy':
+    'The key is stored in one file readable only by SairiOS, is never shown again, and never leaves this machine except to your provider. SairiOS itself never reads it.',
+  'setup.submit': 'Connect',
+  'setup.working': 'Connecting…',
+  'setup.later': 'Not now',
+  'setup.done': 'Connected',
+  'setup.configured': '{provider} · {model}',
+  'setup.change': 'Change model',
+  'setup.missingOpenclaw':
+    'OpenClaw is not installed on this machine, so there is nothing to connect to yet. See docs/OPENCLAW.md.',
+  'setup.openclawVersion': 'OpenClaw {version}',
+  'setup.mockNotice': 'Running on the mock agent.',
+
   // --- system status ---
   'sys.runtime': 'runtime',
   'sys.model': 'model',
@@ -329,6 +350,26 @@ const es: Dict = {
   'crys.confirm': 'Cristalizar',
   'crys.working': 'Cristalizando…',
   'crys.cancel': 'Cancelar',
+
+  'setup.title': 'Conectar un modelo',
+  'setup.intro':
+    'SairiOS funciona con tu propia cuenta de proveedor de modelos. Hasta que conectes una, los contextos funcionan con el agente simulado: todo es real menos el pensamiento.',
+  'setup.provider': 'Proveedor',
+  'setup.model': 'Modelo',
+  'setup.key': 'Clave de API',
+  'setup.keyWhere': 'Conseguí una clave en {url}',
+  'setup.privacy':
+    'La clave se guarda en un único archivo que solo SairiOS puede leer, no se vuelve a mostrar y no sale de esta máquina salvo hacia tu proveedor. SairiOS nunca la lee.',
+  'setup.submit': 'Conectar',
+  'setup.working': 'Conectando…',
+  'setup.later': 'Ahora no',
+  'setup.done': 'Conectado',
+  'setup.configured': '{provider} · {model}',
+  'setup.change': 'Cambiar modelo',
+  'setup.missingOpenclaw':
+    'OpenClaw no está instalado en esta máquina, así que todavía no hay a qué conectarse. Ver docs/OPENCLAW.md.',
+  'setup.openclawVersion': 'OpenClaw {version}',
+  'setup.mockNotice': 'Funcionando con el agente simulado.',
 
   'sys.runtime': 'runtime',
   'sys.model': 'modelo',

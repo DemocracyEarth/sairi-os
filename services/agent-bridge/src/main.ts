@@ -7,6 +7,7 @@ import { MockAgentProvider } from './providers/mock.js';
 import { OpenClawAgentProvider } from './providers/openclaw.js';
 import { WsGatewayTransport } from './providers/ws-transport.js';
 import { createAgentBridgeServer } from './server.js';
+import { ProviderSetup } from './setup.js';
 import type { AgentProvider } from './provider.js';
 
 const env = readEnv();
@@ -42,7 +43,26 @@ for (const check of startupChecks(env)) {
   else log.info(line);
 }
 
-const server = createAgentBridgeServer({ bridge, env, logger: log });
+/**
+ * Both files live under the bridge's own data directory, which the service
+ * account owns. Nothing here needs root: the OpenClaw gateway unit runs as the
+ * same account and reads the credential through `EnvironmentFile=`.
+ */
+const setup = new ProviderSetup({
+  envFilePath: resolve(env.dataDir, 'agent-bridge/provider.env'),
+  statePath: resolve(env.dataDir, 'agent-bridge/provider.json'),
+  gatewayUrl: env.openclawGatewayUrl,
+  logger: log,
+});
+
+const setupStatus = await setup.status();
+log.info(
+  setupStatus.configured
+    ? `provider configured: ${setupStatus.provider} (${setupStatus.model})`
+    : 'no model provider configured yet; first-run setup will ask for one',
+);
+
+const server = createAgentBridgeServer({ bridge, env, logger: log, setup });
 
 attachListenDiagnostics(server, {
   service: 'agent-bridge',

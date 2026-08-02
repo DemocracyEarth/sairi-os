@@ -1,0 +1,32 @@
+# Starts the OpenClaw gateway when a provider credential appears.
+#
+# The problem this solves: the agent bridge runs as an unprivileged, sandboxed
+# service with NoNewPrivileges=yes and no sudo. When a person completes first-run
+# setup, the bridge can write the credential file — but it cannot call systemctl
+# to start the gateway, and giving it that power would hand a network-facing HTTP
+# service the ability to start units. That is a far larger grant than the feature
+# is worth.
+#
+# So the file appearing IS the signal. systemd watches the path and starts the
+# gateway itself. Setup stays unprivileged, and the only thing the bridge can
+# cause is exactly this one unit to start.
+#
+# Install to /etc/systemd/system/ and enable:
+#   systemctl enable --now sairios-openclaw.path
+
+[Unit]
+Description=Watch for a configured model provider
+Documentation=file:/opt/sairios/docs/OPENCLAW.md
+
+[Path]
+# Written by first-run setup at mode 0600. Present means "a provider is
+# configured"; absent means the machine is running on the mock agent.
+PathExists=/var/lib/sairios/agent/agent-bridge/provider.env
+# Setup can be run again to change providers. Rewriting the file restarts the
+# gateway so the new credential is actually the one in use — without this, a
+# changed key would silently keep talking to the old provider until reboot.
+PathChanged=/var/lib/sairios/agent/agent-bridge/provider.env
+Unit=sairios-openclaw.service
+
+[Install]
+WantedBy=multi-user.target

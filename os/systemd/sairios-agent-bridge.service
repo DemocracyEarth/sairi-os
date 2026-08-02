@@ -80,7 +80,16 @@ ProtectSystem=strict
 # tmpfs only because systemd resolves the EnvironmentFile path from %h.
 ProtectHome=read-only
 # Transcripts and per-context agent state. Nothing else is writable.
+# The provider credential written by first-run setup lands here too, at
+# agent-bridge/provider.env with mode 0600. UMask=0077 below is what makes the
+# parent directories match.
 ReadWritePaths=/var/lib/sairios/agent
+# First-run setup runs `openclaw onboard`, which writes OpenClaw's own config.
+# ProtectHome=read-only above would block it, so exactly this one directory is
+# punched back out — not the whole home. sairios-provision creates it; the
+# leading `-` keeps the unit startable on a machine where OpenClaw was never
+# installed, where onboarding would fail earlier anyway with openclaw_missing.
+ReadWritePaths=-/home/sairi/.openclaw
 PrivateDevices=yes
 ProtectProc=invisible
 ProcSubset=pid

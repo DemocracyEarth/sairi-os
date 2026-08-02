@@ -1,0 +1,85 @@
+# SairiOS ↔ OpenClaw gateway.
+#
+# OpenClaw is an upstream dependency, not part of SairiOS. This unit runs the
+# gateway that the agent bridge dials at ws://127.0.0.1:18789. The version is
+# pinned in openclaw/config/version.json.
+#
+# It is NOT installed by `openclaw onboard --install-daemon`. First-run setup
+# deliberately omits that flag so the daemon on this machine is this file —
+# readable, hardened, and under the same review as every other SairiOS unit —
+# rather than something generated at runtime.
+#
+# This unit is started by sairios-openclaw.path, not enabled directly. See that
+# file for why: the bridge runs unprivileged and cannot call systemctl, so the
+# credential file appearing is what starts the gateway.
+
+[Unit]
+Description=OpenClaw gateway (upstream agent runtime for SairiOS)
+Documentation=file:/opt/sairios/docs/OPENCLAW.md
+Documentation=https://github.com/openclaw/openclaw
+After=network-online.target
+Wants=network-online.target
+# Without a configured provider there is nothing to serve. The bridge reports
+# `openclaw_missing`/unconfigured rather than the gateway crash-looping.
+ConditionPathExists=/var/lib/sairios/agent/agent-bridge/provider.env
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Service]
+User=sairi
+Group=sairi
+Type=exec
+WorkingDirectory=/home/sairi
+
+# THE credential file. Mode 0600, written by first-run setup, holding one
+# variable — ANTHROPIC_API_KEY or OPENAI_API_KEY. OpenClaw's own config stores
+# only a reference to the variable name (`--secret-input-mode ref`), so this
+# file is the single place on the machine where the secret exists.
+#
+# It is never in this unit, never in an image layer, and never in the repository.
+EnvironmentFile=/var/lib/sairios/agent/agent-bridge/provider.env
+
+ExecStart=/usr/local/bin/openclaw gateway --port 18789
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=20
+
+# ---------------------------------------------------------------------------
+# Hardening
+#
+# Weaker than the SairiOS services in exactly one respect: this process reaches
+# the public internet, because that is its entire job. Everything else is held
+# to the same standard, and the permission broker still stands between anything
+# the agent proposes and anything that happens on this machine.
+# ---------------------------------------------------------------------------
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+# OpenClaw's config, credential store and workspace.
+ReadWritePaths=/home/sairi/.openclaw
+PrivateDevices=yes
+ProtectProc=invisible
+ProcSubset=pid
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=yes
+# Not set, for the same reason as the other Node services: V8 needs
+# write-then-execute pages and refuses to start without them.
+# MemoryDenyWriteExecute=yes
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+SystemCallArchitectures=native
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

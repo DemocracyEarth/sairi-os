@@ -4,21 +4,56 @@
     "vendored into this repository. This file pins the version SairiOS expects,",
     "so the image build, the agent bridge and CI all agree on one target.",
     "",
-    "`status` is deliberately honest. It stays \"unpinned\" until a maintainer has",
-    "actually run SairiOS against a live gateway of a specific version and",
-    "recorded it here together with the protocol notes in docs/OPENCLAW.md.",
+    "`status` is deliberately honest, and the three values mean different things:",
+    "  unpinned - no version chosen.",
+    "  pinned   - a version is chosen and its published CLI surface has been read,",
+    "             but SairiOS has not been run against a live gateway of it.",
+    "  verified - a maintainer has run SairiOS against a live gateway of exactly",
+    "             this version and reconciled the frame shapes in",
+    "             services/agent-bridge/src/providers/openclaw.ts.",
+    "",
     "`make doctor` prints this status, and the agent bridge includes it in its",
     "provider report."
   ],
   "openclaw": {
-    "version": null,
-    "status": "unpinned",
+    "version": "2026.7.1-2",
+    "status": "pinned",
     "verifiedAgainst": null,
+    "package": {
+      "name": "openclaw",
+      "registry": "https://registry.npmjs.org/openclaw",
+      "license": "MIT",
+      "enginesNode": ">=22.22.3 <23 || >=24.15.0 <25 || >=25.9.0",
+      "$comment": [
+        "The guest runs Node 22.23.2 (pinned in vm/cloud-init/user-data.yaml),",
+        "which satisfies the first range. Bumping either pin means rechecking",
+        "this constraint: OpenClaw refuses to start on an unsupported runtime."
+      ]
+    },
+    "cliSurface": {
+      "status": "read-from-upstream-docs",
+      "readOn": "2026-08-01",
+      "source": "https://github.com/openclaw/openclaw/blob/main/docs/start/wizard-cli-automation.md",
+      "$comment": [
+        "services/agent-bridge/src/setup.ts drives `openclaw onboard` with the",
+        "flags documented at that source. They have been read, not executed here.",
+        "The first machine to run first-run setup is the first execution."
+      ],
+      "usedFlags": [
+        "onboard --non-interactive --accept-risk",
+        "--mode local",
+        "--auth-choice <apiKey|openai-api-key>",
+        "--secret-input-mode ref",
+        "--gateway-bind loopback",
+        "--skip-bootstrap --skip-skills"
+      ]
+    },
     "gatewayProtocol": {
       "transport": "websocket",
       "defaultUrl": "ws://127.0.0.1:18789",
+      "defaultPort": 18789,
       "status": "unverified",
-      "note": "The frame shapes in services/agent-bridge/src/providers/openclaw.ts are placeholders. Reconcile them with the pinned release before marking this verified."
+      "note": "The frame shapes in services/agent-bridge/src/providers/openclaw.ts are placeholders. Reconcile them with the pinned release before marking this verified. The port and transport are documented upstream; the frames are not."
     }
   },
   "sairios": {
@@ -28,6 +63,17 @@
       "streamed assistant messages",
       "tool-call events carrying a SairiOS capability name",
       "a channel for returning a SairiUI document"
-    ]
+    ],
+    "credentialHandling": {
+      "$comment": [
+        "SairiOS never writes into OpenClaw's credential store. It writes ONE",
+        "0600 environment file and onboards OpenClaw with --secret-input-mode ref,",
+        "so OpenClaw stores {source:'env', id:'<VAR>'} and resolves the value at",
+        "run time from the environment systemd hands it. The key is never an",
+        "argv element, never logged, and never returned by any HTTP route."
+      ],
+      "envFile": "${SAIRIOS_DATA_DIR}/agent-bridge/provider.env",
+      "mode": "0600"
+    }
   }
 }

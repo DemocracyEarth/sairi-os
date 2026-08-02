@@ -165,8 +165,41 @@ export interface ProviderStatusRecord {
   detail: string;
 }
 
+export interface SetupProviderRecord {
+  id: string;
+  label: string;
+  keyHint: string;
+  docsUrl: string;
+  models: { id: string; label: string }[];
+}
+
+export interface SetupStatusRecord {
+  configured: boolean;
+  provider: string | null;
+  model: string | null;
+  openclawInstalled: boolean;
+  openclawVersion: string | null;
+  gatewayUrl: string;
+  keyPresent: boolean;
+  providers: SetupProviderRecord[];
+}
+
 export const bridgeApi = {
   provider: () => request<ProviderStatusRecord>(`${BRIDGE_BASE}/provider`),
+
+  setupStatus: () => request<SetupStatusRecord>(`${BRIDGE_BASE}/setup`),
+
+  /**
+   * The one call in the shell that carries a secret. It goes out over loopback
+   * to the bridge and is never stored in component state longer than the
+   * submission, never written to localStorage, and never read back: there is no
+   * endpoint that returns a key.
+   */
+  configureProvider: (input: { provider: string; model: string; apiKey: string }) =>
+    request<SetupStatusRecord>(`${BRIDGE_BASE}/setup`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
 
   /**
    * Streams NDJSON events from the bridge. Yields each event as it arrives so
