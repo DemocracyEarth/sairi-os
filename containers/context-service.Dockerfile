@@ -118,6 +118,26 @@ COPY --from=builder --chown=10001:10001 /build/packages/context-schema/dist ./pa
 COPY --from=builder --chown=10001:10001 /build/packages/adaptive-ui-schema/package.json ./packages/adaptive-ui-schema/
 COPY --from=builder --chown=10001:10001 /build/packages/adaptive-ui-schema/dist ./packages/adaptive-ui-schema/dist
 
+# Nested node_modules, and they are NOT optional.
+#
+# The production ajv@8 does not live at the root. npm hoists the DEV ajv@6
+# that eslint pulls in to /build/node_modules, and the prod ajv@8 that the
+# schema packages actually import stays nested inside each of them:
+#
+#   node_modules/ajv                            6.x  (dev, pruned away)
+#   packages/context-schema/node_modules/ajv    8.x  (prod, needed)
+#   packages/adaptive-ui-schema/node_modules/ajv 8.x (prod, needed)
+#
+# Copying only /build/node_modules therefore produces an image that builds
+# cleanly and dies on its first import:
+#
+#   Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'ajv' imported from
+#   /app/packages/context-schema/dist/validate.js
+#
+# Which is exactly what the first run of this image did.
+COPY --from=builder --chown=10001:10001 /build/packages/context-schema/node_modules ./packages/context-schema/node_modules
+COPY --from=builder --chown=10001:10001 /build/packages/adaptive-ui-schema/node_modules ./packages/adaptive-ui-schema/node_modules
+
 # The exception: both schema packages publish a subpath export pointing at
 # ./src/schema/*.json. Those JSON documents are runtime assets, not sources.
 # Omitting them breaks SairiUI validation at request time rather than at build
