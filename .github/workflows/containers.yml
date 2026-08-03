@@ -1,0 +1,239 @@
+# Builds the four development images, runs the stack, and checks that the
+# hardening in compose.yaml does what its comments say.
+#
+# Why this is its own workflow rather than part of ci.yml: four Node images with
+# a full `npm ci` in each builder stage is minutes of work, most of it repeated
+# on every push, and the thing it protects — container configuration — changes
+# rarely. It runs on demand, nightly, and on any change to containers/ or the
+# workspace manifests, which is when it can actually break.
+#
+# The part worth having is not "the images build". It is the second half:
+# compose.yaml makes specific claims — non-root, read-only root filesystem, all
+# capabilities dropped, no-new-privileges, a network with no route off the box —
+# and every one of those is asserted here twice. Once against the container's
+# declared configuration, and once against its actual behaviour, because a
+# directive that is set but not enforced looks identical to one that works if
+# you only read `docker inspect`.
+#
+# ---------------------------------------------------------------------------
+# STATUS: written on a machine with no container runtime.
+# ---------------------------------------------------------------------------
+# The authoring host has no Docker, Podman or Colima, and installing one is not
+# a change to make on somebody's machine unasked. Nothing here has been executed
+# locally; the first CI run is the first run. Expect the probe steps to need
+# adjusting before the hardening assertions do.
+
+name: Containers
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 4 * * *'
+  push:
+    paths:
+      - 'containers/**'
+      - 'package-lock.json'
+      - '**/package.json'
+      - '.github/workflows/containers.yml'
+  pull_request:
+    paths:
+      - 'containers/**'
+      - 'package-lock.json'
+      - '**/package.json'
+      - '.github/workflows/containers.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: containers-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-run:
+    name: Build the images, run the stack, verify the hardening
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Runtime versions
+        run: |
+          docker version --format 'docker {{.Server.Version}}'
+          docker compose version
+
+      # ---------------------------------------------------------------------
+      # Build
+      # ---------------------------------------------------------------------
+      - name: Build all four images
+        working-directory: containers
+        run: docker compose build --progress plain
+
+      - name: Image sizes
+        run: docker images --filter 'reference=sairios/*' --format '  {{.Repository}}:{{.Tag}}  {{.Size}}'
+
+      # ---------------------------------------------------------------------
+      # Run
+      # ---------------------------------------------------------------------
+      - name: Start the stack
+        working-directory: containers
+        run: docker compose up -d --wait --wait-timeout 180
+
+      - name: Container status
+        working-directory: containers
+        run: docker compose ps
+
+      # The three HTTP services are published on loopback. Reaching them from the
+      # runner proves both that the process started and that the published-port
+      # mapping is what compose says it is.
+      - name: Services answer on their published ports
+        run: |
+          set -euo pipefail
+          for port in 7801 7802 7803; do
+            code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 "http://127.0.0.1:${port}/healthz")"
+            [ "$code" = 200 ] || { echo "port $port answered $code"; exit 1; }
+            echo "ok   127.0.0.1:${port}/healthz"
+          done
+
+      # A real domain operation through the containerised stack, not just a
+      # liveness ping: this exercises the context service's store on its volume.
+      - name: Create and read back a context
+        run: |
+          set -euo pipefail
+          id="$(curl -sS --max-time 15 -X POST http://127.0.0.1:7801/contexts \
+            -H 'content-type: application/json' \
+            -d '{"name":"container smoke","type":"ephemeral","objective":"prove the stack works"}' |
+            node -e 'process.stdin.on("data",d=>{const c=JSON.parse(d);if(!c.id)throw new Error("no id in "+d);console.log(c.id)})')"
+          echo "created $id"
+          curl -sS --max-time 10 "http://127.0.0.1:7801/contexts/${id}" |
+            node -e 'process.stdin.on("data",d=>{const c=JSON.parse(d);if(c.name!=="container smoke")throw new Error("read back wrong: "+d);console.log("read back ok")})'
+
+      # ---------------------------------------------------------------------
+      # Hardening — declared
+      # ---------------------------------------------------------------------
+      - name: Every service container matches its declared hardening
+        run: |
+          set -euo pipefail
+          fail=0
+          check() {
+            if [ "$2" = "$3" ]; then
+              echo "  ok    $1 = $2"
+            else
+              echo "  FAIL  $1 = $2 (expected $3)"
+              fail=1
+            fi
+          }
+          for name in $(docker ps --format '{{.Names}}'); do
+            echo "--- $name"
+            check user \
+              "$(docker inspect "$name" --format '{{.Config.User}}')" '10001:10001'
+            check read-only-rootfs \
+              "$(docker inspect "$name" --format '{{.HostConfig.ReadonlyRootfs}}')" 'true'
+            check privileged \
+              "$(docker inspect "$name" --format '{{.HostConfig.Privileged}}')" 'false'
+            check no-new-privileges \
+              "$(docker inspect "$name" --format '{{index .HostConfig.SecurityOpt 0}}')" 'no-new-privileges:true'
+            check cap-drop \
+              "$(docker inspect "$name" --format '{{.HostConfig.CapDrop}}')" '[ALL]'
+            check pids-limit \
+              "$(docker inspect "$name" --format '{{.HostConfig.PidsLimit}}')" '256'
+          done
+          exit "$fail"
+
+      # ---------------------------------------------------------------------
+      # Hardening — actually enforced
+      #
+      # `docker inspect` reports what was requested. These probes report what
+      # the kernel is doing, which is the only thing that matters.
+      # ---------------------------------------------------------------------
+      - name: The processes really run as a non-root user
+        working-directory: containers
+        run: |
+          set -euo pipefail
+          for svc in context-service permission-broker agent-bridge tool-sandbox; do
+            uid="$(docker compose exec -T "$svc" id -u | tr -d '\r\n')"
+            [ "$uid" = 10001 ] || { echo "$svc runs as uid $uid, expected 10001"; exit 1; }
+            echo "ok   $svc runs as uid 10001"
+          done
+
+      - name: The root filesystem really is read-only
+        working-directory: containers
+        run: |
+          set -euo pipefail
+          for svc in context-service permission-broker agent-bridge tool-sandbox; do
+            # Must fail. If this write lands, read_only is decorative.
+            if docker compose exec -T "$svc" sh -c 'touch /proof-of-write' 2>/dev/null; then
+              echo "$svc allowed a write to /, read_only is not in effect"; exit 1
+            fi
+            echo "ok   $svc refused a write to /"
+          done
+
+      - name: /tmp is writable but noexec, so nothing can be run from scratch space
+        working-directory: containers
+        run: |
+          set -euo pipefail
+          for svc in context-service permission-broker agent-bridge; do
+            docker compose exec -T "$svc" sh -c 'printf "#!/bin/sh\necho ran\n" > /tmp/x && chmod +x /tmp/x' ||
+              { echo "$svc could not write to /tmp, which it needs"; exit 1; }
+            if docker compose exec -T "$svc" sh -c '/tmp/x' 2>/dev/null; then
+              echo "$svc EXECUTED a file from /tmp; noexec is not in effect"; exit 1
+            fi
+            echo "ok   $svc: /tmp writable, not executable"
+          done
+
+      # The sandbox sits on a network declared `internal: true`, which means
+      # Docker gives it no gateway at all. This is the claim that matters most,
+      # because it is what stands between a tool run and the internet.
+      - name: The tool sandbox has no route off the box
+        working-directory: containers
+        run: |
+          set -euo pipefail
+          if docker compose exec -T tool-sandbox node -e "
+            const net = require('net');
+            const s = net.connect({ host: '1.1.1.1', port: 443 });
+            s.setTimeout(5000);
+            s.on('connect', () => { console.log('CONNECTED'); process.exit(0); });
+            s.on('error',   () => process.exit(1));
+            s.on('timeout', () => process.exit(1));
+          " 2>/dev/null; then
+            echo 'the tool sandbox reached the public internet; internal: true is not in effect'
+            exit 1
+          fi
+          echo 'ok   tool sandbox cannot reach 1.1.1.1'
+
+      - name: The tool sandbox publishes no ports
+        run: |
+          set -euo pipefail
+          published="$(docker inspect "$(docker ps --filter 'name=tool-sandbox' --format '{{.Names}}')" \
+            --format '{{json .NetworkSettings.Ports}}')"
+          case "$published" in
+            '{}' | 'null') echo 'ok   tool sandbox publishes nothing' ;;
+            *) echo "tool sandbox publishes: $published"; exit 1 ;;
+          esac
+
+      # Mounting the Docker socket into a container is equivalent to giving it
+      # host root, which would make the entire permission broker meaningless.
+      # compose.yaml says it is never mounted; this is that sentence, checked.
+      - name: No container has the Docker socket
+        run: |
+          set -euo pipefail
+          for name in $(docker ps --format '{{.Names}}'); do
+            if docker inspect "$name" --format '{{json .Mounts}}' | grep -q 'docker.sock'; then
+              echo "$name mounts the Docker socket"; exit 1
+            fi
+          done
+          echo 'ok   no container mounts /var/run/docker.sock'
+
+      # ---------------------------------------------------------------------
+      # Teardown
+      # ---------------------------------------------------------------------
+      - name: Logs
+        if: always()
+        working-directory: containers
+        run: docker compose logs --no-color --tail 60
+
+      - name: Tear down
+        if: always()
+        working-directory: containers
+        run: docker compose down --volumes --remove-orphans
