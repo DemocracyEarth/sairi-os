@@ -51,21 +51,92 @@ export interface GatewaySocket {
 }
 
 /**
- * Placeholder wire codec.
+ * Wire codec for the OpenClaw gateway, protocol 4.
  *
- * UNVERIFIED against a live gateway. Isolated here so reconciling it with the
- * real OpenClaw protocol touches one function in each direction.
+ * The envelope and the handshake are VERIFIED against a live gateway
+ * (openclaw 2026.7.1-2, 2026-08-03). Real captured frames are in
+ * ./gateway-frames.fixture.json and are what the tests run on.
+ *
+ * The session flow below is NOT verified: running a turn needs a configured
+ * model provider, which needs somebody's API key. The method and event names
+ * used are the ones the live gateway advertised in `hello-ok.features`, so they
+ * exist — but the request params and the event payload shapes are still read
+ * from upstream types rather than observed.
+ *
+ * What the earlier placeholder got wrong, and why it could never have worked:
+ * it switched on `frame.type` expecting an event NAME there. In the real
+ * protocol `type` is one of three CATEGORIES — req, res, event — and the name
+ * lives in `event` (or `method`). Every invented name it looked for
+ * (`session.prompt`, `session.created`, `message.delta`, `tool.call`,
+ * `ui.specification`, `session.done`) is absent from the 218 methods and 30
+ * events the gateway actually offers.
  */
+
+/** Protocol version this client speaks. The gateway echoes it in hello-ok. */
+export const GATEWAY_PROTOCOL = 4;
+
+/**
+ * Identity for the connect handshake.
+ *
+ * `client.id` and `client.mode` are closed enums enforced server-side; anything
+ * else is refused with INVALID_REQUEST naming the offending path. SairiOS uses
+ * the documented trusted same-process backend path — a loopback control-plane
+ * client, which may omit `device` instead of going through pairing.
+ *
+ * `mode` is NOT `operator`. That is a ROLE. The protocol.md shipped inside the
+ * openclaw package itself shows `"mode": "operator"` in its connect example and
+ * the gateway rejects it; upstream's doc is wrong.
+ */
+export const CLIENT_IDENTITY = {
+  id: 'gateway-client',
+  mode: 'backend',
+  platform: 'linux',
+} as const;
+
+/** Builds the `connect` request sent in reply to `connect.challenge`. */
+export function encodeConnect(id: string, version: string, token?: string): string {
+  return JSON.stringify({
+    type: 'req',
+    id,
+    method: 'connect',
+    params: {
+      minProtocol: GATEWAY_PROTOCOL,
+      maxProtocol: GATEWAY_PROTOCOL,
+      client: { ...CLIENT_IDENTITY, version },
+      role: 'operator',
+      scopes: ['operator.read', 'operator.write'],
+      caps: [],
+      commands: [],
+      permissions: {},
+      locale: 'en-US',
+      userAgent: `sairios-agent-bridge/${version}`,
+      ...(token ? { auth: { token } } : {}),
+    },
+  });
+}
+
+/** True for the pre-connect challenge the gateway sends before anything else. */
+export function isConnectChallenge(frame: Record<string, unknown>): boolean {
+  return frame['type'] === 'event' && frame['event'] === 'connect.challenge';
+}
 const codec = {
+  /**
+   * `sessions.send` is a real method — it is in the vocabulary the live gateway
+   * advertised. The params shape is not yet observed; see the file header.
+   */
   encodeIntention(sessionId: string, input: IntentionInput): string {
     return JSON.stringify({
-      type: 'session.prompt',
-      sessionId,
-      prompt: input.intention,
-      metadata: {
-        contextId: input.contextId,
-        contextType: input.contextType,
-        contextName: input.contextName,
+      type: 'req',
+      id: `send-${sessionId}`,
+      method: 'sessions.send',
+      params: {
+        sessionId,
+        message: input.intention,
+        metadata: {
+          contextId: input.contextId,
+          contextType: input.contextType,
+          contextName: input.contextName,
+        },
       },
     });
   },
@@ -81,18 +152,39 @@ const codec = {
       ];
     }
 
-    switch (frame['type']) {
-      case 'session.created':
-        return typeof frame['sessionId'] === 'string'
-          ? [{ type: 'session', sessionId: frame['sessionId'] }]
-          : [];
+    // The real envelope. `type` is the CATEGORY; the name is in `event`.
+    if (frame['type'] === 'res') {
+      if (frame['ok'] === false) {
+        const error = (frame['error'] ?? {}) as Record<string, unknown>;
+        return [
+          {
+            type: 'error',
+            message: `${String(error['code'] ?? 'GATEWAY_ERROR')}: ${String(
+              error['message'] ?? 'The gateway refused the request.',
+            )}`,
+            recoverable: false,
+          },
+        ];
+      }
+      return [];
+    }
 
-      case 'message.delta':
-      case 'message':
-        return typeof frame['text'] === 'string' ? [{ type: 'message', text: frame['text'] }] : [];
+    if (frame['type'] !== 'event') return [];
 
-      case 'tool.call': {
-        const capability = frame['capability'];
+    const payload = (frame['payload'] ?? {}) as Record<string, unknown>;
+
+    switch (frame['event']) {
+      case 'session.message':
+      case 'chat':
+      case 'agent': {
+        const text = payload['text'] ?? payload['content'];
+        return typeof text === 'string' ? [{ type: 'message', text }] : [];
+      }
+
+      // OpenClaw runs its own approval round trip. SairiOS already has one, so
+      // this becomes a broker request rather than a second prompt to the user.
+      case 'exec.approval.requested': {
+        const capability = payload['capability'];
         if (!isCapability(capability)) {
           return [
             {
@@ -106,15 +198,18 @@ const codec = {
           {
             type: 'permission-request',
             capability,
-            reason: String(frame['reason'] ?? 'No reason given.'),
-            payload: frame['payload'] ?? {},
+            reason: String(payload['reason'] ?? 'No reason given.'),
+            payload: payload['payload'] ?? {},
           },
         ];
       }
 
-      case 'ui.specification': {
-        // Model output. Validated before it can reach the renderer.
-        const validated = validateSairiUI(frame['document']);
+      case 'session.operation': {
+        // A SairiUI document arrives as operation output. Validated before it
+        // can reach the renderer, exactly as before — that part was never the
+        // protocol's business.
+        if (payload['kind'] !== 'ui') return [];
+        const validated = validateSairiUI(payload['document']);
         return validated.ok
           ? [{ type: 'ui', document: validated.value }]
           : [
@@ -126,21 +221,12 @@ const codec = {
             ];
       }
 
-      case 'session.error':
-        return [
-          {
-            type: 'error',
-            message: String(frame['message'] ?? 'Gateway error.'),
-            recoverable: false,
-          },
-        ];
-
-      case 'session.done':
+      case 'shutdown':
         return [{ type: 'done' }];
 
       default:
-        // Unknown frame types are ignored rather than surfaced, so a newer
-        // gateway adding a frame does not break the session.
+        // Unknown events are ignored rather than surfaced, so a newer gateway
+        // adding one does not break the session.
         return [];
     }
   },

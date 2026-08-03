@@ -272,23 +272,30 @@ describe('openclaw provider', () => {
   });
 
   it('streams normalized events from a fake gateway', async () => {
+    // Real protocol-4 envelope: `type` is the category, the name is in `event`.
+    // These shapes come from frames a live gateway actually sent; see
+    // providers/gateway-frames.fixture.json.
     const frames = [
-      JSON.stringify({ type: 'message', text: 'thinking' }),
+      JSON.stringify({ type: 'event', event: 'session.message', payload: { text: 'thinking' } }),
       JSON.stringify({
-        type: 'ui.specification',
-        document: {
-          version: '0.1',
-          contextId: CONTEXT,
-          title: 'From gateway',
-          contextType: 'ephemeral',
-          layout: {
-            type: 'stack',
-            regions: [{ id: 'a', component: { type: 'text', props: { body: 'hi' } } }],
+        type: 'event',
+        event: 'session.operation',
+        payload: {
+          kind: 'ui',
+          document: {
+            version: '0.1',
+            contextId: CONTEXT,
+            title: 'From gateway',
+            contextType: 'ephemeral',
+            layout: {
+              type: 'stack',
+              regions: [{ id: 'a', component: { type: 'text', props: { body: 'hi' } } }],
+            },
+            suggestedActions: [],
           },
-          suggestedActions: [],
         },
       }),
-      JSON.stringify({ type: 'session.done' }),
+      JSON.stringify({ type: 'event', event: 'shutdown', payload: {} }),
     ];
     const socket: GatewaySocket = {
       send: () => {},
@@ -313,21 +320,56 @@ describe('openclaw provider', () => {
 describe('openclaw frame normalization', () => {
   it('rejects a UI document from the gateway that fails validation', () => {
     const events = openclawCodec.decodeFrame(
-      JSON.stringify({ type: 'ui.specification', document: { version: '9.9' } }),
+      JSON.stringify({
+        type: 'event',
+        event: 'session.operation',
+        payload: { kind: 'ui', document: { version: '9.9' } },
+      }),
     );
     expect(events[0]?.type).toBe('ui-rejected');
   });
 
-  it('rejects a tool call naming an unknown capability', () => {
+  it('ignores a frame whose name is in `type`, the way the old codec expected', () => {
+    // Guards the specific mistake that made the placeholder unworkable. A
+    // gateway never sends this, and reading it would mean the envelope was
+    // being parsed wrong again.
+    expect(openclawCodec.decodeFrame(JSON.stringify({ type: 'session.done' }))).toEqual([]);
+    expect(openclawCodec.decodeFrame(JSON.stringify({ type: 'ui.specification' }))).toEqual([]);
+  });
+
+  it('surfaces a refused request as an error carrying the gateway code', () => {
     const events = openclawCodec.decodeFrame(
-      JSON.stringify({ type: 'tool.call', capability: 'system.shell', reason: 'x' }),
+      JSON.stringify({
+        type: 'res',
+        id: '1',
+        ok: false,
+        error: { code: 'INVALID_REQUEST', message: 'invalid connect params' },
+      }),
+    );
+    expect(events[0]?.type).toBe('error');
+    expect(events[0] && 'message' in events[0] ? events[0].message : '').toContain(
+      'INVALID_REQUEST',
+    );
+  });
+
+  it('rejects an approval request naming an unknown capability', () => {
+    const events = openclawCodec.decodeFrame(
+      JSON.stringify({
+        type: 'event',
+        event: 'exec.approval.requested',
+        payload: { capability: 'system.shell', reason: 'x' },
+      }),
     );
     expect(events[0]?.type).toBe('error');
   });
 
-  it('accepts a tool call naming a known capability', () => {
+  it('turns an approval request for a known capability into a broker request', () => {
     const events = openclawCodec.decodeFrame(
-      JSON.stringify({ type: 'tool.call', capability: 'files.read', reason: 'x', payload: {} }),
+      JSON.stringify({
+        type: 'event',
+        event: 'exec.approval.requested',
+        payload: { capability: 'files.read', reason: 'x', payload: {} },
+      }),
     );
     expect(events[0]?.type).toBe('permission-request');
   });

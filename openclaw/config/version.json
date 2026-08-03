@@ -52,8 +52,29 @@
       "transport": "websocket",
       "defaultUrl": "ws://127.0.0.1:18789",
       "defaultPort": 18789,
-      "status": "unverified",
-      "note": "The frame shapes in services/agent-bridge/src/providers/openclaw.ts are placeholders. Reconcile them with the pinned release before marking this verified. The port and transport are documented upstream; the frames are not."
+      "version": 4,
+      "status": "handshake-verified",
+      "verifiedOn": "2026-08-03",
+      "$comment": [
+        "Split status, because the two halves are not equally known.",
+        "",
+        "VERIFIED against a live gateway of exactly this version: the envelope",
+        "(req/res/event), the connect.challenge -> connect -> hello-ok handshake,",
+        "protocol version 4, the client id/mode enums, and the request/response",
+        "cycle. Real captured frames are committed at",
+        "services/agent-bridge/src/providers/gateway-frames.fixture.json and the",
+        "tests run on them.",
+        "",
+        "NOT VERIFIED: a full agent turn. Running one needs a configured model",
+        "provider, which needs a user's API key. sessions.create/send and the",
+        "session.* events exist in the vocabulary hello-ok advertised, but their",
+        "params and payload shapes have not been observed.",
+        "",
+        "Found on the way: the protocol.md shipped inside the openclaw package",
+        "shows client.mode: 'operator' in its connect example. That value is not",
+        "in the enum and the gateway refuses it. operator is a ROLE."
+      ],
+      "clientIdentity": { "id": "gateway-client", "mode": "backend", "role": "operator" }
     }
   },
   "sairios": {

@@ -12,7 +12,8 @@ reached over its local gateway, never vendored into this repository.
 > | Guest install (cloud-init)              | **Real.** Installs the pinned version; a failure degrades to mock rather than breaking the boot.                                                  |
 > | `sairios-openclaw.service` / `.path`    | **Real, and boot-tested as units.** The gateway process itself has not been run.                                                                  |
 > | First-run setup (this document, path 0) | **Written and unit-tested; never executed against the real binary.** The flags come from upstream's CLI automation reference, read on 2026-08-01. |
-> | Gateway wire protocol                   | **Scaffolding.** The frame shapes in `services/agent-bridge/src/providers/openclaw.ts` are placeholders.                                          |
+> | Gateway handshake + envelope            | **Verified 2026-08-03** against a live gateway. Real frames captured to `providers/gateway-frames.fixture.json`; the tests run on them.           |
+> | Gateway session flow                    | **Unverified.** The method and event names are the ones `hello-ok` advertised, so they exist; their params and payloads have not been observed.   |
 >
 > `SAIRIOS_AGENT_PROVIDER=mock` is fully working and remains the default. The
 > first person to complete first-run setup on a real machine is the first person
@@ -60,6 +61,51 @@ one process that needs it. If you want to revoke it, delete that file and
 The key is also never a command-line argument. `argv` is readable by every user
 on the machine through `ps`; the key travels to `openclaw onboard` in the child
 process environment instead.
+
+## What talking to a real gateway established
+
+Run on 2026-08-03 against `openclaw 2026.7.1-2` in the SairiOS guest, with **no
+provider credential involved**. The gateway starts unconfigured with
+`--dev --auth none --allow-unconfigured`, which is enough to verify everything
+that is not the model itself.
+
+The envelope has three categories, and the message name is never in `type`:
+
+```
+req    {type:"req",   id, method, params}
+res    {type:"res",   id, ok, payload|error}
+event  {type:"event", event, payload, seq?, stateVersion?}
+```
+
+The handshake is `connect.challenge` (from the gateway, unprompted) → `connect`
+(from us) → `hello-ok`. Protocol version 4. On success the gateway advertised
+**218 methods and 30 events**, and granted `operator.read` + `operator.write`.
+
+Two things this corrected:
+
+1. **The placeholder codec could never have worked.** It switched on
+   `frame.type` expecting an event name there, and looked for
+   `session.prompt`, `session.created`, `message.delta`, `tool.call`,
+   `ui.specification`, `session.done`. Not one of those exists.
+
+2. **`client.id` and `client.mode` are closed enums**, enforced server-side. The
+   `protocol.md` shipped _inside the openclaw package_ shows
+   `"mode": "operator"` in its connect example; the gateway refuses it, because
+   `operator` is a **role**. Valid modes are
+   `webchat|cli|ui|backend|node|probe|test`. SairiOS connects as
+   `gateway-client`/`backend` — the documented trusted loopback path, which may
+   omit device pairing.
+
+The one that will matter next: OpenClaw has its own approval round trip
+(`exec.approval.requested` / `.resolved`, plus `exec.approval.request` /
+`waitDecision` / `resolve`). SairiOS already has a permission broker with the
+same shape. Those two must be wired to each other, or a user answers the same
+question twice.
+
+**What a key would add, and only this:** `models.list` returns `{"models":[]}`
+on an unconfigured gateway. Running an actual turn — `sessions.create`,
+`sessions.send`, and the `session.*` events that stream back — needs a
+configured provider. That is the remaining unverified surface.
 
 ## Setup path 0 — first-run setup in the OS (what a user actually does)
 
