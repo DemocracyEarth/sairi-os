@@ -141,6 +141,26 @@ const codec = {
     });
   },
 
+  /**
+   * Answers an approval OpenClaw is blocking on.
+   *
+   * `exec.approval.resolve` is a real method, from the vocabulary the live
+   * gateway advertised in hello-ok. Its params are not yet observed — running
+   * one end to end needs a configured model provider.
+   */
+  encodeApprovalResolution(
+    externalId: string,
+    decision: 'allow' | 'deny',
+    rationale: string,
+  ): string {
+    return JSON.stringify({
+      type: 'req',
+      id: `approval-${externalId}`,
+      method: 'exec.approval.resolve',
+      params: { id: externalId, decision, reason: rationale },
+    });
+  },
+
   /** Normalizes one gateway frame into zero or more SairiOS events. */
   decodeFrame(raw: string): AgentEvent[] {
     let frame: Record<string, unknown>;
@@ -194,12 +214,17 @@ const codec = {
             },
           ];
         }
+        // The id is what makes this answerable. OpenClaw blocks on
+        // exec.approval.resolve; drop the id and the user's decision has
+        // nowhere to go.
+        const externalId = payload['id'] ?? payload['approvalId'] ?? payload['requestId'];
         return [
           {
             type: 'permission-request',
             capability,
             reason: String(payload['reason'] ?? 'No reason given.'),
             payload: payload['payload'] ?? {},
+            ...(typeof externalId === 'string' ? { externalId } : {}),
           },
         ];
       }
@@ -283,6 +308,27 @@ export class OpenClawAgentProvider implements AgentProvider {
       );
     }
     return ok(newId('ses'));
+  }
+
+  /**
+   * Sends a decision back to the gateway over the session's own socket.
+   *
+   * Throws when the session has no socket. That is deliberate: the relay treats
+   * a throw as "could not tell OpenClaw", keeps the decision it already made,
+   * and lets OpenClaw's own timeout refuse the action. Silently succeeding here
+   * would report a decision as delivered when it was not.
+   */
+  async resolveApproval(
+    sessionId: string,
+    externalId: string,
+    decision: 'allow' | 'deny',
+    rationale: string,
+  ): Promise<void> {
+    const socket = this.#sockets.get(sessionId);
+    if (!socket) {
+      throw new Error(`No open gateway socket for session ${sessionId}.`);
+    }
+    socket.send(codec.encodeApprovalResolution(externalId, decision, rationale));
   }
 
   async *run(sessionId: string, input: IntentionInput): AsyncIterable<AgentEvent> {

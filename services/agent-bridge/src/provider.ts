@@ -19,7 +19,21 @@ export type AgentEvent =
   | { type: 'status'; status: 'thinking' | 'streaming' | 'waiting-permission' | 'idle' }
   | { type: 'message'; text: string }
   /** A capability the agent wants. The bridge forwards it to the permission broker. */
-  | { type: 'permission-request'; capability: Capability; reason: string; payload: unknown }
+  | {
+      type: 'permission-request';
+      capability: Capability;
+      reason: string;
+      payload: unknown;
+      /**
+       * The provider's own id for this approval, when the provider has one.
+       *
+       * OpenClaw raises `exec.approval.requested` and blocks until it is told
+       * the answer. Without this id there is nothing to answer, so the request
+       * would hang there and time out on OpenClaw's side no matter what the
+       * user chose here. Absent for providers that only ask.
+       */
+      externalId?: string;
+    }
   /** A SairiUI document. Validated by the bridge before it is emitted. */
   | { type: 'ui'; document: SairiUIDocument }
   | { type: 'ui-rejected'; reason: string; messages: string[] }
@@ -45,6 +59,20 @@ export interface ProviderStatus {
 }
 
 export interface AgentProvider {
+  /**
+   * Answers a provider-side approval the provider is blocking on.
+   *
+   * Optional: only providers with their own approval round trip implement it.
+   * The mock has nothing to answer, and a provider that merely ASKS for
+   * permission (rather than waiting on a reply) does not need it either.
+   */
+  resolveApproval?(
+    sessionId: string,
+    externalId: string,
+    decision: 'allow' | 'deny',
+    rationale: string,
+  ): Promise<void>;
+
   readonly name: string;
   /** Never throws. Reports what is configured and what is not. */
   status(): Promise<ProviderStatus>;

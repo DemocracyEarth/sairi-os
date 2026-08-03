@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ok } from '@sairios/shared';
 import { validateSairiUI, type SairiUIDocument } from '@sairios/adaptive-ui-schema';
 import type { Context } from '@sairios/context-schema';
 import { AgentBridge, type BridgeEvent } from './bridge.js';
@@ -12,6 +13,10 @@ const CONTEXT = 'ctx_0123456789abcdef0123456789abcdef';
 class FakeBroker implements BrokerClient {
   readonly proposals: { capability: string; reason: string }[] = [];
   #counter = 0;
+  /** What the next status() poll reports. Drives the relay tests. */
+  nextStatus = 'allowed';
+  /** Effective policy the relay reads before proposing. */
+  nextPolicy: 'allow' | 'ask' | 'deny' = 'ask';
 
   async propose(input: { capability: string; reason: string }) {
     this.proposals.push({ capability: input.capability, reason: input.reason });
@@ -21,6 +26,14 @@ class FakeBroker implements BrokerClient {
       status: 'pending',
       risk: 'medium',
     };
+  }
+
+  async status(): Promise<{ status: string } | undefined> {
+    return { status: this.nextStatus };
+  }
+
+  async policy(): Promise<'allow' | 'ask' | 'deny'> {
+    return this.nextPolicy;
   }
 }
 
@@ -381,5 +394,103 @@ describe('openclaw frame normalization', () => {
 
   it('ignores frame types it does not know', () => {
     expect(openclawCodec.decodeFrame(JSON.stringify({ type: 'telemetry.ping' }))).toEqual([]);
+  });
+});
+
+describe('OpenClaw approvals go through the broker, and are asked once', () => {
+  /**
+   * A provider that blocks on an answer, the way OpenClaw does: it raises an
+   * approval carrying its own id and records whatever decision comes back.
+   */
+  class BlockingProvider implements AgentProvider {
+    readonly name = 'openclaw';
+    readonly answers: { externalId: string; decision: string; rationale: string }[] = [];
+
+    async status() {
+      return { provider: 'openclaw', configured: true, offline: false, detail: 'fake' };
+    }
+    async createSession() {
+      return ok('ses_fake');
+    }
+    async closeSession() {}
+    async resolveApproval(
+      _sessionId: string,
+      externalId: string,
+      decision: 'allow' | 'deny',
+      rationale: string,
+    ) {
+      this.answers.push({ externalId, decision, rationale });
+    }
+    async *run(): AsyncIterable<AgentEvent> {
+      yield {
+        type: 'permission-request',
+        capability: 'files.read',
+        reason: 'read the notes',
+        payload: {},
+        externalId: 'oc-1',
+      };
+      yield { type: 'done' };
+    }
+  }
+
+  async function drain(broker: FakeBroker, provider: BlockingProvider) {
+    const contexts = new FakeContexts();
+    const bridge = new AgentBridge({ provider, broker, contexts });
+    const events: BridgeEvent[] = [];
+    for await (const event of bridge.run(input('read my notes'))) events.push(event);
+    return { events, contexts };
+  }
+
+  it('raises exactly one broker request, not one per system', async () => {
+    // The whole point: without this, OpenClaw prompts and SairiOS prompts.
+    const broker = new FakeBroker();
+    const provider = new BlockingProvider();
+    await drain(broker, provider);
+    expect(broker.proposals).toHaveLength(1);
+    expect(broker.proposals[0]?.capability).toBe('files.read');
+  });
+
+  it('sends the decision back, so OpenClaw is not left waiting', async () => {
+    const broker = new FakeBroker();
+    const provider = new BlockingProvider();
+    await drain(broker, provider);
+    expect(provider.answers).toHaveLength(1);
+    expect(provider.answers[0]).toMatchObject({ externalId: 'oc-1', decision: 'allow' });
+  });
+
+  it('tells OpenClaw no when the user denies', async () => {
+    const broker = new FakeBroker();
+    broker.nextStatus = 'denied';
+    const provider = new BlockingProvider();
+    const { events } = await drain(broker, provider);
+    expect(provider.answers[0]?.decision).toBe('deny');
+    expect(events.some((e) => e.type === 'error')).toBe(true);
+  });
+
+  it('refuses without asking when policy already denies', async () => {
+    const broker = new FakeBroker();
+    broker.nextPolicy = 'deny';
+    const provider = new BlockingProvider();
+    await drain(broker, provider);
+    expect(broker.proposals).toHaveLength(0);
+    expect(provider.answers[0]?.decision).toBe('deny');
+  });
+
+  it('still prompts when policy says allow, because that grant was for the sandbox', async () => {
+    // An `allow` policy means the BROKER may act unprompted inside its sandbox.
+    // It is not consent for OpenClaw to act outside one.
+    const broker = new FakeBroker();
+    broker.nextPolicy = 'allow';
+    const provider = new BlockingProvider();
+    await drain(broker, provider);
+    expect(broker.proposals).toHaveLength(1);
+  });
+
+  it('records in the context that the action ran outside the sandbox', async () => {
+    const broker = new FakeBroker();
+    const { contexts } = await drain(broker, new BlockingProvider());
+    const entry = contexts.events.find((e) => e.summary.includes('OpenClaw'));
+    expect(entry).toBeDefined();
+    expect(entry?.summary).toContain('allow');
   });
 });

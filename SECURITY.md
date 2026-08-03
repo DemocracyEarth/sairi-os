@@ -164,6 +164,43 @@ Nothing else in SairiOS may build a path from agent input.
 - Writes are capped (512 kB) and `files.delete` is non-recursive, so a grant for
   one file cannot remove a tree.
 
+## Relayed approvals (OpenClaw)
+
+OpenClaw has its own approval round trip: it raises `exec.approval.requested`
+and blocks until it is told the answer. Left unwired, both systems prompt and a
+user answers the same question twice — the second time in OpenClaw's terms,
+where SairiOS's policy, audit log and sandbox have no say.
+
+There is now exactly one decision, and it is SairiOS's
+([services/agent-bridge/src/approval-relay.ts](services/agent-bridge/src/approval-relay.ts)).
+
+**A relayed approval is not a broker execution, and the two must not be
+conflated:**
+
+|                  | who acts                         | contained?                       | audited?          |
+| ---------------- | -------------------------------- | -------------------------------- | ----------------- |
+| broker execution | the broker                       | yes — path containment, size cap | yes               |
+| relayed approval | **OpenClaw**, in its own process | **no**                           | the decision only |
+
+Every rule follows from that asymmetry:
+
+- **An `allow` policy never auto-approves a relay.** `process.list` is `allow`
+  because a _sandboxed_ listing is harmless; that is not consent for OpenClaw to
+  run it against the real machine unprompted. An `allow` policy is downgraded to
+  a prompt. Treating the two as one value is the easiest way to turn this relay
+  into a privilege escalation.
+- **A `deny` policy refuses outright**, without prompting and without proposing.
+- **`process.execute` is never relayed**, whatever the policy says. SairiOS does
+  not implement unrestricted execution, and an approval prompt is not a
+  substitute for not having built it.
+- **It fails closed.** An unreachable broker, a lost request, an unrecognised
+  status and an expired timeout all deny. The only path to `allow` is a broker
+  request a human moved to `allowed`. An unanswered prompt is not consent.
+- **The user is told where it runs.** An approved relay says plainly that
+  OpenClaw performs the action outside the SairiOS sandbox, and the context log
+  records it. Same principle as the `simulated` flag: a user must always know
+  what actually happened.
+
 ## Secrets
 
 - **SairiOS never authenticates to a model provider.** No line of SairiOS code

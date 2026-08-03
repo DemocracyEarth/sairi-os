@@ -1,6 +1,7 @@
 import { validateSairiUI } from '@sairios/adaptive-ui-schema';
 import { createLogger, type Logger } from '@sairios/shared';
 import type { BrokerClient, ContextClient } from './clients.js';
+import { relayApproval } from './approval-relay.js';
 import type { AgentEvent, AgentProvider, IntentionInput } from './provider.js';
 
 /**
@@ -78,6 +79,61 @@ export class AgentBridge {
       for await (const event of this.#provider.run(session.value, input)) {
         switch (event.type) {
           case 'permission-request': {
+            // A provider that supplies an externalId is BLOCKING on our answer
+            // — OpenClaw raises exec.approval.requested and waits. Those go
+            // through the relay, which reaches a decision and sends it back, so
+            // the user is asked once rather than twice.
+            //
+            // The relay is deliberately stricter than a local grant: OpenClaw
+            // performs the action in its own process, outside the sandbox the
+            // broker would otherwise contain it in. See approval-relay.ts.
+            if (event.externalId && this.#provider.resolveApproval) {
+              const resolveApproval = this.#provider.resolveApproval.bind(this.#provider);
+              const externalId = event.externalId;
+              const policy = await this.#broker.policy(event.capability);
+
+              const outcome = await relayApproval(
+                {
+                  externalId,
+                  contextId: input.contextId,
+                  capability: event.capability,
+                  reason: event.reason,
+                  payload: event.payload,
+                },
+                policy,
+                {
+                  propose: async (r) => {
+                    const p = await this.#broker.propose({
+                      contextId: r.contextId,
+                      capability: r.capability,
+                      reason: r.reason,
+                      payload: r.payload,
+                    });
+                    return 'error' in p ? { error: p.error } : { id: p.id };
+                  },
+                  status: (requestId) => this.#broker.status(requestId),
+                  resolve: (id, decision, rationale) =>
+                    resolveApproval(session.value, id, decision, rationale),
+                  wait: (ms) => new Promise((done) => setTimeout(done, ms)),
+                  now: () => Date.now(),
+                },
+              );
+
+              // Recorded either way. An approval that happened outside the
+              // sandbox is exactly the thing a reader of the log needs to see.
+              await this.#contexts.appendEvent(
+                input.contextId,
+                'permission.requested',
+                `${event.capability} (via OpenClaw): ${outcome.decision} — ${outcome.rationale}`,
+                outcome.requestId ? { requestId: outcome.requestId } : {},
+              );
+
+              if (outcome.decision === 'deny') {
+                yield { type: 'error', message: outcome.rationale, recoverable: true };
+              }
+              break;
+            }
+
             const proposed = await this.#broker.propose({
               contextId: input.contextId,
               capability: event.capability,
