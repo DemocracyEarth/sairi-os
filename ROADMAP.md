@@ -68,8 +68,11 @@ faults in the VM path were found this way and are in the commit history.
       unit-tested and reachable on the VM, and its `openclaw onboard` flags come
       from upstream's CLI automation reference — but that command has never been
       executed. The first person to enter a key is the first to run it.
-- [ ] **Docker development services** — Compose file and Dockerfiles written and
-      reviewed, never built.
+- [x] **Docker development services.** All four images build, the stack runs,
+      and the hardening in compose.yaml is verified behaviourally: non-root,
+      read-only root filesystem, `/tmp` writable but noexec, all capabilities
+      dropped, no-new-privileges, pids capped, the sandbox with no route off the
+      box, and no container mounting the Docker socket.
 
 ### Known and deliberately unfinished
 
@@ -124,8 +127,23 @@ exists is real.
 3. **Persistence across a reboot.** Create a context in the guest, crystallize
    it, reboot, and confirm both survive. The boot is verified; this specific
    round trip is not.
-4. **Build and run the containers.** Confirm the hardening directives do what
-   the comments claim.
+4. ~~**Build and run the containers.**~~ Done, and the hardening is checked
+   rather than asserted. `.github/workflows/containers.yml` builds all four
+   images, runs the stack, creates and reads back a context through it, then
+   verifies every claim in compose.yaml twice — once against the declared
+   configuration and once by trying the forbidden thing and requiring it to
+   fail. Verified: run 30777686875, every step green.
+
+   Two real faults, both of which could only ever surface on a real build:
+
+   - compose.yaml set the pids cap two ways at once (`pids_limit` plus the
+     normalised `deploy.resources.limits.pids`), which made the whole project
+     invalid.
+   - the runtime stages copied only the root `node_modules`, so the production
+     ajv@8 — which npm nests inside each schema package, because eslint's dev
+     ajv@6 wins the root — never reached the image. Every image built cleanly
+     and died on its first import.
+
 5. ~~**One palette, not two.**~~ Done. `tokens.css` is canonical and
    `os/branding/palette.css` is generated from it by `build-palette.mjs`, with
    `palette.test.ts` failing on drift. The 65-token parallel vocabulary that
