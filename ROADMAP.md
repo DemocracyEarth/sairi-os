@@ -37,7 +37,7 @@ subsystems.
 - [x] The logo, drawn as geometry rather than text so it has no font dependency:
       menu bar, first-run setup, favicon, session icon, README
 - [x] End-to-end test of the full flow in mock mode against the real services
-- [x] 302 tests, none requiring a credential or the network
+- [x] 338 tests, none requiring a credential or the network
 
 ### Verified by actually running it
 
@@ -56,18 +56,30 @@ faults in the VM path were found this way and are in the commit history.
       `SAIRIOS_COMPOSITOR=cage` remains for machines with real GL.
 - [x] **OpenClaw is installed in the image** at the pinned version, verified by
       running the binary in the guest, and the gateway units provision correctly.
+- [x] **SairiOS speaks to a live gateway.** Handshake, envelope and
+      request/response cycle verified 2026-08-03 against openclaw 2026.7.1-2.
+      Real captured frames are committed at
+      `services/agent-bridge/src/providers/gateway-frames.fixture.json` and the
+      tests run on them. No credential was needed: the gateway starts with
+      `--dev --auth none --allow-unconfigured`.
+- [x] **Every flag first-run setup passes exists.** All eight, and every value
+      (`--mode local`, `--secret-input-mode ref`, `--gateway-bind loopback`,
+      both `--auth-choice` values) checked against `openclaw onboard --help` on
+      the real binary.
 
 ### Built but NOT verified
 
-- [ ] **The OpenClaw wire protocol.** The frame shapes in
-      `services/agent-bridge/src/providers/openclaw.ts` are **placeholders**. The
-      connection lifecycle is unit-tested against a fake transport; nothing in
-      SairiOS has ever exchanged a message with a live gateway.
-      See [docs/OPENCLAW.md](docs/OPENCLAW.md), which states the split precisely.
-- [ ] **First-run provider setup against the real binary.** The flow is written,
-      unit-tested and reachable on the VM, and its `openclaw onboard` flags come
-      from upstream's CLI automation reference — but that command has never been
-      executed. The first person to enter a key is the first to run it.
+- [ ] **An actual agent turn.** This is now the whole of the gap, and it is the
+      only part that needs somebody's API key. `models.list` returns
+      `{"models":[]}` on an unconfigured gateway. `sessions.create`,
+      `sessions.send` and the `session.*` events exist in the vocabulary
+      `hello-ok` advertised, so the names are right — but their params and
+      payload shapes have not been observed, and neither has
+      `exec.approval.resolve`.
+- [ ] **First-run provider setup end to end.** Every flag and value it passes is
+      now verified against the real binary, so the argv is right. The command
+      itself has still never run. The first person to enter a key is the first
+      to run it.
 - [x] **Docker development services.** All four images build, the stack runs,
       and the hardening in compose.yaml is verified behaviourally: non-root,
       read-only root filesystem, `/tmp` writable but noexec, all capabilities
@@ -83,6 +95,12 @@ Not bugs to be discovered later; they are listed because they are already known.
   flag is accurate and surfaced in the UI, but a user's first real task will
   meet it.
 - **A granted permission cannot be revoked.** See Milestone 2.
+- **The OpenClaw approval relay is a new trust boundary, reviewed only by its
+  author.** It decides whether an external agent runtime may act _outside_ the
+  SairiOS sandbox, which makes it the most consequential seam added since the
+  broker itself. It fails closed, never auto-allows, and refuses
+  `process.execute` outright — but "I reasoned about it carefully and wrote
+  tests" is not a review. First item for Milestone 3.
 - ~~The seeded "SairiOS development" context is stale.~~ Fixed: it now reports
   the VM as booting, OpenClaw as pinned-but-unverified, and 3 of 11 capabilities
   as real.
@@ -102,13 +120,30 @@ Not bugs to be discovered later; they are listed because they are already known.
 **Goal:** turn what is written into what is demonstrated. Nothing new until what
 exists is real.
 
-1. **Meet a live gateway.** This is the one that gates everything else, because
-   the product's central claim — a model returns a validated SairiUI document
-   and the broker mediates every action — has only ever run against the mock.
-   Enter a key on the VM, capture real gateway frames, reconcile the codec
-   against them, freeze the frames as fixture tests, then move
-   `openclaw/config/version.json` from `pinned` to `verified`.
-   Expect the placeholders to be wrong on first contact.
+1. **Meet a live gateway.** Mostly done, and further than expected — the
+   gateway starts unconfigured, so the handshake, the envelope, the
+   request/response cycle and the full method vocabulary were all reachable with
+   no credential at all.
+
+   Done: codec reconciled against protocol 4, real frames frozen as fixtures,
+   `version.json` moved from `pinned` to `handshake-verified`, and OpenClaw's
+   approval round trip wired into the permission broker so a user is asked once
+   rather than twice.
+
+   The placeholders were wrong on first contact, exactly as predicted, and
+   wrong at the root: the old codec switched on `frame.type` expecting an event
+   _name_ there, but `type` is one of three _categories_ and the name lives in
+   `event`. Every name it looked for was invented.
+
+   Also corrected: `client.id` and `client.mode` are closed enums enforced
+   server-side, and the `protocol.md` shipped _inside the openclaw package_
+   shows a `client.mode` the gateway refuses.
+
+   **Remaining, and it needs your key:** run one real turn. Capture the
+   `sessions.create` / `sessions.send` params and the `session.*` and
+   `exec.approval.*` payloads, add them to the fixture, and move
+   `version.json` to `verified`.
+
 2. ~~**CI.**~~ Done for the fast gate, and green on a real runner.
    `.github/workflows/ci.yml` runs on every push and PR: `make validate`, the
    boot path (shellcheck, `bash -n`, cloud-init YAML, `systemd-analyze verify`
@@ -155,6 +190,12 @@ exists is real.
 Exit criterion: the "Built but NOT verified" list is empty and every claim in
 the README has been demonstrated.
 
+**Where that stands:** three of five items are done. What is left is one real
+agent turn (item 1, needs a key), one VM smoke run that has never executed (item
+2), and the reboot round trip (item 3). Everything remaining is a thing to
+_run_, not a thing to build — which is the position this milestone was supposed
+to reach.
+
 ## Milestone 2 — contexts that hold up under use
 
 **Goal:** make a persistent context worth returning to after a month.
@@ -164,6 +205,11 @@ the README has been demonstrated.
   to withdraw it. Visibility without control is only half a permission system.
   This is the first thing to fix in the broker, and it is a much smaller job
   than anything below it.
+
+  The OpenClaw approval relay raises the stakes: a relayed grant authorises an
+  action _outside_ the sandbox, so "I take that back" needs to be expressible
+  before that becomes routine.
+
 - Context memory that is actually used: retrieval, summarization, and an
   explicit distinction between durable and working memory in the UI.
 - Artifacts as first-class citizens: import files into a context sandbox, track
@@ -190,9 +236,15 @@ prerequisite for anything running unattended.
 - Supply-chain work: SBOM, dependency pinning with provenance, reproducible
   image builds.
 - A security review of the whole boundary set by someone who did not write it.
-  The provider-credential path added in
-  [ADR 0010](docs/adr/0010-provider-credential-custody.md) belongs in that
-  review: it is the only place SairiOS takes custody of a secret.
+  Two seams belong at the top of that review, both added recently and both
+  reviewed only by their author:
+  - **the OpenClaw approval relay**
+    ([approval-relay.ts](services/agent-bridge/src/approval-relay.ts)) — it
+    decides whether an external runtime may act outside the sandbox, and the
+    `allow`-policy downgrade is the specific thing to attack;
+  - **the provider-credential path**
+    ([ADR 0010](docs/adr/0010-provider-credential-custody.md)) — the only place
+    SairiOS takes custody of a secret.
 
 ## Milestone 4 — contexts that move
 
