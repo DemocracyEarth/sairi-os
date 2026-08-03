@@ -69,19 +69,30 @@ x-hardening: &hardening
   # does not depend on the image's /etc/passwd.
   user: '10001:10001'
 
-  # Cap the process table. A fork bomb from a runaway tool execution or a
-  # dependency exhausts this limit instead of the host's.
-  pids_limit: 256
-
   # Docker Compose v2 applies deploy.resources.limits outside Swarm. These are
   # development limits, not a defence against a determined attacker: they bound
   # accidental runaway resource use, and they make it obvious when a service
   # regresses into a memory leak.
+  #
+  # `pids` lives HERE and not in a top-level `pids_limit:`. Compose normalises
+  # `pids_limit` into this same field, so setting both makes the project
+  # invalid the moment the two are not identical:
+  #
+  #   can't set distinct values on 'pids_limit' and
+  #   'deploy.resources.limits.pids': invalid compose project
+  #
+  # That error was sitting in this file from the day it was written and was
+  # only ever going to surface on the first `compose build`, which is exactly
+  # what happened. One limit, one place.
+  #
+  # The pids cap itself: a fork bomb from a runaway tool execution or a
+  # dependency exhausts this instead of the host's process table.
   deploy:
     resources:
       limits:
         cpus: '1.00'
         memory: 512M
+        pids: 256
 
   # With read_only: true the process still needs somewhere to write scratch
   # files. tmpfs is memory backed, wiped on container exit, and mounted with

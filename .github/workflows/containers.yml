@@ -68,7 +68,7 @@ jobs:
       # ---------------------------------------------------------------------
       - name: Build all four images
         working-directory: containers
-        run: docker compose build --progress plain
+        run: docker compose --progress plain build
 
       - name: Image sizes
         run: docker images --filter 'reference=sairios/*' --format '  {{.Repository}}:{{.Tag}}  {{.Size}}'
