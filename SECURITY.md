@@ -127,19 +127,33 @@ Properties that hold by construction:
 
 Default policies:
 
-| Capability             | Default  | v0 behaviour                                                |
-| ---------------------- | -------- | ----------------------------------------------------------- |
-| `files.read`           | ask      | real, sandbox only                                          |
-| `files.write`          | ask      | real, sandbox only                                          |
-| `files.delete`         | **deny** | real, sandbox only, non-recursive                           |
-| `process.list`         | allow    | SairiOS services only — host processes are never enumerated |
-| `process.execute`      | **deny** | not implemented                                             |
-| `network.fetch`        | ask      | simulated — no socket is opened                             |
-| `browser.open`         | ask      | simulated                                                   |
-| `clipboard.read`       | **deny** | simulated                                                   |
-| `clipboard.write`      | ask      | simulated                                                   |
-| `notifications.send`   | ask      | simulated                                                   |
-| `system.settings.read` | allow    | SairiOS settings only, no env, no secrets                   |
+**Four of the eleven capabilities do something real. Six are simulated. One is
+unimplemented.** Every row below says which, because describing only a
+capability's _scope_ is what let a wrong count into three documents.
+
+| Capability             | Default  | Real?         | v0 behaviour                                                |
+| ---------------------- | -------- | ------------- | ----------------------------------------------------------- |
+| `files.read`           | ask      | **real**      | reads a real file, sandbox only                             |
+| `files.write`          | ask      | **real**      | writes a real file, sandbox only                            |
+| `files.delete`         | **deny** | **real**      | deletes a real file, sandbox only, non-recursive            |
+| `system.settings.read` | allow    | **real**      | returns live SairiOS settings. No env, no host, no secrets  |
+| `process.list`         | allow    | simulated     | SairiOS services only — host processes are never enumerated |
+| `network.fetch`        | ask      | simulated     | no socket is opened                                         |
+| `browser.open`         | ask      | simulated     | nothing is launched                                         |
+| `clipboard.read`       | **deny** | simulated     | the real clipboard is never read                            |
+| `clipboard.write`      | ask      | simulated     | the real clipboard is never written                         |
+| `notifications.send`   | ask      | simulated     | no notification is delivered                                |
+| `process.execute`      | **deny** | unimplemented | returns `not_implemented`; there is no shell                |
+
+`system.settings.read` is the one that reads real while writing nothing, and it
+is where the two honesty flags drifted apart: `realSideEffect` in policy.ts said
+false because the name reads as "does this write", while the outcome correctly
+reported `simulated: false`. The approval prompt was therefore understating what
+the user was about to get.
+
+`capability-honesty.test.ts` now executes every capability and asserts the
+descriptor and the outcome agree, so the two cannot disagree again — and the
+counts above are pinned by that same test rather than by counting greps.
 
 Two defaults deserve explanation. `process.list` is allow-by-default, so it must
 not leak what the user is running — it reports SairiOS's own services and

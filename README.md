@@ -213,25 +213,30 @@ Worked examples, including two that are invalid on purpose, are in
 The broker separates **observation**, **proposal** and **execution**. The agent
 can observe and propose. Only a user decision executes.
 
-| Capability             | Default  | What v0 actually does                       |
-| ---------------------- | -------- | ------------------------------------------- |
-| `files.read`           | ask      | real, sandbox only                          |
-| `files.write`          | ask      | real, sandbox only                          |
-| `files.delete`         | **deny** | real, sandbox only, non-recursive           |
-| `process.list`         | allow    | SairiOS services only, never host processes |
-| `process.execute`      | **deny** | not implemented — there is no shell         |
-| `network.fetch`        | ask      | simulated                                   |
-| `browser.open`         | ask      | simulated                                   |
-| `clipboard.read`       | **deny** | simulated                                   |
-| `clipboard.write`      | ask      | simulated                                   |
-| `notifications.send`   | ask      | simulated                                   |
-| `system.settings.read` | allow    | SairiOS settings only, no secrets           |
+Four of the eleven do something real, six are simulated, one is unimplemented:
+
+| Capability             | Default  | Real?         | What v0 actually does                       |
+| ---------------------- | -------- | ------------- | ------------------------------------------- |
+| `files.read`           | ask      | **real**      | reads a real file, sandbox only             |
+| `files.write`          | ask      | **real**      | writes a real file, sandbox only            |
+| `files.delete`         | **deny** | **real**      | real, sandbox only, non-recursive           |
+| `system.settings.read` | allow    | **real**      | live SairiOS settings, no secrets           |
+| `process.list`         | allow    | simulated     | SairiOS services only, never host processes |
+| `network.fetch`        | ask      | simulated     | no socket is opened                         |
+| `browser.open`         | ask      | simulated     | nothing is launched                         |
+| `clipboard.read`       | **deny** | simulated     | the real clipboard is never read            |
+| `clipboard.write`      | ask      | simulated     | the real clipboard is never written         |
+| `notifications.send`   | ask      | simulated     | no notification is delivered                |
+| `process.execute`      | **deny** | unimplemented | there is no shell                           |
 
 Grant scopes: allow once, allow for this context, deny, deny and remember. Every
 privileged action is schema-validated, logged, attributable to a context,
-visible to you, and cancellable until it runs. Actions that really happen are
-confined to the context's sandbox directory; the rest are simulated and labelled
-as such in the UI.
+visible to you, and cancellable until it runs.
+
+Everything that touches a file is confined to the context's sandbox directory.
+`system.settings.read` is real but writes nothing — it returns SairiOS's own
+configuration and never environment variables, host settings or secrets.
+Everything else is simulated and labelled as such in the UI.
 
 ## Configuring a model
 

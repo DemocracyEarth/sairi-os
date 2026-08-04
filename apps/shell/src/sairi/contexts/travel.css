@@ -117,7 +117,7 @@
 
 .sairi .s-trv-map__land {
   fill: url(#s-trv-land);
-  stroke: rgb(53 214 240 / 34%);
+  stroke: color-mix(in srgb, var(--cyan) 34%, transparent);
   stroke-width: 1;
   stroke-linejoin: round;
 }
@@ -149,18 +149,18 @@
 .sairi .s-trv-map__leg--booked {
   stroke: var(--cyan);
   stroke-width: 2;
-  filter: drop-shadow(0 0 5px rgb(53 214 240 / 55%));
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--cyan) 55%, transparent));
 }
 
 .sairi .s-trv-map__leg--proposed {
-  stroke: rgb(53 214 240 / 52%);
+  stroke: color-mix(in srgb, var(--cyan) 52%, transparent);
   stroke-width: 1.5;
   stroke-dasharray: 5 4;
   animation: s-trv-breathe 4.2s var(--ease-in-out) infinite;
 }
 
 .sairi .s-trv-map__leg--alternative {
-  stroke: rgb(155 123 255 / 62%);
+  stroke: color-mix(in srgb, var(--violet) 62%, transparent);
   stroke-width: 1.3;
   stroke-dasharray: 1.4 3.4;
 }
@@ -181,7 +181,7 @@
 }
 
 .sairi .s-trv-map__city--alternative .s-trv-map__node {
-  stroke: rgb(155 123 255 / 55%);
+  stroke: color-mix(in srgb, var(--violet) 55%, transparent);
   stroke-width: 1.2;
 }
 
@@ -194,6 +194,11 @@
   transform-box: fill-box;
   transform-origin: center;
   animation: s-trv-pulse 3.4s var(--ease-out) infinite;
+}
+
+.sairi .s-trv-map__leader {
+  stroke: var(--frost-4);
+  stroke-width: 0.5;
 }
 
 .sairi .s-trv-map__name {
@@ -241,7 +246,7 @@
 }
 
 .sairi .s-trv-map__keyitem--proposed {
-  color: rgb(53 214 240 / 60%);
+  color: color-mix(in srgb, var(--cyan) 60%, transparent);
 }
 
 .sairi .s-trv-map__keyitem--proposed::before {
@@ -249,7 +254,7 @@
 }
 
 .sairi .s-trv-map__keyitem--alternative {
-  color: rgb(155 123 255 / 70%);
+  color: color-mix(in srgb, var(--violet) 70%, transparent);
 }
 
 .sairi .s-trv-map__keyitem--alternative::before {
@@ -466,7 +471,7 @@
 }
 
 .sairi .s-trv-day--held .s-trv-day__lodge {
-  background: rgb(245 185 68 / 8%);
+  background: color-mix(in srgb, var(--amber) 8%, transparent);
 }
 
 /* The resolved panel is narrow on purpose, so its interior tightens to match:
@@ -563,16 +568,16 @@
 /* A locked constraint is a wall, so it gets the only solid, filled treatment
    in this lens. Everything still in play stays dashed. */
 .sairi .s-trv-chip--locked {
-  border-color: rgb(79 224 168 / 30%);
-  background: rgb(79 224 168 / 6%);
+  border-color: color-mix(in srgb, var(--mint) 30%, transparent);
+  background: color-mix(in srgb, var(--mint) 6%, transparent);
 }
 
 .sairi .s-trv-chip--tension {
   border-style: dashed;
   border-left-style: solid;
-  border-color: rgb(224 97 200 / 34%);
+  border-color: color-mix(in srgb, var(--magenta) 34%, transparent);
   border-left-color: var(--magenta);
-  background: rgb(224 97 200 / 5%);
+  background: color-mix(in srgb, var(--magenta) 5%, transparent);
 }
 
 .sairi .s-trv-chip--open,
@@ -620,7 +625,7 @@
 }
 
 .sairi .s-trv-tension {
-  border-top: 1px solid rgb(224 97 200 / 26%);
+  border-top: 1px solid color-mix(in srgb, var(--magenta) 26%, transparent);
   padding-top: var(--s-3);
 }
 
@@ -713,8 +718,8 @@
   flex: 1 1 auto;
   background: repeating-linear-gradient(
     -45deg,
-    rgb(53 214 240 / 34%) 0 4px,
-    rgb(53 214 240 / 12%) 4px 8px
+    color-mix(in srgb, var(--cyan) 34%, transparent) 0 4px,
+    color-mix(in srgb, var(--cyan) 12%, transparent) 4px 8px
   );
 }
 

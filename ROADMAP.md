@@ -95,19 +95,17 @@ commit history.
 
 Not bugs to be discovered later; they are listed because they are already known.
 
-- **Six of the eleven capabilities are simulated.** Counted from the flag the
-  UI actually renders, `simulated` in `actions.ts`: `process.list`,
-  `network.fetch`, `browser.open`, `clipboard.read`, `clipboard.write` and
-  `notifications.send`. Four do real work — the three `files.*` plus
-  `system.settings.read`, which returns real SairiOS configuration.
-  `process.execute` is neither: it is refused as `not_implemented` and produces
-  no outcome at all.
+- **Six of the eleven capabilities are simulated**, four do real work
+  (`files.read`, `files.write`, `files.delete`, `system.settings.read`), and
+  `process.execute` is unimplemented. Pinned by `capability-honesty.test.ts`
+  rather than by counting greps — counting greps is what got this wrong three
+  times, because the two sources disagreed.
 
-- **Two flags disagree about `system.settings.read`.** `actions.ts` returns
-  `simulated: false` (it reads real configuration) while `policy.ts` describes it
-  as `realSideEffect: false`. One of them is wrong and they are read by different
-  surfaces. Worth reconciling before either is quoted as authority again — this
-  roadmap has now quoted the wrong one twice.
+- ~~Two flags disagree about `system.settings.read`.~~ Fixed. `policy.ts` now
+  says `realSideEffect: true`, matching the outcome, and
+  `capability-honesty.test.ts` executes all eleven capabilities to assert the
+  approval-time claim and the post-execution claim agree. Verified to fail when
+  the bug is reintroduced.
 - **A granted permission cannot be revoked.** See Milestone 2.
 - **The OpenClaw approval relay is a new trust boundary, reviewed only by its
   author.** It decides whether an external agent runtime may act _outside_ the

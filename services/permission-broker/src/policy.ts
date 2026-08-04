@@ -31,7 +31,22 @@ export interface CapabilityDescriptor {
   risk: RiskLevel;
   /** What v0 actually does. Kept honest: most capabilities are simulated. */
   v0Behaviour: string;
-  /** True when v0 performs a real side effect rather than a simulated one. */
+  /**
+   * True when executing this does something REAL — a real mutation, or real
+   * data returned. False when v0 fabricates the outcome.
+   *
+   * This must equal `!outcome.simulated` from actions.ts for the same
+   * capability, and `capability-honesty.test.ts` executes every capability to
+   * prove it. The two are the same claim made at different moments: this one
+   * before the user approves, `simulated` after it ran. If they disagree, the
+   * approval prompt is lying about what is about to happen.
+   *
+   * Read the name carefully. "Side effect" is loose: `system.settings.read`
+   * mutates nothing yet returns real configuration, so it is `true`. The
+   * question is "is this real", not "does this write". Getting that backwards
+   * is exactly the bug this comment exists to prevent — it shipped once, and
+   * put the wrong capability count in three documents.
+   */
   realSideEffect: boolean;
 }
 
@@ -116,7 +131,11 @@ export const CAPABILITY_DESCRIPTORS: Readonly<Record<Capability, CapabilityDescr
     v0Behaviour:
       'Returns SairiOS settings only (provider mode, ports, sandbox path). No host settings, ' +
       'no environment variables, no secrets.',
-    realSideEffect: false,
+    // Real, not simulated: actions.ts returns the live agentProvider, bindHost,
+    // storeDriver and sandbox root. It is the only capability that returns real
+    // data while mutating nothing, which is how it came to be the only one
+    // whose two honesty flags disagreed.
+    realSideEffect: true,
   },
 };
 

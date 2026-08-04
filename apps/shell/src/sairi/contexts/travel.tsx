@@ -66,6 +66,15 @@ interface MapCity {
   state: 'confirmed' | 'contested' | 'alternative';
   /** Which side the label hangs off, chosen so no label crosses a route line. */
   side: 'left' | 'right';
+  /**
+   * Manual label displacement, in map units. Kyoto and Osaka are 40 km apart in
+   * a country 500 km wide, so at this scale their labels land on top of each
+   * other and on top of the Hokuriku legs. Real maps solve that by moving the
+   * label off the mark and drawing a leader to it; so does this one. Any city
+   * carrying an offset gets the leader automatically.
+   */
+  dx?: number;
+  dy?: number;
 }
 
 interface MapLeg {
@@ -282,33 +291,38 @@ function MapLens(panel: Panel): JSX.Element {
             />
           ))}
 
-          {data.cities.map((city) => (
-            <g className={`s-trv-map__city s-trv-map__city--${city.state}`} key={city.id}>
-              {city.state === 'confirmed' && (
-                <circle cx={city.x} cy={city.y} fill="url(#s-trv-node-glow)" r="17" />
-              )}
-              {city.state === 'contested' && (
-                <circle className="s-trv-map__pulse" cx={city.x} cy={city.y} r="11" />
-              )}
-              <circle className="s-trv-map__node" cx={city.x} cy={city.y} r="4.5" />
-              <text
-                className="s-trv-map__name"
-                textAnchor={city.side === 'left' ? 'end' : 'start'}
-                x={city.side === 'left' ? city.x - 11 : city.x + 11}
-                y={city.y + 1}
-              >
-                {city.name}
-              </text>
-              <text
-                className="s-trv-map__nights"
-                textAnchor={city.side === 'left' ? 'end' : 'start'}
-                x={city.side === 'left' ? city.x - 11 : city.x + 11}
-                y={city.y + 12}
-              >
-                {city.jp} · {city.nights}
-              </text>
-            </g>
-          ))}
+          {data.cities.map((city) => {
+            const anchor = city.side === 'left' ? 'end' : 'start';
+            const lx = (city.side === 'left' ? city.x - 11 : city.x + 11) + (city.dx ?? 0);
+            const ly = city.y + (city.dy ?? 0);
+            const displaced = Boolean(city.dx) || Boolean(city.dy);
+            return (
+              <g className={`s-trv-map__city s-trv-map__city--${city.state}`} key={city.id}>
+                {city.state === 'confirmed' && (
+                  <circle cx={city.x} cy={city.y} fill="url(#s-trv-node-glow)" r="17" />
+                )}
+                {city.state === 'contested' && (
+                  <circle className="s-trv-map__pulse" cx={city.x} cy={city.y} r="11" />
+                )}
+                {displaced && (
+                  <line
+                    className="s-trv-map__leader"
+                    x1={city.x}
+                    x2={lx + (city.side === 'left' ? 3 : -3)}
+                    y1={city.y}
+                    y2={ly - 3}
+                  />
+                )}
+                <circle className="s-trv-map__node" cx={city.x} cy={city.y} r="4.5" />
+                <text className="s-trv-map__name" textAnchor={anchor} x={lx} y={ly + 1}>
+                  {city.name}
+                </text>
+                <text className="s-trv-map__nights" textAnchor={anchor} x={lx} y={ly + 12}>
+                  {city.jp} · {city.nights}
+                </text>
+              </g>
+            );
+          })}
         </svg>
         <figcaption className="s-trv-map__key">
           <span className="s-trv-map__keyitem s-trv-map__keyitem--booked">ticketed</span>
@@ -708,6 +722,8 @@ const MAP_DATA: MapData = {
       nights: '4 nights',
       state: 'confirmed',
       side: 'left',
+      dx: -19,
+      dy: -19,
     },
     {
       id: 'osaka',
@@ -718,6 +734,8 @@ const MAP_DATA: MapData = {
       nights: '2 nights',
       state: 'confirmed',
       side: 'left',
+      dx: -9,
+      dy: 22,
     },
     {
       id: 'hiroshima',
@@ -783,7 +801,7 @@ const MAP_DATA: MapData = {
       duration: '1h 27m',
       fare: '¥10,620 ×2',
       commitment: 'alternative',
-      path: 'M 70 155 Q 122 178 170 154',
+      path: 'M 70 155 Q 122 166 170 154',
     },
   ],
   reasoning:
