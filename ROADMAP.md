@@ -144,7 +144,7 @@ exists is real.
    `exec.approval.*` payloads, add them to the fixture, and move
    `version.json` to `verified`.
 
-2. ~~**CI.**~~ Done for the fast gate, and green on a real runner.
+2. ~~**CI.**~~ Done, and every workflow is green on a real runner.
    `.github/workflows/ci.yml` runs on every push and PR: `make validate`, the
    boot path (shellcheck, `bash -n`, cloud-init YAML, `systemd-analyze verify`
    on all seven units, `desktop-file-validate`), a credential scan, and
@@ -155,9 +155,21 @@ exists is real.
    not cover. Allowed by exact key name, so any other non-standard key still
    fails.
 
-   Still outstanding: `vm-smoke.yml` has never run. It builds an image and boots
-   it nightly, its timeout is a guess, and no local build has ever been amd64 —
-   the only architecture a standard runner offers.
+   `vm-smoke.yml` is green too. It builds an image from scratch and boots it,
+   nightly and on demand. Verified twice on **amd64**, which no local build had
+   ever exercised: run 30786339286 (the first scheduled firing) and run 30870557160. Both `ok: 19 warn: 7 fail: 0` / DEGRADED — identical to the
+   arm64 result — with OpenClaw present in the guest.
+
+   All three risks flagged when it was written are settled. `/dev/kvm` does
+   exist on a standard runner (it is just not writable until the chmod), the
+   amd64 path works, and the whole job takes about four minutes rather than the
+   ninety the timeout allows.
+
+   It also had a bug of its own: the capability report tested `/dev/kvm` for
+   write access _before_ the step that grants it, so it logged
+   "ABSENT — will fall back to TCG" on a runner that then used KVM. Anyone
+   debugging a slow boot would have started from a false premise. Fixed by
+   granting first and reporting after.
 
 3. ~~**Persistence across a reboot.**~~ Done. A context was created in the
    guest, run through the bridge until it had a validated SairiUI document and

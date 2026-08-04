@@ -11,24 +11,21 @@
 # found in the VM path so far was found exactly this way.
 #
 # ---------------------------------------------------------------------------
-# STATUS: this workflow has never run.
+# STATUS: verified. First green run 2026-08-03 (run 30786339286).
 # ---------------------------------------------------------------------------
-# It was written on a macOS/arm64 machine with no GitHub Actions runner. The
-# scripts it calls DO work — the image has been built from scratch and booted to
-# a desktop several times locally — but on macOS with HVF acceleration, on
-# arm64, not on a Linux x86_64 runner under KVM or TCG.
+# What that run settled, all three of which were open questions when this was
+# written on a macOS/arm64 machine with no runner:
 #
-# Specifically unverified here:
-#   - whether /dev/kvm exists on a standard GitHub runner. The script falls back
-#     to TCG when it does not, which is correct but far slower, and the timeout
-#     below is a guess rather than a measurement.
-#   - whether the amd64 image path works at all. Every local build has been
-#     arm64; APPROX_SIZE_amd64 in build-image.sh is a recorded constant, not
-#     something this project has downloaded.
-#   - how long a TCG first boot actually takes.
-#
-# The first run will tell us. Expect to adjust the timeout, and do not treat a
-# red result here as a product regression until the workflow itself is trusted.
+#   - /dev/kvm DOES exist on a standard ubuntu-latest runner. It is not writable
+#     by the runner user until the chmod step, which is the whole reason the
+#     ordering note above exists.
+#   - the amd64 image path works. Every local build had been arm64, and
+#     APPROX_SIZE_amd64 in build-image.sh was a recorded constant nobody had
+#     ever downloaded. The guest self-check reported `ok: 19 warn: 7 fail: 0`
+#     and DEGRADED — identical to the arm64 result.
+#   - it takes 4m36s end to end with KVM; the smoke itself is 225s. The
+#     90-minute timeout is roughly twenty times what is needed, and stays that
+#     way only to cover a TCG fallback.
 
 name: VM smoke
 
@@ -63,13 +60,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Report what this runner can do
+      # Ordering matters here, and getting it wrong produced a genuinely
+      # misleading log on the first real run: this used to test /dev/kvm for
+      # write access BEFORE the chmod below, so it printed
+      # "ABSENT — will fall back to TCG" on a runner that then went on to use
+      # KVM perfectly well. Anyone debugging a slow boot would have started from
+      # a false premise. Grant first, then report what is actually true.
+      - name: Enable KVM if this runner has it
         run: |
-          echo "arch:     $(uname -m)"
-          echo "kvm:      $([ -r /dev/kvm ] && [ -w /dev/kvm ] && echo present || echo ABSENT — will fall back to TCG)"
-          echo "cpus:     $(nproc)"
-          echo "memory:   $(free -h | awk '/^Mem:/ {print $2}')"
-          echo "disk:     $(df -h / | awk 'NR==2 {print $4}') free"
+          if [ -e /dev/kvm ]; then
+            sudo chmod 666 /dev/kvm || true
+          fi
 
       - name: Install QEMU and image tooling
         run: |
@@ -77,16 +78,24 @@ jobs:
           sudo apt-get install -y -qq qemu-system-x86 qemu-utils xorriso curl
           qemu-system-x86_64 --version | head -n 1
 
-      # Membership in kvm is what makes /dev/kvm usable when the device exists.
-      # Harmless when it does not — the script detects and falls back.
-      - name: Allow KVM if the runner has it
+      # GitHub's standard ubuntu-latest runners DO have /dev/kvm — it is simply
+      # not writable by the runner user until the chmod above. Measured on
+      # 2026-08-03: build + boot + self-check in 4m36s total, the smoke itself
+      # 225s, on 4 cores with KVM. Under TCG expect several times that, which is
+      # why the job timeout stays generous.
+      - name: Report what this runner can do
         run: |
-          if [ -e /dev/kvm ]; then
-            sudo chmod 666 /dev/kvm || true
-            ls -l /dev/kvm
+          echo "arch:     $(uname -m)"
+          if [ -e /dev/kvm ] && [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
+            echo "kvm:      usable — $(ls -l /dev/kvm)"
+          elif [ -e /dev/kvm ]; then
+            echo "kvm:      present but NOT writable; the boot falls back to TCG and will be slow"
           else
-            echo "no /dev/kvm; the boot will run under TCG emulation and be slow"
+            echo "kvm:      no /dev/kvm at all; the boot runs under TCG and will be slow"
           fi
+          echo "cpus:     $(nproc)"
+          echo "memory:   $(free -h | awk '/^Mem:/ {print $2}')"
+          echo "disk:     $(df -h / | awk 'NR==2 {print $4}') free"
 
       # An SSH key so the guest is reachable if the smoke run needs triage. It is
       # generated here and thrown away with the runner: nothing persists, and no
