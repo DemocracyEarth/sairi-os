@@ -159,9 +159,27 @@ exists is real.
    it nightly, its timeout is a guess, and no local build has ever been amd64 —
    the only architecture a standard runner offers.
 
-3. **Persistence across a reboot.** Create a context in the guest, crystallize
-   it, reboot, and confirm both survive. The boot is verified; this specific
-   round trip is not.
+3. ~~**Persistence across a reboot.**~~ Done. A context was created in the
+   guest, run through the bridge until it had a validated SairiUI document and
+   eight events, crystallized, fingerprinted, and the VM cold-booted — QEMU
+   killed and restarted from the qcow2, `up 1 day 7 hours` to `up 0 minutes`.
+   Every field matched: ids, names, types, statuses, createdAt, event counts and
+   a hash of the UI document. The template still instantiates into a fresh run.
+
+   The check was built to defeat the ways it could falsely pass: seeding only
+   runs on an empty store, so `totalContexts` staying at 5 rather than dropping
+   to the 3 demo seeds is what proves the store was read rather than recreated.
+   The driver was confirmed `sqlite`, not the JSON fallback.
+
+   Two real faults found by doing it:
+
+   - `Requires=` propagates a stop but not a start, so `systemctl restart
+sairios-context-service` took the agent bridge down and left it down —
+     silently, with no failure to restart because a propagated stop is a clean
+     exit. Fixed with `PartOf=`, verified on the VM in both directions.
+   - a crystallized template keeps the source context's **name** in its
+     provenance event. Deliberate, but undocumented and untested until now.
+
 4. ~~**Build and run the containers.**~~ Done, and the hardening is checked
    rather than asserted. `.github/workflows/containers.yml` builds all four
    images, runs the stack, creates and reads back a context through it, then

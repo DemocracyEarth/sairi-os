@@ -230,6 +230,12 @@ Every rule follows from that asymmetry:
 - Crystallization strips memory whose key looks like a credential, whatever its
   scope, and everything marked sensitive.
 - Synchronised context documents carry secret **names**, never values.
+- A crystallized template keeps **the source context's name**, in its provenance
+  event (`Crystallized from "…"`). Deliberate — a template with no traceable
+  origin is worse — but it is a real tradeoff, because a template is the artifact
+  most likely to be shared and a context name can itself be sensitive. Nothing
+  else from the source survives; `crystallize.test.ts` pins exactly that, so it
+  stays a decision rather than an accident.
 
 ## Network posture
 

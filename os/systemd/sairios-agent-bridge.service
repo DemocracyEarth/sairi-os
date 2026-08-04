@@ -32,6 +32,18 @@ Documentation=file:/opt/sairios/os/README.md
 # Hard dependency: the bridge cannot serve a context it cannot read. If the context
 # service is stopped, stop the bridge too.
 Requires=sairios-context-service.service
+# PartOf is what makes that survivable, and its absence was a real fault.
+#
+# Requires= propagates a STOP but not a START. So `systemctl restart
+# sairios-context-service` — an ordinary thing to do — took the bridge down and
+# left it down. Nothing restarted it, `Restart=on-failure` did not apply because
+# a propagated stop is a clean exit, and the desktop simply had no agent bridge
+# until somebody rebooted. Verified on the VM: stop the context service, the
+# bridge goes inactive; start it again, the bridge stays inactive.
+#
+# PartOf= propagates stop AND restart from the named unit, so the pair now moves
+# together in both directions.
+PartOf=sairios-context-service.service
 # Ordering: context service, then broker, then this.
 After=sairios-context-service.service sairios-permission-broker.service
 # The broker is Wants rather than Requires so that the bridge can start and report a

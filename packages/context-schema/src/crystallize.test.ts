@@ -401,3 +401,56 @@ describe('sanitizeUiSpecification', () => {
     expect(item).toEqual({ id: 'step1', label: 'Do it', checked: false });
   });
 });
+
+describe('what a template still says about where it came from', () => {
+  /**
+   * Crystallization strips conversation, files, run content and anything that
+   * looks like a credential. It does NOT strip the source context's NAME: the
+   * provenance event records `Crystallized from "<name>"`.
+   *
+   * That is deliberate — a template with no traceable origin is worse — but it
+   * is a real tradeoff, because a template is the artifact most likely to be
+   * shared and a context name can itself be sensitive ("Q3 redundancies").
+   * Found by inspecting a template on the VM after a reboot; nothing tested or
+   * documented it before.
+   *
+   * These tests pin the tradeoff so it stays a decision. If the name should
+   * stop travelling, change crystallize.ts and change these with it.
+   */
+  it('keeps the source name in the provenance event, and nowhere else', () => {
+    const source = ranContext({ name: 'Q3 redundancies' });
+    const template = crystallize(source, {
+      name: 'headcount review',
+      clock: fixedClock('2026-08-01T09:00:00.000Z'),
+    });
+    if (!template.ok) throw new Error('expected a template');
+
+    const found: string[] = [];
+    const walk = (value: unknown, path: string): void => {
+      if (typeof value === 'string') {
+        if (value.includes('Q3 redundancies')) found.push(path);
+        return;
+      }
+      if (value && typeof value === 'object') {
+        for (const [k, v] of Object.entries(value)) walk(v, `${path}.${k}`);
+      }
+    };
+    walk(template.value.context, '');
+
+    expect(found).toEqual(['.events.0.summary']);
+  });
+
+  it('does not put the source name in the template name, objective or memory', () => {
+    const source = ranContext({ name: 'Q3 redundancies', objective: 'decide who goes' });
+    const template = crystallize(source, {
+      name: 'headcount review',
+      clock: fixedClock('2026-08-01T09:00:00.000Z'),
+    });
+    if (!template.ok) throw new Error('expected a template');
+
+    expect(template.value.context.name).toBe('headcount review');
+    expect(template.value.context.memory.map((m) => String(m.value)).join(' ')).not.toContain(
+      'Q3 redundancies',
+    );
+  });
+});
