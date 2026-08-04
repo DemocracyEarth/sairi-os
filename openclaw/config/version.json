@@ -31,8 +31,19 @@
       ]
     },
     "cliSurface": {
-      "status": "read-from-upstream-docs",
+      "status": "flags-verified-against-binary",
       "readOn": "2026-08-01",
+      "verifiedOn": "2026-08-03",
+      "verifiedHow": [
+        "Every flag and value below was checked against `openclaw onboard --help`",
+        "on the real pinned binary in the guest. All eight flags exist; --mode",
+        "accepts local|remote, --secret-input-mode accepts plaintext|ref,",
+        "--gateway-bind accepts loopback, and both --auth-choice values are in",
+        "its enumerated list.",
+        "",
+        "The argv is therefore right. The COMMAND has still never been executed:",
+        "that needs a provider key, and is tracked in ROADMAP.md."
+      ],
       "source": "https://github.com/openclaw/openclaw/blob/main/docs/start/wizard-cli-automation.md",
       "$comment": [
         "services/agent-bridge/src/setup.ts drives `openclaw onboard` with the",

@@ -1,14 +1,16 @@
 # Roadmap
 
-SairiOS is an experiment. This roadmap says what has been built, what has been
-built but not verified, and what comes next. It is deliberately specific about
-the difference.
+SairiOS is an experiment. This roadmap separates what has been built and tested,
+what has been **verified by running it**, what has been built but _not_ verified,
+what is knowingly unfinished, and what comes next. It is deliberately specific
+about those differences, because they are the difference between a claim and a
+demonstration.
 
 A claim moves out of "not verified" only when somebody has run the thing and
 said so, with the date. "It should work" is not a verification, and neither is a
 passing unit test against a fake.
 
-_Last reconciled against the tree: 2026-08-02._
+_Last reconciled against the tree: 2026-08-04._
 
 ## Milestone 0 — vertical slice (current)
 
@@ -37,12 +39,14 @@ subsystems.
 - [x] The logo, drawn as geometry rather than text so it has no font dependency:
       menu bar, first-run setup, favicon, session icon, README
 - [x] End-to-end test of the full flow in mock mode against the real services
-- [x] 338 tests, none requiring a credential or the network
+- [x] 340 tests, none requiring a credential or the network
 
 ### Verified by actually running it
 
-Each of these was moved here by doing it, not by reasoning about it. Four real
-faults in the VM path were found this way and are in the commit history.
+Each of these was moved here by doing it, not by reasoning about it. Running
+these is how nearly every fault in the VM and container paths was found — the
+count is well past the four the first VM commit recorded, and they are in the
+commit history.
 
 - [x] **The VM image builds from scratch and boots.** QEMU on macOS arm64,
       Debian 12, cloud-init provisioned, guest self-check `fail: 0` / `DEGRADED`.
@@ -56,6 +60,12 @@ faults in the VM path were found this way and are in the commit history.
       `SAIRIOS_COMPOSITOR=cage` remains for machines with real GL.
 - [x] **OpenClaw is installed in the image** at the pinned version, verified by
       running the binary in the guest, and the gateway units provision correctly.
+- [x] **The Docker development services build and run** (run 30777686875,
+      2026-08-03). The hardening in compose.yaml is verified behaviourally, not
+      just declared: non-root, read-only root filesystem, `/tmp` writable but
+      noexec, all capabilities dropped, no-new-privileges, pids capped, the
+      sandbox with no route off the box, and no container mounting the Docker
+      socket.
 - [x] **SairiOS speaks to a live gateway.** Handshake, envelope and
       request/response cycle verified 2026-08-03 against openclaw 2026.7.1-2.
       Real captured frames are committed at
@@ -80,20 +90,16 @@ faults in the VM path were found this way and are in the commit history.
       now verified against the real binary, so the argv is right. The command
       itself has still never run. The first person to enter a key is the first
       to run it.
-- [x] **Docker development services.** All four images build, the stack runs,
-      and the hardening in compose.yaml is verified behaviourally: non-root,
-      read-only root filesystem, `/tmp` writable but noexec, all capabilities
-      dropped, no-new-privileges, pids capped, the sandbox with no route off the
-      box, and no container mounting the Docker socket.
 
 ### Known and deliberately unfinished
 
 Not bugs to be discovered later; they are listed because they are already known.
 
-- **Eight of the eleven capabilities are simulated.** Only `files.read`,
-  `files.write` and `files.delete` produce a real side effect. The `simulated`
-  flag is accurate and surfaced in the UI, but a user's first real task will
-  meet it.
+- **Only three of the eleven capabilities do anything real.** `files.read`,
+  `files.write` and `files.delete` have real side effects; seven are simulated;
+  `process.execute` is neither, being denied and unimplemented. The `simulated`
+  flag the UI renders comes from `actions.ts`, and it is accurate — but a user's
+  first real task will meet it.
 - **A granted permission cannot be revoked.** See Milestone 2.
 - **The OpenClaw approval relay is a new trust boundary, reviewed only by its
   author.** It decides whether an external agent runtime may act _outside_ the
@@ -126,7 +132,9 @@ exists is real.
    no credential at all.
 
    Done: codec reconciled against protocol 4, real frames frozen as fixtures,
-   `version.json` moved from `pinned` to `handshake-verified`, and OpenClaw's
+   `version.json`'s `gatewayProtocol.status` moved from `unverified` to
+   `handshake-verified` (the `pinned` value lives on a different field,
+   `openclaw.status`, and is unchanged), and OpenClaw's
    approval round trip wired into the permission broker so a user is asked once
    rather than twice.
 
@@ -145,7 +153,7 @@ exists is real.
    `version.json` to `verified`.
 
 2. ~~**CI.**~~ Done, and every workflow is green on a real runner.
-   `.github/workflows/ci.yml` runs on every push and PR: `make validate`, the
+   `.github/workflows/ci.yml` runs on pushes to `main` and on every PR: `make validate`, the
    boot path (shellcheck, `bash -n`, cloud-init YAML, `systemd-analyze verify`
    on all seven units, `desktop-file-validate`), a credential scan, and
    generated-file freshness. Verified: run 30769693247, all four jobs green.
@@ -220,11 +228,24 @@ sairios-context-service` took the agent bridge down and left it down —
 Exit criterion: the "Built but NOT verified" list is empty and every claim in
 the README has been demonstrated.
 
-**Where that stands:** three of five items are done. What is left is one real
-agent turn (item 1, needs a key), one VM smoke run that has never executed (item
-2), and the reboot round trip (item 3). Everything remaining is a thing to
-_run_, not a thing to build — which is the position this milestone was supposed
-to reach.
+**Where that stands:** four of the five numbered items are done. The fifth is
+partly done, and the remainder of it is **more than a missing API key** — that
+framing was too generous and is corrected here.
+
+Verified: the gateway handshake, envelope, request/response cycle and method
+vocabulary, against a live gateway; and OpenClaw's approvals wired into the
+permission broker.
+
+Still to build: the provider does not implement a session at all.
+`sessions.create` appears nowhere in `services/`, so `run()` sends
+`sessions.send` for a session that was never opened. That is unwritten code, not
+merely unobserved behaviour.
+
+Still to observe, and this is the part needing a key: the `sessions.*` params,
+the `session.*` event payloads, and `exec.approval.resolve`.
+
+Two entries remain unchecked under "Built but NOT verified", not one, and the
+exit criterion also asks that every claim in the README has been demonstrated.
 
 ## Milestone 2 — contexts that hold up under use
 
