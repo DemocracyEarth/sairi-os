@@ -179,12 +179,28 @@ set +x # in case the caller exported an xtrace
 if [ -n "${SAIRIOS_PROVIDER_KEY:-}" ]; then
 	PROVIDER_KEY="$SAIRIOS_PROVIDER_KEY"
 	say "    using SAIRIOS_PROVIDER_KEY from the environment"
-else
+elif [ -t 0 ]; then
 	printf '    paste your %s key (input hidden): ' "$PROVIDER"
 	# -s: no echo. Reading into a variable rather than a file means it never
 	# touches the host filesystem.
 	read -rs PROVIDER_KEY
 	printf '\n'
+else
+	# No terminal to prompt on. Without this branch `read` hits EOF, returns
+	# non-zero, and `set -e` kills the script with no output at all — which is
+	# the worst way to tell someone their automation is missing an input.
+	printf '\n'
+	printf 'connect-model.sh: no terminal to prompt on, and SAIRIOS_PROVIDER_KEY is not set.\n' >&2
+	printf '\n' >&2
+	printf '  Run it from a terminal:\n' >&2
+	printf '      make vm-connect\n' >&2
+	printf '\n' >&2
+	printf '  Or supply the key through the environment, which is what CI and\n' >&2
+	printf '  scripts should do:\n' >&2
+	printf '      SAIRIOS_PROVIDER_KEY="$(cat ~/.anthropic-key)" make vm-connect\n' >&2
+	printf '\n' >&2
+	printf '  Nothing was changed on the guest.\n' >&2
+	exit 1
 fi
 
 [ -n "${PROVIDER_KEY:-}" ] || {
