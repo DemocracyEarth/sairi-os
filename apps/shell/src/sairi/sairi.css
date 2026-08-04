@@ -1367,3 +1367,31 @@
     font-size: var(--t-body);
   }
 }
+
+/* Model status, and the way back into setup. Sits under the Sairi grip so the
+   answer to "what is thinking for me" is always one glance away. */
+.s-intel__setup {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  padding: var(--s-2) var(--s-4);
+  border: 0;
+  border-bottom: 1px solid var(--frost-6);
+  background: transparent;
+  color: var(--frost-4);
+  font: inherit;
+  font-size: var(--t-micro);
+  cursor: pointer;
+  text-align: left;
+}
+
+.s-intel__setup:hover {
+  color: var(--frost-2);
+  background: var(--frost-6);
+}
+
+.s-intel__setup:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}

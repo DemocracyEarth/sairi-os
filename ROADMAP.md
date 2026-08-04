@@ -38,8 +38,21 @@ subsystems.
       the default
 - [x] The logo, drawn as geometry rather than text so it has no font dependency:
       menu bar, first-run setup, favicon, session icon, README
+- [x] **Sairi OS** — the context-native surface at `#/os`, and what the VM now
+      boots into. Dark, cinematic, agent-native, zero new dependencies: every
+      chart, map and diagram is hand-built SVG or CSS. Its organising idea is
+      _convergence_ — a panel's shape encodes how certain its contents are, so
+      the layout carries information rather than containing it. Four example
+      contexts (research, incident, travel, design) each produce a genuinely
+      different workspace.
+- [x] **A setup wizard for the model connection.** Five steps: what Sairi needs,
+      whether OpenClaw is actually installed on this machine, provider, model,
+      key. The runtime check re-reads live state rather than trusting what was
+      captured at mount, and the key step states the four promises next to the
+      field they are about — each of them enforced in setup.ts and asserted in
+      its tests.
 - [x] End-to-end test of the full flow in mock mode against the real services
-- [x] 340 tests, none requiring a credential or the network
+- [x] 355 tests, none requiring a credential or the network
 
 ### Verified by actually running it
 
@@ -60,6 +73,10 @@ commit history.
       `SAIRIOS_COMPOSITOR=cage` remains for machines with real GL.
 - [x] **OpenClaw is installed in the image** at the pinned version, verified by
       running the binary in the guest, and the gateway units provision correctly.
+- [x] **The VM boots into Sairi OS and the wizard runs on it.** Verified
+      2026-08-04 by screenshot from the guest's own compositor, and by driving
+      the wizard against the guest's bridge: the runtime step reports the real
+      `OpenClaw 2026.7.1-2 (0790d9f)` installed in that VM, not a placeholder.
 - [x] **The Docker development services build and run** (run 30777686875,
       2026-08-03). The hardening in compose.yaml is verified behaviourally, not
       just declared: non-root, read-only root filesystem, `/tmp` writable but

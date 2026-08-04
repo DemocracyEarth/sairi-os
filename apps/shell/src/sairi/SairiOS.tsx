@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { AmbientBackground } from './AmbientBackground.js';
 import { Assembly } from './Assembly.js';
+import { SetupWizard } from './SetupWizard.js';
 import { AgentPresence, ConvergenceMeter, ContextSurface, StatusOrb, hue } from './primitives.js';
 import {
   convergence,
@@ -20,6 +21,7 @@ import {
   type SairiContext,
 } from './state.js';
 import { CONTEXT_REGISTRY, LENS_REGISTRY, blankContext } from './contexts/registry.js';
+import { bridgeApi, type SetupStatusRecord } from '../api.js';
 import './tokens.css';
 import './sairi.css';
 
@@ -59,6 +61,10 @@ export function SairiOS(): JSX.Element {
   const [intent, setIntent] = useState('');
   const [intelOpen, setIntelOpen] = useState(false);
   const [switching, setSwitching] = useState(false);
+  const [setup, setSetup] = useState<SetupStatusRecord | null>(null);
+  // Starts dismissed so nothing flashes before the bridge answers. Opens itself
+  // exactly once, when the status comes back unconfigured.
+  const [wizardOpen, setWizardOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const active = useMemo(
@@ -78,6 +84,16 @@ export function SairiOS(): JSX.Element {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  useEffect(() => {
+    // A bridge that does not manage credentials answers 501; setup stays null
+    // and the wizard never appears.
+    void bridgeApi.setupStatus().then((r) => {
+      if (!r.ok) return;
+      setSetup(r.value);
+      if (!r.value.configured) setWizardOpen(true);
+    });
   }, []);
 
   const submit = useCallback(
@@ -275,6 +291,13 @@ export function SairiOS(): JSX.Element {
           </span>
         </button>
 
+        {setup && (
+          <button className="s-intel__setup" onClick={() => setWizardOpen(true)} type="button">
+            <StatusOrb hue={setup.configured ? 'mint' : 'amber'} size={6} />
+            {setup.configured ? `${setup.provider} · ${setup.model}` : 'No model connected'}
+          </button>
+        )}
+
         <div className="s-intel__body">
           <ContextSurface
             accent={active.hue}
@@ -340,6 +363,17 @@ export function SairiOS(): JSX.Element {
 
       {assembling && (
         <Assembly context={assembling} beat={beat} onAdvance={advance} onSkip={finishAssembly} />
+      )}
+
+      {setup && wizardOpen && (
+        <SetupWizard
+          onDismiss={() => setWizardOpen(false)}
+          onDone={(next) => {
+            setSetup(next);
+            setWizardOpen(false);
+          }}
+          status={setup}
+        />
       )}
     </div>
   );

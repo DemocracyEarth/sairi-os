@@ -23,7 +23,13 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Configuration (all overridable from the environment / EnvironmentFile)
 # ---------------------------------------------------------------------------
-SAIRIOS_SHELL_URL="${SAIRIOS_SHELL_URL:-http://127.0.0.1:7800}"
+# The VM boots into Sairi OS — the context-native surface at #/os — not the v0
+# desktop. Both are served by the same shell; the hash decides which mounts.
+#
+# The v0 desktop stays reachable at http://127.0.0.1:7800/ for anyone who wants
+# it, and overriding this variable in the EnvironmentFile switches the machine
+# back without a rebuild.
+SAIRIOS_SHELL_URL="${SAIRIOS_SHELL_URL:-http://127.0.0.1:7800/#/os}"
 SAIRIOS_SHELL_HOST="${SAIRIOS_SHELL_HOST:-127.0.0.1}"
 SAIRIOS_SHELL_PORT="${SAIRIOS_SHELL_PORT:-7800}"
 # Total seconds to wait for the shell port. Generous: on first boot the shell unit may be

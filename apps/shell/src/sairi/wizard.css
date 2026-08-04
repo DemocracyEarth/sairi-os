@@ -1,0 +1,538 @@
+/*
+ * First-run setup.
+ *
+ * Composes the Sairi tokens; defines no colours of its own. The one structural
+ * departure from the workspace is that this is a single centred panel rather
+ * than a three-layer composition — before a model is connected there are no
+ * contexts to navigate and no agents to show, so a rail and an intelligence
+ * column would be chrome around an empty room.
+ */
+
+.s-wiz {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: var(--s-5);
+  overflow-y: auto;
+  background: radial-gradient(
+    120% 90% at 50% -10%,
+    var(--deep) 0%,
+    var(--midnight) 45%,
+    var(--void) 100%
+  );
+  animation: s-wiz-in var(--d-slow) var(--ease-out);
+}
+
+@keyframes s-wiz-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* One light behind the panel, in the chosen provider's hue, so the choice is
+   felt before it is read. */
+.s-wiz__glow {
+  position: absolute;
+  width: min(760px, 90vw);
+  height: min(760px, 90vw);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  filter: blur(120px);
+  opacity: 0.5;
+  pointer-events: none;
+  transition: background var(--d-cine) var(--ease-out);
+  animation: s-wiz-breathe 14s var(--ease-in-out) infinite alternate;
+}
+
+@keyframes s-wiz-breathe {
+  to {
+    transform: scale(1.12);
+    opacity: 0.32;
+  }
+}
+
+.s-wiz__panel {
+  position: relative;
+  width: min(680px, 100%);
+  border-radius: var(--r-xl);
+  border: 1px solid var(--frost-5);
+  background: rgb(8 13 34 / 74%);
+  backdrop-filter: var(--blur-2);
+  box-shadow: var(--e-3);
+  padding: var(--s-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6);
+}
+
+/* ------------------------------------------------------------- the spine */
+
+.s-wiz__spine {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.s-wiz__beat {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-micro);
+  text-transform: uppercase;
+  color: var(--frost-4);
+  flex: 1;
+  min-width: 0;
+}
+
+/* The connector between beats. Fills behind you as you advance. */
+.s-wiz__beat::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--frost-6);
+  transition: background var(--d-slow) var(--ease-out);
+}
+
+.s-wiz__beat:last-child::after {
+  display: none;
+}
+
+.s-wiz__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1px solid var(--frost-5);
+  flex-shrink: 0;
+  transition: all var(--d) var(--ease-spring);
+}
+
+.s-wiz__beat--done {
+  color: var(--frost-3);
+}
+
+.s-wiz__beat--done .s-wiz__dot {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.s-wiz__beat--done::after {
+  background: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.s-wiz__beat--now {
+  color: var(--frost);
+}
+
+.s-wiz__beat--now .s-wiz__dot {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
+  transform: scale(1.35);
+}
+
+.s-wiz__beatlabel {
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------- content */
+
+.s-wiz__stage {
+  min-height: 340px;
+  display: flex;
+  align-items: flex-start;
+}
+
+.s-wiz__step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  width: 100%;
+  animation: s-wiz-step var(--d-slow) var(--ease-out);
+}
+
+.s-wiz__step--center {
+  align-items: center;
+  text-align: center;
+  justify-content: center;
+  min-height: 340px;
+}
+
+@keyframes s-wiz-step {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+}
+
+.s-wiz__eyebrow {
+  margin: 0;
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-micro);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.s-wiz__title {
+  margin: 0;
+  font-size: 27px;
+  font-weight: 600;
+  letter-spacing: var(--track-display);
+  line-height: 1.2;
+  color: var(--frost);
+  max-width: 24ch;
+}
+
+.s-wiz__step--center .s-wiz__title {
+  max-width: none;
+}
+
+.s-wiz__lede {
+  margin: 0;
+  font-size: var(--t-body);
+  line-height: 1.65;
+  color: var(--frost-3);
+  max-width: 58ch;
+}
+
+.s-wiz__facts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.s-wiz__facts li {
+  display: grid;
+  grid-template-columns: 10px 1fr;
+  gap: var(--s-3);
+  align-items: baseline;
+  font-size: var(--t-body);
+  color: var(--frost-2);
+  line-height: 1.55;
+}
+
+/* ------------------------------------------------------------- runtime */
+
+.s-wiz__check {
+  display: grid;
+  grid-template-columns: 12px 1fr;
+  gap: var(--s-3);
+  align-items: start;
+  padding: var(--s-4);
+  border-radius: var(--r);
+  border: 1px solid var(--frost-6);
+  background: rgb(255 255 255 / 2.5%);
+}
+
+.s-wiz__check.is-ok {
+  border-color: color-mix(in srgb, var(--mint) 32%, transparent);
+  background: color-mix(in srgb, var(--mint) 6%, transparent);
+}
+
+.s-wiz__check.is-missing {
+  border-color: color-mix(in srgb, var(--amber) 32%, transparent);
+  background: color-mix(in srgb, var(--amber) 6%, transparent);
+}
+
+.s-wiz__checkline {
+  margin: 0 0 4px;
+  font-family: var(--mono);
+  font-size: var(--t-meta);
+  color: var(--frost);
+}
+
+.s-wiz__checknote {
+  margin: 0;
+  font-size: var(--t-micro);
+  line-height: 1.6;
+  color: var(--frost-4);
+}
+
+.s-wiz__checknote code {
+  font-family: var(--mono);
+  color: var(--frost-3);
+}
+
+.s-wiz__code {
+  margin: 0;
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--frost-6);
+  background: rgb(0 0 0 / 30%);
+  font-family: var(--mono);
+  font-size: var(--t-meta);
+  color: var(--cyan);
+  overflow-x: auto;
+}
+
+.s-wiz__install {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+/* ------------------------------------------------------- provider/model */
+
+.s-wiz__providers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--s-3);
+}
+
+.s-wiz__provider {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: flex-start;
+  padding: var(--s-4);
+  border-radius: var(--r);
+  border: 1px solid var(--frost-5);
+  background: transparent;
+  color: var(--frost-2);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--d-fast) var(--ease-out);
+}
+
+.s-wiz__provider:hover {
+  border-color: var(--frost-4);
+  background: var(--frost-6);
+}
+
+.s-wiz__provider.is-chosen {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--frost);
+  box-shadow: 0 0 26px color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
+.s-wiz__provider:focus-visible,
+.s-wiz__model:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.s-wiz__providername {
+  font-size: var(--t-lead);
+  font-weight: 550;
+}
+
+.s-wiz__providermeta {
+  font-size: var(--t-micro);
+  color: var(--frost-4);
+}
+
+.s-wiz__models {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.s-wiz__model {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-sm);
+  border: 1px solid transparent;
+  background: var(--frost-6);
+  color: var(--frost-2);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--d-fast) var(--ease-out);
+}
+
+.s-wiz__model:hover {
+  background: var(--frost-5);
+}
+
+.s-wiz__model.is-chosen {
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--frost);
+}
+
+.s-wiz__modelname {
+  font-size: var(--t-body);
+  font-weight: 500;
+}
+
+.s-wiz__modelid {
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  color: var(--frost-4);
+}
+
+/* ------------------------------------------------------------------ key */
+
+.s-wiz__key {
+  width: 100%;
+  padding: var(--s-4);
+  border-radius: var(--r);
+  border: 1px solid var(--frost-5);
+  background: rgb(0 0 0 / 28%);
+  color: var(--frost);
+  font-family: var(--mono);
+  font-size: var(--t-lead);
+  letter-spacing: 0.06em;
+  outline: none;
+  transition: all var(--d) var(--ease-out);
+}
+
+.s-wiz__key::placeholder {
+  color: var(--frost-4);
+  letter-spacing: normal;
+}
+
+.s-wiz__key:focus {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 1px var(--accent),
+    0 0 34px color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
+.s-wiz__where {
+  margin: 0;
+  font-size: var(--t-micro);
+  color: var(--frost-4);
+}
+
+.s-wiz__where a {
+  color: var(--accent);
+}
+
+/* The promise, next to the field it is about. */
+.s-wiz__promise {
+  list-style: none;
+  margin: 0;
+  padding: var(--s-4);
+  border-radius: var(--r);
+  border-left: 2px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  background: rgb(255 255 255 / 2.5%);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.s-wiz__promise li {
+  font-size: var(--t-micro);
+  line-height: 1.55;
+  color: var(--frost-3);
+}
+
+.s-wiz__error {
+  margin: 0;
+  padding: var(--s-3);
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--coral) 14%, transparent);
+  color: var(--frost);
+  font-size: var(--t-meta);
+  line-height: 1.55;
+}
+
+/* ----------------------------------------------------------- connecting */
+
+.s-wiz__pulse {
+  display: flex;
+  gap: var(--s-3);
+}
+
+.s-wiz__pulse span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 14px var(--accent);
+  animation: s-wiz-bounce 1.3s var(--ease-in-out) infinite;
+}
+
+.s-wiz__pulse span:nth-child(2) {
+  animation-delay: 0.16s;
+}
+.s-wiz__pulse span:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+@keyframes s-wiz-bounce {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    opacity: 1;
+    transform: translate3d(0, -7px, 0);
+  }
+}
+
+/* -------------------------------------------------------------- actions */
+
+.s-wiz__actions {
+  display: flex;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: var(--s-2);
+}
+
+.s-btn--quiet {
+  border-color: transparent;
+  color: var(--frost-4);
+}
+
+.s-btn--quiet:hover {
+  color: var(--frost-2);
+}
+
+/* ----------------------------------------------------------- responsive */
+
+@media (width <= 720px) {
+  .s-wiz {
+    padding: 0;
+    place-items: stretch;
+  }
+
+  .s-wiz__panel {
+    width: 100%;
+    min-height: 100dvh;
+    border: 0;
+    border-radius: 0;
+    padding: var(--s-5) var(--s-4) calc(var(--s-5) + env(safe-area-inset-bottom));
+    gap: var(--s-5);
+  }
+
+  .s-wiz__title {
+    font-size: 22px;
+  }
+
+  /* Only the current beat is named; the rest stay as dots. Five labels do not
+     fit, and truncating them would be worse than showing position alone. */
+  .s-wiz__beat:not(.s-wiz__beat--now) .s-wiz__beatlabel {
+    display: none;
+  }
+
+  .s-wiz__stage {
+    min-height: 0;
+  }
+
+  /* Primary action within thumb reach and full width. */
+  .s-wiz__actions {
+    flex-direction: column-reverse;
+  }
+
+  .s-wiz__actions .s-btn {
+    width: 100%;
+    padding: 12px 16px;
+  }
+}

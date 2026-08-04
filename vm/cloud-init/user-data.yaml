@@ -203,7 +203,18 @@ write_files:
     content: |
       # Read by sairios-session.service (EnvironmentFile=-/etc/sairios/session.env).
       # Non-secret only. Nothing here is confidential; the file is world readable.
-      SAIRIOS_SHELL_URL=http://127.0.0.1:7800
+      # Sairi OS — the context-native surface — is what the machine boots into.
+      # Same shell and same port as the v0 desktop; the #/os fragment decides
+      # which one mounts.
+      #
+      # QUOTED because systemd treats an unquoted '#' in an EnvironmentFile as
+      # the start of a comment, which silently truncates this to the bare origin
+      # and boots the wrong surface with no error anywhere.
+      #
+      # This file WINS over Environment= in the unit: EnvironmentFile is applied
+      # afterwards. Three places name this URL — here, the unit, and the
+      # launcher's own default — and this is the one that decides.
+      SAIRIOS_SHELL_URL="http://127.0.0.1:7800/#/os"
       SAIRIOS_SHELL_HOST=127.0.0.1
       SAIRIOS_SHELL_PORT=7800
       SAIRIOS_SHELL_WAIT_SECONDS=120

@@ -71,7 +71,15 @@ Environment=XDG_SESSION_TYPE=wayland
 Environment=XDG_SESSION_DESKTOP=sairios
 Environment=XDG_CURRENT_DESKTOP=SairiOS
 # The launcher waits on this before it starts cog.
-Environment=SAIRIOS_SHELL_URL=http://127.0.0.1:7800
+# The machine boots into Sairi OS — the context-native surface — not the v0
+# desktop. Same shell, same port; the hash decides which one mounts.
+#
+# This line overrides the default in the launcher script, so BOTH have to agree.
+# Changing only the script does nothing, which cost a delivery cycle to notice.
+#
+# The v0 desktop is still there at http://127.0.0.1:7800/ and a drop-in or
+# /etc/sairios/session.env switches the machine back without a rebuild.
+Environment=SAIRIOS_SHELL_URL=http://127.0.0.1:7800/#/os
 Environment=SAIRIOS_SHELL_WAIT_SECONDS=120
 EnvironmentFile=-/etc/sairios/session.env
 
