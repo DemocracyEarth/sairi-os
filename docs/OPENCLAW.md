@@ -133,6 +133,49 @@ file appearing is the signal instead.
 Pressing **Not now** is a supported answer. The machine keeps running the mock
 agent, which is a complete system — everything works except the thinking.
 
+## Setup path 0b — connecting the VM, where you cannot paste
+
+QEMU's default display has no clipboard channel. There is nothing to paste into,
+and typing a forty-character key into a kiosk by hand is not a setup flow.
+
+Two ways round it, and neither involves putting a key in the image.
+
+**Set it from the host.** One command, and you never type into the VM at all:
+
+```bash
+make vm-connect
+```
+
+It opens an SSH tunnel to the guest's agent bridge and drives the same
+`POST /setup` the wizard drives, so the real path runs: shape validation, the
+0600 write, `openclaw onboard --secret-input-mode ref`, and the path unit
+starting the gateway. The key is read from a hidden prompt or
+`SAIRIOS_PROVIDER_KEY`, piped to curl on stdin, and never appears in argv, in
+your shell history, or on the host's disk. There is deliberately no `--api-key`
+flag; passing one is refused with an explanation.
+
+**Or use the wizard from your own browser**, where paste works normally:
+
+```bash
+make vm-tunnel
+```
+
+Then open <http://127.0.0.1:7800/#/os>. This forwards all four ports — the shell
+on 7800 plus the three services it calls — because forwarding only 7800 gives
+you a desktop where every request fails and looks like a broken build.
+
+### Why the key is not baked into the image
+
+It is the obvious idea. It is also the one thing CLAUDE.md rules out without
+exception: no credential in source, tests, fixtures, image layers, Dockerfiles
+or cloud-init files.
+
+A key in `user-data` ends up in `vm/out/seed.iso` — an unencrypted file that
+outlives the boot, is copied whenever the image is copied, and is readable by
+anything running on the host. The 0600 file inside the guest is strictly better,
+and both commands above are how a key gets there without one ever touching host
+storage.
+
 ## Setup path 1 — interactive OpenClaw onboarding
 
 1. Install OpenClaw following its own documentation. Do not install it from this

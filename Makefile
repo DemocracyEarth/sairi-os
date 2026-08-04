@@ -14,7 +14,8 @@ SHELL := /bin/bash
 NPM ?= npm
 
 .PHONY: help setup dev test test-watch lint typecheck format format-check build \
-        vm-image vm-image-dry-run vm-run vm-run-headless vm-clean vm-clean-all \
+        vm-image vm-image-dry-run vm-run vm-run-headless vm-tunnel vm-connect \
+        vm-clean vm-clean-all \
         docker-up docker-down doctor clean clean-all validate
 
 help: ## Show the available targets
@@ -85,6 +86,12 @@ vm-run: ## Boot the SairiOS VM with a graphical display
 
 vm-run-headless: ## Boot the VM headless with a serial console (CI smoke test)
 	@bash vm/qemu/run-vm-headless.sh
+
+vm-tunnel: ## Reach the guest desktop from this machine's browser (paste works there)
+	@bash vm/qemu/tunnel.sh
+
+vm-connect: ## Connect the running guest to a model provider, without typing into the VM
+	@bash vm/qemu/connect-model.sh
 
 vm-clean: ## Remove built VM artifacts, keeping the downloaded base image
 	@bash vm/qemu/clean.sh
