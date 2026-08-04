@@ -1,0 +1,166 @@
+/*
+ * Sairi OS — the cinematic token layer.
+ *
+ * Scoped to `.sairi` on purpose. The shipped desktop is a warm, light,
+ * early-Macintosh system with its own token set in
+ * packages/ui-components/src/tokens.css, and it is verified and in use. This
+ * layer does not touch it: both can exist, and a machine can show either.
+ *
+ * ---------------------------------------------------------------------------
+ * Convergence: the one idea these tokens exist to express
+ * ---------------------------------------------------------------------------
+ * A surface's appearance is a function of how CERTAIN its contents are, not of
+ * what kind of widget it is. Three states, and they are visually different
+ * kinds of object rather than three shades of the same one:
+ *
+ *   provisional  wide, dim, cool, dashed edge, low elevation. A question.
+ *   forming      tightening, warming, edge solidifying. Work in progress.
+ *   resolved     narrow, luminous, warm, solid edge, raised. An answer.
+ *
+ * Every `--c-*` token below interpolates across that axis. A panel sets
+ * `--certainty` (0..1) and inherits its whole appearance from it, which is why
+ * the layout can change meaning without any component knowing about layout.
+ *
+ * ---------------------------------------------------------------------------
+ * Performance
+ * ---------------------------------------------------------------------------
+ * Backdrop blur is expensive and is therefore rationed: two levels, used on at
+ * most a handful of surfaces at a time. Animation is restricted to transform
+ * and opacity, which the compositor can run without layout or paint. There is
+ * no requestAnimationFrame loop anywhere in this build — ambient motion is CSS
+ * keyframes on a small number of elements, which the browser can throttle when
+ * the tab is hidden and which cost nothing on the main thread.
+ */
+
+.sairi {
+  /* --- the void ------------------------------------------------------- */
+  --void: #050816;
+  --midnight: #080d22;
+  --deep: #0c1533;
+  --deep-2: #101c40;
+
+  /* Frost. Text and hairlines are white at graded alpha rather than grey,
+     so they pick up whatever light sits behind them. */
+  --frost: rgb(255 255 255 / 92%);
+  --frost-2: rgb(255 255 255 / 72%);
+  --frost-3: rgb(255 255 255 / 48%);
+  --frost-4: rgb(255 255 255 / 28%);
+  --frost-5: rgb(255 255 255 / 12%);
+  --frost-6: rgb(255 255 255 / 6%);
+
+  /* --- spectral ------------------------------------------------------- *
+   * Seven hues, each with a job. Never decorative: if one of these appears,
+   * it is carrying a meaning from the list below.
+   *
+   *   cyan     an agent is working
+   *   violet   synthesis, a knowledge relation
+   *   magenta  a conflict, a contradiction, a blocked path
+   *   coral    a failure, an alert, something wrong
+   *   amber    awaiting a human decision
+   *   mint     resolved, confirmed, safe
+   *   blue     structural, neutral, the default light
+   */
+  --blue: #4c8dff;
+  --cyan: #35d6f0;
+  --violet: #9b7bff;
+  --magenta: #e061c8;
+  --coral: #ff7a66;
+  --amber: #f5b944;
+  --mint: #4fe0a8;
+
+  /* --- convergence axis ---------------------------------------------- *
+   * A surface sets --certainty: 0 (a question) .. 1 (an answer).
+   * Everything below is derived from it. */
+  --certainty: 0;
+
+  /* Edge: dashed and cool when provisional, solid and warm when resolved. */
+  --c-edge-alpha: calc(0.1 + var(--certainty) * 0.34);
+  --c-edge: rgb(255 255 255 / calc(var(--c-edge-alpha) * 100%));
+  /* Fill lifts slightly as it resolves, so a resolved surface reads nearer. */
+  --c-fill: rgb(255 255 255 / calc((0.022 + var(--certainty) * 0.045) * 100%));
+  /* Glow only exists once there is something worth looking at. */
+  --c-glow-alpha: calc(var(--certainty) * var(--certainty) * 0.5);
+  /* Type sharpens as certainty rises. */
+  --c-ink: rgb(255 255 255 / calc((0.5 + var(--certainty) * 0.42) * 100%));
+  --c-lift: calc(var(--certainty) * -3px);
+
+  /* --- elevation ------------------------------------------------------ */
+  --e-0: none;
+  --e-1: 0 1px 2px rgb(0 0 0 / 40%);
+  --e-2: 0 2px 8px rgb(0 0 0 / 45%), 0 12px 32px rgb(0 0 0 / 30%);
+  --e-3: 0 4px 16px rgb(0 0 0 / 50%), 0 24px 64px rgb(0 0 0 / 40%);
+
+  /* Rationed. Two levels, and a budget of a few elements each. */
+  --blur-1: blur(14px);
+  --blur-2: blur(28px);
+
+  /* --- geometry ------------------------------------------------------- */
+  --r-sm: 6px;
+  --r: 12px;
+  --r-lg: 18px;
+  --r-xl: 26px;
+
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+
+  /* --- type ----------------------------------------------------------- *
+   * System stack: no webfont to download, no layout shift, and the CSP
+   * forbids a foreign font host anyway. */
+  --font: ui-sans-serif, -apple-system, 'SF Pro Text', 'Segoe UI', Inter, system-ui, sans-serif;
+  --mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace;
+
+  --t-display: 34px;
+  --t-title: 21px;
+  --t-lead: 16px;
+  --t-body: 13.5px;
+  --t-meta: 12px;
+  --t-micro: 10.5px;
+
+  --track-display: -0.028em;
+  --track-title: -0.018em;
+  --track-micro: 0.09em;
+
+  /* --- motion --------------------------------------------------------- *
+   * One easing for entrances (decelerate — arrives with weight), one for
+   * exits, one spring-ish for anything the pointer drives. */
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.5, 1);
+  --d-fast: 140ms;
+  --d: 260ms;
+  --d-slow: 520ms;
+  --d-cine: 900ms;
+
+  --z-bg: 0;
+  --z-surface: 10;
+  --z-nav: 20;
+  --z-intel: 30;
+  --z-command: 40;
+  --z-overlay: 50;
+
+  color-scheme: dark;
+  font-family: var(--font);
+  color: var(--frost);
+  background: var(--void);
+}
+
+/*
+ * Reduced motion is honoured by removing MOVEMENT, not by removing the
+ * interface. The assembly sequence still runs and still explains what Sairi
+ * did — it simply arrives rather than travels.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .sairi *,
+  .sairi *::before,
+  .sairi *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}

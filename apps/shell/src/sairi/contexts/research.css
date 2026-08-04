@@ -1,0 +1,794 @@
+/*
+ * RESEARCH context lenses.
+ *
+ * Every selector is prefixed `s-res` so four contexts can ship their own lens
+ * styling into the same document without a cascade fight.
+ *
+ * Nothing here sets a colour, a radius or a spacing value directly: those come
+ * from tokens.css, because a lens that invents its own scale stops looking like
+ * the same operating system the moment a token moves. Bare pixel values appear
+ * only for hairlines and for SVG user units, neither of which is spacing.
+ */
+
+/* Text alternatives that must exist for assistive tech but would duplicate the
+   panel chrome if drawn. */
+.s-res-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ *
+ * sources
+ * ------------------------------------------------------------------ */
+
+.s-res-src {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.s-res-src__summary {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-4);
+}
+
+.s-res-src__summarytext {
+  margin: 0;
+  font-size: var(--t-meta);
+  line-height: 1.45;
+  color: var(--frost-3);
+}
+
+.s-res-src__question {
+  margin: 0;
+  max-width: 68ch;
+  font-size: var(--t-lead);
+  line-height: 1.4;
+  letter-spacing: var(--track-title);
+  color: var(--frost-2);
+}
+
+.s-res-src__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.s-res-src__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--s-3);
+  align-items: start;
+  padding: var(--s-3) var(--s-2);
+  border-top: 1px solid var(--frost-6);
+  transition: background-color var(--d-fast) var(--ease-out);
+}
+
+/* The split view drops the ranking: in a contradiction, "first" would imply a
+   winner that has not been decided. */
+.s-res-src__row--norank {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.s-res-src__row:first-child {
+  border-top: none;
+}
+
+.s-res-src__row:hover {
+  background: var(--frost-6);
+}
+
+/* A contested source is not hidden and not softened — it is marked, because the
+   fact that it is contested is itself a finding. */
+.s-res-src__row--contested {
+  box-shadow: inset 2px 0 0 var(--magenta);
+}
+
+.s-res-src__rank {
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  line-height: 1.6;
+  color: var(--frost-4);
+  font-variant-numeric: tabular-nums;
+}
+
+.s-res-src__main {
+  min-width: 0;
+}
+
+.s-res-src__title {
+  margin: 0;
+  font-size: var(--t-body);
+  font-weight: 550;
+  line-height: 1.35;
+  color: var(--c-ink, var(--frost));
+}
+
+.s-res-src__venue {
+  margin: var(--s-1) 0 0;
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  color: var(--frost-3);
+}
+
+.s-res-src__note {
+  margin: var(--s-2) 0 0;
+  max-width: 62ch;
+  font-size: var(--t-meta);
+  line-height: 1.5;
+  color: var(--frost-3);
+}
+
+.s-res-src__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  margin-top: var(--s-2);
+  font-size: var(--t-micro);
+  color: var(--frost-4);
+}
+
+.s-res-src__date,
+.s-res-src__measure {
+  font-family: var(--mono);
+  letter-spacing: 0.02em;
+}
+
+.s-res-src__agent {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  color: var(--frost-3);
+}
+
+.s-res-src__pips {
+  display: inline-flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.s-res-src__pip {
+  width: 3px;
+  height: 7px;
+  border-radius: 1px;
+  background: var(--frost-5);
+}
+
+.s-res-src__pip.is-on {
+  background: var(--accent, var(--violet));
+}
+
+.s-res-src__cred {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--s-1);
+  min-width: 3rem;
+}
+
+.s-res-src__credval {
+  font-family: var(--mono);
+  font-size: var(--t-body);
+  font-variant-numeric: tabular-nums;
+  color: var(--frost-2);
+}
+
+.s-res-src__credbar {
+  display: block;
+  width: 3rem;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--frost-6);
+  overflow: hidden;
+}
+
+.s-res-src__credfill {
+  display: block;
+  height: 100%;
+  width: calc(var(--v) * 100%);
+  border-radius: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+
+/* --- the split: claim against counter-claim ------------------------- */
+
+.s-res-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: var(--s-4);
+  align-items: start;
+}
+
+.s-res-split__col {
+  min-width: 0;
+}
+
+.s-res-split__head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0 0 var(--s-2);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  letter-spacing: var(--track-micro);
+  text-transform: uppercase;
+  color: var(--frost-3);
+}
+
+.s-res-split__spine {
+  align-self: stretch;
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--frost-5) 15%,
+    var(--magenta) 50%,
+    var(--frost-5) 85%,
+    transparent
+  );
+  opacity: 0.55;
+}
+
+.s-res-open {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 18rem);
+  gap: var(--s-5);
+  align-items: start;
+  margin-top: var(--s-3);
+}
+
+.s-res-open__head {
+  margin: 0 0 var(--s-1);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  letter-spacing: var(--track-micro);
+  text-transform: uppercase;
+  color: var(--magenta);
+}
+
+.s-res-open__text {
+  margin: 0;
+  max-width: 72ch;
+  font-size: var(--t-body);
+  line-height: 1.55;
+  color: var(--frost-2);
+}
+
+.s-res-open__pending {
+  padding: var(--s-3);
+  border: 1px dashed var(--frost-5);
+  border-radius: var(--r);
+}
+
+.s-res-open__pendinglabel {
+  display: block;
+  margin-bottom: var(--s-2);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-micro);
+  text-transform: uppercase;
+  color: var(--amber);
+}
+
+/* ------------------------------------------------------------------ *
+ * knowledge-map
+ * ------------------------------------------------------------------ */
+
+.s-res-map {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.s-res-map__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.s-res-map__edge {
+  fill: none;
+  stroke-width: 1.2;
+}
+
+.s-res-map__edge--supports {
+  stroke: var(--mint);
+  opacity: 0.6;
+}
+
+.s-res-map__edge--extends {
+  stroke: var(--violet);
+  stroke-dasharray: 1 4;
+  stroke-linecap: round;
+  opacity: 0.75;
+}
+
+/* The only animated thing in this lens: an unresolved conflict should read as
+   unresolved even when nobody is looking at the legend. Opacity only, so the
+   compositor handles it and no layout is touched. */
+.s-res-map__edge--contradicts {
+  stroke: var(--magenta);
+  stroke-dasharray: 5 3;
+  stroke-width: 1.6;
+  opacity: 0.85;
+  animation: s-res-contest 3.2s var(--ease-in-out) infinite;
+}
+
+@keyframes s-res-contest {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.s-res-map__arrow--supports {
+  fill: var(--mint);
+}
+
+.s-res-map__arrow--contradicts {
+  fill: var(--magenta);
+}
+
+.s-res-map__arrow--extends {
+  fill: var(--violet);
+}
+
+.s-res-map__disc {
+  fill: currentcolor;
+  fill-opacity: 0.16;
+  stroke: currentcolor;
+  stroke-width: 1.2;
+}
+
+.s-res-map__disc--settled {
+  fill-opacity: 0.28;
+}
+
+/* A dashed disc is the same grammar the provisional panel edge uses: an outline
+   that has not closed yet. */
+.s-res-map__disc--disputed {
+  stroke-dasharray: 3 2.5;
+  fill-opacity: 0.08;
+}
+
+/* SVG user units, not layout pixels: this text scales with the viewBox. */
+.s-res-map__label {
+  font-family: var(--font);
+  font-size: 9.5px;
+  fill: var(--frost-2);
+  letter-spacing: 0.01em;
+}
+
+.s-res-map__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--t-micro);
+  color: var(--frost-3);
+}
+
+.s-res-map__legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.s-res-map__legendnote {
+  color: var(--frost-4);
+}
+
+.s-res-map__key {
+  width: var(--s-5);
+  height: 0;
+  border-top-width: 2px;
+}
+
+.s-res-map__key--supports {
+  border-top: 2px solid var(--mint);
+}
+
+.s-res-map__key--contradicts {
+  border-top: 2px dashed var(--magenta);
+}
+
+.s-res-map__key--extends {
+  border-top: 2px dotted var(--violet);
+}
+
+.s-res-map__caption {
+  margin: 0;
+  max-width: 64ch;
+  font-size: var(--t-meta);
+  line-height: 1.5;
+  color: var(--frost-3);
+}
+
+.s-res-map__alt {
+  font-size: var(--t-meta);
+  color: var(--frost-3);
+}
+
+.s-res-map__alt summary {
+  cursor: pointer;
+  padding: var(--s-1) var(--s-2);
+  border-radius: var(--r-sm);
+  color: var(--frost-3);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-micro);
+  text-transform: uppercase;
+}
+
+.s-res-map__alt summary:hover {
+  color: var(--frost);
+  background: var(--frost-6);
+}
+
+.s-res-map__alt summary:focus-visible {
+  outline: 2px solid var(--violet);
+  outline-offset: 2px;
+}
+
+.s-res-map__alt ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin: var(--s-3) 0 0;
+  padding: 0 0 0 var(--s-4);
+  line-height: 1.5;
+}
+
+.s-res-map__alt b {
+  font-weight: 600;
+  color: var(--frost-2);
+}
+
+/* ------------------------------------------------------------------ *
+ * comparison
+ * ------------------------------------------------------------------ */
+
+.s-res-cmp {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.s-res-cmp__wrap {
+  overflow-x: auto;
+  border-radius: var(--r-sm);
+}
+
+.s-res-cmp__wrap:focus-visible {
+  outline: 2px solid var(--violet);
+  outline-offset: 2px;
+}
+
+.s-res-cmp__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--t-meta);
+}
+
+.s-res-cmp__corner {
+  width: 12rem;
+}
+
+.s-res-cmp__colhead {
+  padding: 0 var(--s-3) var(--s-3);
+  text-align: left;
+  vertical-align: bottom;
+  border-bottom: 1px solid var(--frost-5);
+  box-shadow: inset 0 -1px 0 var(--accent, transparent);
+}
+
+.s-res-cmp__name {
+  display: block;
+  font-size: var(--t-body);
+  font-weight: 600;
+  letter-spacing: var(--track-title);
+  color: var(--accent, var(--frost));
+}
+
+.s-res-cmp__sub {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  font-weight: 400;
+  color: var(--frost-4);
+}
+
+.s-res-cmp__verdict {
+  display: block;
+  margin-top: var(--s-2);
+}
+
+.s-res-cmp__metric {
+  padding: var(--s-3) var(--s-3) var(--s-3) var(--s-2);
+  text-align: left;
+  font-weight: 500;
+  color: var(--frost-3);
+  border-bottom: 1px solid var(--frost-6);
+  vertical-align: top;
+}
+
+.s-res-cmp__cell {
+  padding: var(--s-3);
+  vertical-align: top;
+  border-bottom: 1px solid var(--frost-6);
+  color: var(--frost-2);
+}
+
+.s-res-cmp__val {
+  display: block;
+  font-family: var(--mono);
+  font-size: var(--t-meta);
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
+.s-res-cmp__cell--caveat .s-res-cmp__val {
+  color: var(--frost-4);
+}
+
+.s-res-cmp__caveat {
+  margin-left: var(--s-1);
+  color: var(--amber);
+  text-decoration: none;
+  cursor: help;
+}
+
+.s-res-cmp__bar {
+  display: block;
+  width: 100%;
+  height: 2px;
+  margin-top: var(--s-2);
+  background: var(--frost-6);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.s-res-cmp__barfill {
+  display: block;
+  height: 100%;
+  width: calc(var(--v) * 100%);
+  background: var(--accent);
+  /* Glow is proportional to the value, so a strong figure is literally the
+     brightest thing in its row. */
+  box-shadow: 0 0 calc(var(--v) * 10px) var(--accent);
+  transform-origin: left center;
+}
+
+.s-res-cmp__cell--flag {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.s-res-cmp--compact .s-res-cmp__corner {
+  width: 10rem;
+}
+
+.s-res-cmp--compact .s-res-cmp__cell,
+.s-res-cmp--compact .s-res-cmp__metric {
+  padding: var(--s-2);
+}
+
+.s-res-cmp__foot {
+  margin: 0;
+  max-width: 88ch;
+  font-size: var(--t-micro);
+  line-height: 1.55;
+  color: var(--frost-4);
+}
+
+/* ------------------------------------------------------------------ *
+ * timeline
+ * ------------------------------------------------------------------ */
+
+.s-res-tl {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.s-res-tl__scale,
+.s-res-tl__row {
+  display: grid;
+  grid-template-columns: minmax(0, 20rem) minmax(0, 1fr) 3rem;
+  gap: var(--s-4);
+  align-items: center;
+}
+
+.s-res-tl__ticks {
+  position: relative;
+  height: var(--s-4);
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  color: var(--frost-4);
+}
+
+.s-res-tl__tick {
+  position: absolute;
+  top: 0;
+  left: calc(var(--t) * 100%);
+  transform: translateX(-50%);
+}
+
+.s-res-tl__tick--now {
+  left: calc(var(--now) * 100%);
+  color: var(--cyan);
+  letter-spacing: var(--track-micro);
+}
+
+.s-res-tl__confhead {
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-micro);
+  text-transform: uppercase;
+  color: var(--frost-4);
+  text-align: right;
+}
+
+.s-res-tl__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.s-res-tl__row {
+  padding: var(--s-2) 0;
+  border-top: 1px solid var(--frost-6);
+}
+
+.s-res-tl__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.s-res-tl__label {
+  font-size: var(--t-body);
+  line-height: 1.3;
+  color: var(--frost-2);
+}
+
+.s-res-tl__date {
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  color: var(--frost-4);
+}
+
+/* Year gridlines live on the track itself, so they line up across every row
+   without a second absolutely positioned layer to keep in sync. */
+.s-res-tl__track {
+  position: relative;
+  display: block;
+  height: var(--s-5);
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--frost-6) 0 1px,
+    transparent 1px calc(100% / 3.5)
+  );
+}
+
+.s-res-tl__band {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--t0) * 100%);
+  width: calc((var(--t1) - var(--t0)) * 100%);
+  min-width: 2px;
+  height: 6px;
+  transform: translateY(-50%);
+  border-radius: 3px;
+  background: var(--accent);
+  /* Confidence, not date: a wide bar can still be a weak one. */
+  opacity: calc(0.14 + var(--k) * 0.5);
+}
+
+.s-res-tl__dot {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--t) * 100%);
+  width: 7px;
+  height: 7px;
+  margin-left: -3.5px;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 calc(var(--k) * 12px) var(--accent);
+}
+
+.s-res-tl__now {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--now) * 100%);
+  width: 1px;
+  background: var(--cyan);
+  opacity: 0.35;
+}
+
+/* A target is drawn like a provisional panel: dashed outline, no fill weight. */
+.s-res-tl__row--forecast .s-res-tl__band {
+  background: repeating-linear-gradient(90deg, var(--accent) 0 3px, transparent 3px 7px);
+}
+
+.s-res-tl__row--forecast .s-res-tl__label,
+.s-res-tl__row--forecast .s-res-tl__conf {
+  color: var(--frost-3);
+}
+
+.s-res-tl__conf {
+  font-family: var(--mono);
+  font-size: var(--t-meta);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--frost-2);
+}
+
+.s-res-tl__legend {
+  margin: var(--s-2) 0 0;
+  max-width: 92ch;
+  font-size: var(--t-micro);
+  line-height: 1.55;
+  color: var(--frost-4);
+}
+
+/* ------------------------------------------------------------------ *
+ * Narrow widths
+ *
+ * A provisional panel is wide by design, but the viewport may not be. The split
+ * and the timeline collapse to a single column rather than shrinking, because a
+ * two-column comparison at 300px is worse than a list.
+ * ------------------------------------------------------------------ */
+
+@media (width <= 900px) {
+  .s-res-split,
+  .s-res-open {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .s-res-split__spine {
+    display: none;
+  }
+
+  /* The axis keeps its three columns so the year ticks stay aligned with the
+     bars; only the label column gives up width. */
+  .s-res-tl__scale,
+  .s-res-tl__row {
+    grid-template-columns: minmax(0, 9rem) minmax(0, 1fr) 2.5rem;
+    gap: var(--s-3);
+  }
+}
+
+/*
+ * tokens.css already neutralises durations across `.sairi`. This restates it
+ * locally so the file is correct when read on its own, and so the contradiction
+ * edge settles at full strength rather than mid-fade.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .s-res-map__edge--contradicts {
+    animation: none;
+    opacity: 0.85;
+  }
+}

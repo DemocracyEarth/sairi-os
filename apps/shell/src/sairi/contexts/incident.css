@@ -1,0 +1,753 @@
+/*
+ * INCIDENT — lens interiors for "checkout payments are failing for some users".
+ *
+ * Every class is prefixed `s-inc` so four context authors cannot collide in one
+ * stylesheet namespace. Colour, spacing, radius and easing all come from
+ * tokens.css; nothing here picks a literal.
+ *
+ * The hue discipline from tokens.css is load-bearing in this context, because
+ * an incident is exactly where colour has to mean something:
+ *   coral   the failure itself
+ *   amber   waiting on a human, or a threshold about to break
+ *   mint    healthy, or an explanation that survived testing
+ *   magenta a contradiction — here, an eliminated hypothesis
+ *   cyan    an agent is working on it
+ */
+
+/* --- shared ------------------------------------------------------------- */
+
+.s-inc-log,
+.s-inc-health,
+.s-inc-hyp,
+.s-inc-seq {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+/* ======================================================================== *
+ * logs
+ * ======================================================================== */
+
+.s-inc-log__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+}
+
+.s-inc-log__stream {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-family: var(--mono);
+  font-size: var(--t-meta);
+  color: var(--frost-2);
+}
+
+.s-inc-log__window {
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  color: var(--frost-4);
+  letter-spacing: var(--track-micro);
+}
+
+.s-inc-log__filters {
+  display: flex;
+  gap: var(--s-1);
+  margin-inline-start: auto;
+}
+
+.s-inc-log__btn {
+  padding: var(--s-1) var(--s-2);
+  border: 1px solid var(--frost-5);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--frost-3);
+  font-family: var(--font);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-micro);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    color var(--d-fast) var(--ease-out),
+    border-color var(--d-fast) var(--ease-out);
+}
+
+.s-inc-log__btn:hover {
+  color: var(--frost);
+  border-color: var(--frost-4);
+}
+
+.s-inc-log__btn[aria-pressed='true'] {
+  color: var(--coral);
+  border-color: color-mix(in oklab, var(--coral) 55%, transparent);
+  background: color-mix(in oklab, var(--coral) 12%, transparent);
+}
+
+.s-inc-log__btn:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+/*
+ * A bounded, focusable stream. Bounded because a log region that grows without
+ * limit pushes every other panel off the screen, and the panel grid is the
+ * thing carrying the meaning here.
+ */
+.s-inc-log__scroll {
+  max-block-size: 280px;
+  overflow-y: auto;
+  border: 1px solid var(--frost-6);
+  border-radius: var(--r-sm);
+  background: rgb(0 0 0 / 26%);
+  scrollbar-width: thin;
+}
+
+.s-inc-log__scroll:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+.s-inc-log__list {
+  margin: 0;
+  padding: var(--s-2);
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.s-inc-log__line {
+  display: grid;
+  grid-template-columns: auto auto auto auto 1fr;
+  gap: var(--s-2);
+  align-items: baseline;
+  padding: 2px var(--s-1);
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  line-height: 1.55;
+  color: var(--frost-3);
+}
+
+.s-inc-log__t {
+  color: var(--frost-4);
+  font-variant-numeric: tabular-nums;
+}
+
+.s-inc-log__lvl {
+  inline-size: 5ch;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.s-inc-log__svc {
+  color: var(--frost-2);
+}
+
+.s-inc-log__region {
+  color: var(--frost-4);
+}
+
+.s-inc-log__msg {
+  display: block;
+  color: inherit;
+  overflow-wrap: anywhere;
+}
+
+.s-inc-log__frame {
+  display: block;
+  padding-inline-start: var(--s-4);
+  color: var(--frost-4);
+  overflow-wrap: anywhere;
+}
+
+.s-inc-log__line[data-level='debug'] .s-inc-log__lvl {
+  color: var(--frost-4);
+}
+.s-inc-log__line[data-level='info'] .s-inc-log__lvl {
+  color: var(--blue);
+}
+.s-inc-log__line[data-level='warn'] .s-inc-log__lvl {
+  color: var(--amber);
+}
+.s-inc-log__line[data-level='error'] .s-inc-log__lvl {
+  color: var(--coral);
+}
+.s-inc-log__line[data-level='fatal'] .s-inc-log__lvl {
+  color: var(--magenta);
+}
+
+/* Errors carry a left edge as well as a coloured level, so the shape of the
+   failure is visible when the region is scrolled fast. */
+.s-inc-log__line[data-level='error'],
+.s-inc-log__line[data-level='fatal'] {
+  color: var(--frost-2);
+  background: color-mix(in oklab, var(--coral) 8%, transparent);
+  box-shadow: inset 2px 0 0 var(--coral);
+}
+
+.s-inc-log__line[data-level='fatal'] {
+  background: color-mix(in oklab, var(--magenta) 12%, transparent);
+  box-shadow: inset 2px 0 0 var(--magenta);
+}
+
+.s-inc-log__foot {
+  margin: 0;
+  font-size: var(--t-micro);
+  color: var(--frost-4);
+  letter-spacing: var(--track-micro);
+}
+
+/* ======================================================================== *
+ * health
+ * ======================================================================== */
+
+.s-inc-health__summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--s-3);
+}
+
+.s-inc-health__fleet {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.s-inc-health__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--s-1) var(--s-3);
+  align-items: center;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--frost-6);
+  border-radius: var(--r-sm);
+  background: rgb(255 255 255 / 2.5%);
+}
+
+/* State lives on the left edge rather than in the fill: five tinted cards read
+   as decoration, five tinted edges read as a status column. */
+.s-inc-health__row[data-state='critical'] {
+  box-shadow: inset 2px 0 0 var(--coral);
+}
+.s-inc-health__row[data-state='degraded'] {
+  box-shadow: inset 2px 0 0 var(--amber);
+}
+.s-inc-health__row[data-state='healthy'] {
+  box-shadow: inset 2px 0 0 var(--mint);
+}
+
+.s-inc-health__id {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  min-inline-size: 0;
+}
+
+.s-inc-health__name {
+  font-family: var(--mono);
+  font-size: var(--t-meta);
+  color: var(--frost);
+}
+
+.s-inc-health__where {
+  font-size: var(--t-micro);
+  color: var(--frost-4);
+  letter-spacing: var(--track-micro);
+}
+
+.s-inc-health__spark {
+  grid-row: 1;
+  grid-column: 2;
+  inline-size: 96px;
+  block-size: 26px;
+}
+
+.s-inc-health__sparkline {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.s-inc-health__sparkarea {
+  fill: var(--accent);
+  opacity: 0.14;
+  stroke: none;
+}
+
+.s-inc-health__deploy line {
+  stroke: var(--frost-3);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+
+.s-inc-health__deploy circle {
+  fill: var(--frost-2);
+}
+
+.s-inc-health__nums {
+  grid-column: 1 / -1;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-4);
+}
+
+.s-inc-health__nums > div {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-1);
+}
+
+.s-inc-health__nums dt {
+  font-size: var(--t-micro);
+  color: var(--frost-4);
+  letter-spacing: var(--track-micro);
+  text-transform: uppercase;
+}
+
+.s-inc-health__nums dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  color: var(--frost-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.s-inc-health__row[data-state='critical'] .s-inc-health__hot {
+  color: var(--coral);
+}
+.s-inc-health__row[data-state='degraded'] .s-inc-health__hot {
+  color: var(--amber);
+}
+
+.s-inc-health__sat {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.s-inc-health__satlabel {
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  color: var(--frost-4);
+  inline-size: 7ch;
+}
+
+.s-inc-health__sattrack {
+  flex: 1;
+  block-size: 3px;
+  border-radius: 2px;
+  background: var(--frost-6);
+  overflow: hidden;
+}
+
+.s-inc-health__satfill {
+  display: block;
+  block-size: 100%;
+  border-radius: 2px;
+  background: var(--frost-3);
+}
+
+.s-inc-health__row[data-state='critical'] .s-inc-health__satfill {
+  background: var(--coral);
+}
+.s-inc-health__row[data-state='degraded'] .s-inc-health__satfill {
+  background: var(--amber);
+}
+
+.s-inc-health__note {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: var(--t-micro);
+  line-height: 1.5;
+  color: var(--frost-3);
+}
+
+/* ======================================================================== *
+ * hypotheses
+ * ======================================================================== */
+
+.s-inc-hyp__q {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.s-inc-hyp__question {
+  margin: 0;
+  flex: 1 1 260px;
+  font-size: var(--t-body);
+  line-height: 1.5;
+  color: var(--frost-2);
+}
+
+.s-inc-hyp__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+/*
+ * The convergence rule applied at card scale: an eliminated hypothesis is wide,
+ * flat and dim; the confirmed one is inset, lifted and warm.
+ *
+ * --certainty is set inline by the card and re-derived here rather than read
+ * from the --c-* tokens. Those tokens resolve their var() references once, on
+ * .sairi, and descendants inherit the resulting string — so a nested surface
+ * that wants the same behaviour has to do the arithmetic itself.
+ */
+.s-inc-hyp__card {
+  --edge: rgb(255 255 255 / calc((0.08 + var(--certainty) * 0.3) * 100%));
+
+  margin-inline: calc(var(--certainty) * var(--s-4));
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--edge);
+  border-radius: var(--r);
+  background: rgb(255 255 255 / calc((0.018 + var(--certainty) * 0.04) * 100%));
+  opacity: calc(0.62 + var(--certainty) * 0.38);
+  transform: translateY(calc(var(--certainty) * -2px));
+  transition:
+    margin var(--d-slow) var(--ease-out),
+    opacity var(--d-slow) var(--ease-out),
+    transform var(--d-slow) var(--ease-out);
+}
+
+.s-inc-hyp__card[data-state='eliminated'] {
+  border-style: dashed;
+}
+
+.s-inc-hyp__card[data-state='confirmed'] {
+  border-color: color-mix(in oklab, var(--accent) 46%, transparent);
+  box-shadow:
+    var(--e-2),
+    0 0 32px color-mix(in oklab, var(--accent) 16%, transparent);
+}
+
+.s-inc-hyp__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.s-inc-hyp__conf {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.s-inc-hyp__confnum {
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.s-inc-hyp__confbar {
+  inline-size: 56px;
+  block-size: 3px;
+  border-radius: 2px;
+  background: var(--frost-6);
+  background-image: linear-gradient(to right, var(--accent), var(--accent));
+  background-size: calc(var(--v) * 100%) 100%;
+  background-repeat: no-repeat;
+}
+
+.s-inc-hyp__claim {
+  margin: var(--s-2) 0 0;
+  font-size: var(--t-body);
+  line-height: 1.55;
+  color: var(--frost);
+}
+
+.s-inc-hyp__card[data-state='eliminated'] .s-inc-hyp__claim,
+.s-inc-hyp__card[data-state='untested'] .s-inc-hyp__claim {
+  color: var(--frost-2);
+}
+
+.s-inc-hyp__card[data-state='confirmed'] .s-inc-hyp__claim {
+  font-size: var(--t-lead);
+  letter-spacing: var(--track-title);
+}
+
+.s-inc-hyp__ev {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--s-3);
+  margin-block-start: var(--s-3);
+}
+
+.s-inc-hyp__ev h4 {
+  margin: 0 0 var(--s-1);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  letter-spacing: var(--track-micro);
+  text-transform: uppercase;
+  color: var(--frost-4);
+}
+
+.s-inc-hyp__ev ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.s-inc-hyp__ev li {
+  position: relative;
+  padding-inline-start: var(--s-4);
+  font-size: var(--t-meta);
+  line-height: 1.5;
+  color: var(--frost-3);
+}
+
+/* Evidence markers are content, not decoration, so they are drawn rather than
+   typed: a "+" in the text would be read aloud on every single line. */
+.s-inc-hyp__ev li::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 0.55em;
+  inset-inline-start: 0;
+  inline-size: var(--s-2);
+  block-size: 1px;
+  background: currentcolor;
+}
+
+.s-inc-hyp__for li::before {
+  block-size: 7px;
+  inline-size: 7px;
+  inset-block-start: 0.35em;
+  border-radius: 50%;
+  background: var(--mint);
+}
+
+.s-inc-hyp__against li::before {
+  background: var(--coral);
+  block-size: 2px;
+}
+
+.s-inc-hyp__method {
+  margin: var(--s-3) 0 0;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--t-micro);
+  color: var(--frost-4);
+}
+
+.s-inc-hyp__draft {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding-block-start: var(--s-2);
+  border-block-start: 1px dashed var(--frost-6);
+}
+
+.s-inc-hyp__drafting {
+  margin: 0;
+  font-size: var(--t-micro);
+  color: var(--frost-4);
+  letter-spacing: var(--track-micro);
+}
+
+/* ======================================================================== *
+ * sequence
+ * ======================================================================== */
+
+.s-inc-seq__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.s-inc-seq__budget {
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  color: var(--frost-4);
+}
+
+.s-inc-seq__svg {
+  inline-size: 100%;
+  block-size: auto;
+  overflow: visible;
+}
+
+.s-inc-seq__lane {
+  fill: rgb(255 255 255 / 4%);
+  stroke: var(--frost-5);
+  stroke-width: 1;
+}
+
+.s-inc-seq__lanename {
+  fill: var(--frost);
+  font-family: var(--mono);
+  font-size: 10.5px;
+}
+
+.s-inc-seq__lanesub {
+  fill: var(--frost-4);
+  font-family: var(--font);
+  font-size: 9px;
+  letter-spacing: var(--track-micro);
+}
+
+.s-inc-seq__life {
+  stroke: var(--frost-6);
+  stroke-width: 1;
+  stroke-dasharray: 3 5;
+}
+
+.s-inc-seq__at {
+  fill: var(--frost-4);
+  font-family: var(--mono);
+  font-size: 9px;
+}
+
+.s-inc-seq__arrow {
+  fill: none;
+  stroke: var(--frost-3);
+  stroke-width: 1.2;
+}
+
+.s-inc-seq__head {
+  fill: var(--frost-3);
+}
+
+.s-inc-seq__head--bad {
+  fill: var(--coral);
+}
+
+.s-inc-seq__label {
+  fill: var(--frost-2);
+  font-family: var(--mono);
+  font-size: 9px;
+}
+
+.s-inc-seq__step[data-kind='error'] .s-inc-seq__arrow {
+  stroke: var(--coral);
+  stroke-dasharray: 5 3;
+}
+
+.s-inc-seq__step[data-kind='error'] .s-inc-seq__label {
+  fill: var(--coral);
+}
+
+.s-inc-seq__step[data-bad='true'] .s-inc-seq__arrow {
+  stroke: var(--coral);
+  stroke-width: 1.8;
+}
+
+.s-inc-seq__step[data-kind='never'] .s-inc-seq__arrow {
+  stroke: var(--frost-5);
+  stroke-dasharray: 2 4;
+}
+
+.s-inc-seq__step[data-kind='never'] .s-inc-seq__label {
+  fill: var(--frost-4);
+}
+
+.s-inc-seq__cross {
+  fill: var(--frost-3);
+  font-family: var(--font);
+  font-size: 10px;
+}
+
+/* The band breathes rather than blinks: opacity only, so the compositor can
+   run it, and the reduced-motion rule in tokens.css stops it dead. */
+.s-inc-seq__band {
+  fill: color-mix(in oklab, var(--coral) 14%, transparent);
+  stroke: color-mix(in oklab, var(--coral) 32%, transparent);
+  stroke-width: 1;
+  animation: s-inc-band 3.2s var(--ease-in-out) infinite;
+}
+
+@keyframes s-inc-band {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.s-inc-seq__caption {
+  margin: 0;
+  font-size: var(--t-meta);
+  line-height: 1.55;
+  color: var(--frost-2);
+}
+
+.s-inc-seq__legend {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-4);
+}
+
+.s-inc-seq__legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--t-micro);
+  color: var(--frost-4);
+  letter-spacing: var(--track-micro);
+}
+
+.s-inc-seq__legend li::before {
+  content: '';
+  inline-size: var(--s-4);
+  block-size: 2px;
+  border-radius: 1px;
+  background: var(--frost-3);
+}
+
+.s-inc-seq__legend li[data-swatch='bad']::before {
+  background: var(--coral);
+  block-size: 3px;
+}
+
+.s-inc-seq__legend li[data-swatch='never']::before {
+  background: repeating-linear-gradient(to right, var(--frost-4) 0 3px, transparent 3px 6px);
+}
+
+/* --- narrow panels ------------------------------------------------------ *
+ * A resolved panel is narrow by design, so these interiors have to survive at
+ * roughly a third of the desktop width without a horizontal scrollbar. */
+@media (width <= 900px) {
+  .s-inc-health__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .s-inc-health__spark {
+    grid-row: auto;
+    grid-column: 1;
+  }
+
+  .s-inc-hyp__card {
+    margin-inline: 0;
+  }
+
+  .s-inc-log__filters {
+    margin-inline-start: 0;
+  }
+}

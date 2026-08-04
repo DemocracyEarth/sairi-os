@@ -95,11 +95,19 @@ commit history.
 
 Not bugs to be discovered later; they are listed because they are already known.
 
-- **Only three of the eleven capabilities do anything real.** `files.read`,
-  `files.write` and `files.delete` have real side effects; seven are simulated;
-  `process.execute` is neither, being denied and unimplemented. The `simulated`
-  flag the UI renders comes from `actions.ts`, and it is accurate — but a user's
-  first real task will meet it.
+- **Six of the eleven capabilities are simulated.** Counted from the flag the
+  UI actually renders, `simulated` in `actions.ts`: `process.list`,
+  `network.fetch`, `browser.open`, `clipboard.read`, `clipboard.write` and
+  `notifications.send`. Four do real work — the three `files.*` plus
+  `system.settings.read`, which returns real SairiOS configuration.
+  `process.execute` is neither: it is refused as `not_implemented` and produces
+  no outcome at all.
+
+- **Two flags disagree about `system.settings.read`.** `actions.ts` returns
+  `simulated: false` (it reads real configuration) while `policy.ts` describes it
+  as `realSideEffect: false`. One of them is wrong and they are read by different
+  surfaces. Worth reconciling before either is quoted as authority again — this
+  roadmap has now quoted the wrong one twice.
 - **A granted permission cannot be revoked.** See Milestone 2.
 - **The OpenClaw approval relay is a new trust boundary, reviewed only by its
   author.** It decides whether an external agent runtime may act _outside_ the

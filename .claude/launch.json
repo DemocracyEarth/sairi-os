@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "shell",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["apps/shell/serve.mjs"],
+      "port": 7800
+    }
+  ]
+}

@@ -1,0 +1,1369 @@
+/*
+ * Sairi OS — structure, surfaces and motion.
+ *
+ * Token values live in tokens.css. This file only composes them.
+ *
+ * Two rules held throughout:
+ *   1. Animate transform and opacity only. Nothing here triggers layout.
+ *   2. Backdrop blur is rationed. It appears on the navigation rail, the
+ *      intelligence layer, the command field and the assembly scrim — four
+ *      elements, none of which overlap heavily. Putting it on every panel is
+ *      what makes glass interfaces stutter.
+ */
+
+/* ---------------------------------------------------------------- layout */
+
+.s-os {
+  display: grid;
+  grid-template-columns: 264px minmax(0, 1fr) 340px;
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'nav work intel'
+    'nav command intel';
+  height: 100dvh;
+  overflow: hidden;
+  position: relative;
+  isolation: isolate;
+}
+
+.s-os.is-switching .s-work {
+  animation: s-context-in var(--d-slow) var(--ease-out);
+}
+
+@keyframes s-context-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0) scale(0.994);
+  }
+}
+
+/* ------------------------------------------------------------- ambient */
+
+.s-ambient {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-bg);
+  overflow: hidden;
+  background: radial-gradient(
+    120% 90% at 50% -20%,
+    var(--deep) 0%,
+    var(--midnight) 45%,
+    var(--void) 100%
+  );
+  pointer-events: none;
+}
+
+.s-ambient__field {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.5;
+  will-change: transform;
+}
+
+.s-ambient__field--1 {
+  width: 46vw;
+  height: 46vw;
+  left: -8vw;
+  top: -12vw;
+  background: color-mix(in srgb, var(--accent) 42%, transparent);
+  animation: s-drift-a 46s var(--ease-in-out) infinite alternate;
+}
+
+.s-ambient__field--2 {
+  width: 38vw;
+  height: 38vw;
+  right: -6vw;
+  top: 18vh;
+  background: color-mix(in srgb, var(--violet) 30%, transparent);
+  animation: s-drift-b 58s var(--ease-in-out) infinite alternate;
+}
+
+.s-ambient__field--3 {
+  width: 52vw;
+  height: 30vw;
+  left: 22vw;
+  bottom: -18vw;
+  background: color-mix(in srgb, var(--blue) 26%, transparent);
+  animation: s-drift-c 72s var(--ease-in-out) infinite alternate;
+}
+
+@keyframes s-drift-a {
+  to {
+    transform: translate3d(6vw, 4vh, 0) scale(1.12);
+  }
+}
+@keyframes s-drift-b {
+  to {
+    transform: translate3d(-5vw, -6vh, 0) scale(1.08);
+  }
+}
+@keyframes s-drift-c {
+  to {
+    transform: translate3d(4vw, -3vh, 0) scale(1.14);
+  }
+}
+
+/* Hides gradient banding on 8-bit panels. */
+.s-ambient__grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+}
+
+/* ---------------------------------------------------------- navigation */
+
+.s-nav {
+  grid-area: nav;
+  z-index: var(--z-nav);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+  padding: var(--s-5) var(--s-4);
+  border-right: 1px solid var(--frost-6);
+  background: rgb(5 8 22 / 55%);
+  backdrop-filter: var(--blur-1);
+  min-height: 0;
+}
+
+.s-nav__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 0 var(--s-2);
+}
+
+.s-nav__mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, var(--cyan), var(--violet) 55%, var(--magenta));
+  box-shadow: 0 0 18px color-mix(in srgb, var(--violet) 55%, transparent);
+}
+
+.s-nav__name {
+  font-size: var(--t-lead);
+  font-weight: 600;
+  letter-spacing: var(--track-title);
+}
+
+.s-nav__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+/* A context in the rail is a memory: brightness is recency, the spine is hue. */
+.s-nav__item {
+  position: relative;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 3px 1fr auto;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-2);
+  border: 0;
+  border-radius: var(--r);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  opacity: calc(0.5 + var(--heat, 1) * 0.5);
+  transition:
+    background var(--d-fast) var(--ease-out),
+    opacity var(--d-fast) var(--ease-out),
+    transform var(--d-fast) var(--ease-out);
+}
+
+.s-nav__item:hover {
+  background: var(--frost-6);
+  opacity: 1;
+}
+
+.s-nav__item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.s-nav__item.is-active {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  opacity: 1;
+}
+
+.s-nav__spine {
+  align-self: stretch;
+  border-radius: 2px;
+  background: var(--accent);
+  opacity: 0;
+  transform: scaleY(0.3);
+  transition: all var(--d) var(--ease-spring);
+}
+
+.s-nav__item.is-active .s-nav__spine {
+  opacity: 1;
+  transform: scaleY(1);
+  box-shadow: 0 0 12px var(--accent);
+}
+
+.s-nav__text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.s-nav__kind {
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-micro);
+  text-transform: uppercase;
+  color: var(--frost-4);
+}
+
+.s-nav__title {
+  font-size: var(--t-body);
+  color: var(--frost-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.s-nav__item.is-active .s-nav__title {
+  color: var(--frost);
+}
+
+.s-nav__hint {
+  margin: 0;
+  padding: 0 var(--s-2);
+  font-size: var(--t-micro);
+  color: var(--frost-4);
+}
+
+.s-nav__hint kbd {
+  font-family: var(--mono);
+  background: var(--frost-6);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+/* ------------------------------------------------------------ workspace */
+
+.s-work {
+  grid-area: work;
+  z-index: var(--z-surface);
+  overflow-y: auto;
+  padding: var(--s-6) var(--s-6) var(--s-4);
+  min-height: 0;
+}
+
+.s-work__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-5);
+  margin-bottom: var(--s-6);
+  flex-wrap: wrap;
+}
+
+.s-work__kind {
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-micro);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.s-work__title h1 {
+  margin: var(--s-2) 0 var(--s-2);
+  font-size: var(--t-display);
+  font-weight: 600;
+  letter-spacing: var(--track-display);
+  line-height: 1.1;
+  max-width: 22ch;
+}
+
+.s-work__objective {
+  margin: 0;
+  font-size: var(--t-body);
+  color: var(--frost-3);
+  max-width: 62ch;
+}
+
+/* Twelve columns so a panel's certainty can drive its width directly. */
+.s-work__grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--s-4);
+  align-items: start;
+  padding-bottom: var(--s-6);
+}
+
+/* -------------------------------------------------------- ContextSurface */
+
+.s-surface {
+  grid-column: span var(--span, 4);
+  position: relative;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--c-edge);
+  background: var(--c-fill);
+  padding: var(--s-4);
+  transform: translate3d(0, var(--c-lift), 0);
+  transition:
+    border-color var(--d-slow) var(--ease-out),
+    background var(--d-slow) var(--ease-out),
+    box-shadow var(--d-slow) var(--ease-out),
+    transform var(--d-slow) var(--ease-out);
+  animation: s-surface-in var(--d-slow) var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 55ms);
+  min-width: 0;
+}
+
+/* The convergence axis, made visible in three lines. */
+.s-surface--provisional {
+  border-style: dashed;
+  box-shadow: var(--e-1);
+}
+
+.s-surface--forming {
+  box-shadow: var(--e-2);
+}
+
+.s-surface--resolved {
+  box-shadow:
+    var(--e-3),
+    0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent),
+    0 0 32px color-mix(in srgb, var(--accent) calc(var(--c-glow-alpha) * 60%), transparent);
+}
+
+@keyframes s-surface-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.985);
+  }
+}
+
+.s-surface__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-bottom: var(--s-3);
+}
+
+.s-surface__kind {
+  display: block;
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-micro);
+  text-transform: uppercase;
+  color: var(--frost-4);
+  margin-bottom: 3px;
+}
+
+.s-surface__title {
+  margin: 0;
+  font-size: var(--t-lead);
+  font-weight: 550;
+  letter-spacing: var(--track-title);
+  color: var(--c-ink);
+}
+
+.s-surface__tools {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-shrink: 0;
+}
+
+/* Provenance: which agent produced this panel. */
+.s-surface__author {
+  font-size: var(--t-micro);
+  color: var(--frost-4);
+  border: 1px solid var(--frost-6);
+  border-radius: 100px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+.s-surface__body {
+  font-size: var(--t-body);
+  color: var(--frost-2);
+  min-width: 0;
+}
+
+/* A provisional panel is still thinking, and says so with a travelling edge. */
+.s-surface__seeking {
+  position: absolute;
+  inset-inline: 12%;
+  top: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0.7;
+  animation: s-seek 3.4s var(--ease-in-out) infinite;
+}
+
+@keyframes s-seek {
+  0%,
+  100% {
+    transform: translate3d(-40%, 0, 0) scaleX(0.4);
+    opacity: 0;
+  }
+  50% {
+    transform: translate3d(40%, 0, 0) scaleX(1);
+    opacity: 0.8;
+  }
+}
+
+/* ------------------------------------------------------------ primitives */
+
+.s-orb {
+  width: var(--orb, 8px);
+  height: var(--orb, 8px);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.s-orb--pulse {
+  animation: s-pulse 2.4s var(--ease-in-out) infinite;
+}
+
+@keyframes s-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.82);
+  }
+}
+
+.s-divider {
+  display: block;
+  height: 1px;
+  margin: var(--s-3) 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--accent) 40%, transparent),
+    transparent
+  );
+}
+
+.s-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.s-metric__value {
+  font-size: var(--t-title);
+  font-weight: 600;
+  letter-spacing: var(--track-title);
+  font-variant-numeric: tabular-nums;
+  color: var(--accent, var(--frost));
+}
+
+.s-metric__label {
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-micro);
+  text-transform: uppercase;
+  color: var(--frost-4);
+}
+
+.s-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--t-micro);
+  padding: 2px 8px;
+  border-radius: 100px;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
+  color: color-mix(in srgb, var(--accent) 80%, white);
+  white-space: nowrap;
+}
+
+.s-tag--solid {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.s-empty {
+  margin: 0;
+  color: var(--frost-4);
+  font-size: var(--t-body);
+  font-style: italic;
+}
+
+.s-forming {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.s-forming__row {
+  height: 9px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--frost-6), var(--frost-5), var(--frost-6));
+  background-size: 200% 100%;
+  animation: s-shimmer 1.8s var(--ease-in-out) infinite;
+  animation-delay: calc(var(--i) * 120ms);
+  width: calc(100% - var(--i) * 12%);
+}
+
+@keyframes s-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* ------------------------------------------------------ ConvergenceMeter */
+
+.s-conv {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-shrink: 0;
+}
+
+.s-conv__label {
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-micro);
+  text-transform: uppercase;
+  color: var(--frost-3);
+  min-width: 9ch;
+  text-align: right;
+}
+
+.s-conv__rail {
+  position: relative;
+  display: block;
+  width: 160px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--frost-6);
+  overflow: visible;
+}
+
+.s-conv__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--v) * 100%);
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--accent) 30%, transparent),
+    var(--accent)
+  );
+  transition: width var(--d-cine) var(--ease-out);
+}
+
+/* The meridian: where this context currently sits between question and answer. */
+.s-conv__meridian {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  left: calc(var(--v) * 100%);
+  width: 1px;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+  transition: left var(--d-cine) var(--ease-out);
+}
+
+/* ---------------------------------------------------------------- agents */
+
+.s-agent {
+  border: 1px solid var(--frost-6);
+  border-radius: var(--r);
+  padding: var(--s-3);
+  background: rgb(255 255 255 / 2.5%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.s-agent--attention {
+  border-color: color-mix(in srgb, var(--amber) 45%, transparent);
+  background: color-mix(in srgb, var(--amber) 7%, transparent);
+}
+
+.s-agent__top {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+}
+
+.s-agent__ring {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  flex-shrink: 0;
+}
+
+.s-agent__ring[data-status='working'] {
+  animation: s-ring 3s linear infinite;
+  background: conic-gradient(
+    from 0deg,
+    transparent 60%,
+    color-mix(in srgb, var(--accent) 45%, transparent)
+  );
+}
+
+@keyframes s-ring {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.s-agent__id {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.s-agent__role {
+  font-size: var(--t-meta);
+  font-weight: 550;
+  color: var(--frost);
+}
+
+.s-agent__task {
+  font-size: var(--t-micro);
+  color: var(--frost-3);
+}
+
+.s-agent__controls {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity var(--d-fast) var(--ease-out);
+}
+
+.s-agent:hover .s-agent__controls,
+.s-agent:focus-within .s-agent__controls {
+  opacity: 1;
+}
+
+.s-mini {
+  font: inherit;
+  font-size: var(--t-micro);
+  color: var(--frost-2);
+  background: var(--frost-6);
+  border: 0;
+  border-radius: 5px;
+  padding: 3px 7px;
+  cursor: pointer;
+}
+
+.s-mini:hover {
+  background: var(--frost-5);
+  color: var(--frost);
+}
+
+.s-mini:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.s-agent__track {
+  height: 2px;
+  border-radius: 2px;
+  background: var(--frost-6);
+  overflow: hidden;
+}
+
+.s-agent__fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+  transition: width var(--d-slow) var(--ease-out);
+}
+
+.s-agent__output {
+  margin: 0;
+  font-size: var(--t-micro);
+  color: var(--frost-3);
+  border-left: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  padding-left: var(--s-3);
+}
+
+.s-agent__flag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--t-micro);
+  color: var(--amber);
+}
+
+/* --------------------------------------------------------- intelligence */
+
+.s-intel {
+  grid-area: intel;
+  z-index: var(--z-intel);
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--frost-6);
+  background: rgb(5 8 22 / 55%);
+  backdrop-filter: var(--blur-1);
+  min-height: 0;
+}
+
+.s-intel__grip {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  padding: var(--s-4);
+  border: 0;
+  border-bottom: 1px solid var(--frost-6);
+  background: transparent;
+  color: var(--frost);
+  font: inherit;
+  font-size: var(--t-meta);
+  font-weight: 550;
+  cursor: default;
+  text-align: left;
+}
+
+.s-intel__count {
+  margin-left: auto;
+  font-weight: 400;
+  color: var(--frost-4);
+  font-size: var(--t-micro);
+}
+
+.s-intel__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  padding: var(--s-4);
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.s-intel__heading {
+  margin: 0;
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-micro);
+  text-transform: uppercase;
+  color: var(--frost-4);
+  font-weight: 500;
+}
+
+.s-intel__agents {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.s-proposal__detail {
+  margin: 0 0 var(--s-3);
+  font-size: var(--t-body);
+  color: var(--frost-2);
+}
+
+.s-proposal__actions {
+  display: flex;
+  gap: var(--s-2);
+}
+
+.s-btn {
+  font: inherit;
+  font-size: var(--t-meta);
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--frost-5);
+  background: transparent;
+  color: var(--frost-2);
+  cursor: pointer;
+  transition: all var(--d-fast) var(--ease-out);
+}
+
+.s-btn:hover {
+  background: var(--frost-6);
+  color: var(--frost);
+}
+
+.s-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.s-btn--primary {
+  border-color: transparent;
+  background: linear-gradient(
+    135deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 65%, var(--violet))
+  );
+  color: #04070f;
+  font-weight: 600;
+  box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.s-btn--primary:hover {
+  filter: brightness(1.1);
+  color: #04070f;
+}
+
+.s-btn:active {
+  transform: translateY(1px);
+}
+
+/* ------------------------------------------------------------- command */
+
+.s-command {
+  grid-area: command;
+  z-index: var(--z-command);
+  padding: 0 var(--s-6) var(--s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.s-command__field {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-3) var(--s-3) var(--s-4);
+  border-radius: var(--r-xl);
+  border: 1px solid var(--frost-5);
+  background: rgb(8 13 34 / 72%);
+  backdrop-filter: var(--blur-2);
+  box-shadow: var(--e-3);
+  transition:
+    border-color var(--d) var(--ease-out),
+    box-shadow var(--d) var(--ease-out);
+}
+
+.s-command__field:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  box-shadow:
+    var(--e-3),
+    0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
+    0 0 40px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.s-command__input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: var(--t-lead);
+  color: var(--frost);
+  background: transparent;
+  border: 0;
+  outline: none;
+}
+
+.s-command__input::placeholder {
+  color: var(--frost-4);
+}
+
+.s-command__go {
+  font: inherit;
+  font-size: var(--t-meta);
+  font-weight: 600;
+  padding: 8px 18px;
+  border: 0;
+  border-radius: 100px;
+  background: linear-gradient(135deg, var(--cyan), var(--violet));
+  color: #04070f;
+  cursor: pointer;
+  transition:
+    opacity var(--d-fast) var(--ease-out),
+    transform var(--d-fast) var(--ease-out);
+}
+
+.s-command__go:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.s-command__go:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+.s-command__go:focus-visible {
+  outline: 2px solid var(--frost);
+  outline-offset: 2px;
+}
+
+.s-command__examples {
+  list-style: none;
+  display: flex;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.s-command__examples::-webkit-scrollbar {
+  display: none;
+}
+
+.s-chip {
+  font: inherit;
+  font-size: var(--t-micro);
+  color: var(--frost-3);
+  background: var(--frost-6);
+  border: 1px solid transparent;
+  border-radius: 100px;
+  padding: 5px 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--d-fast) var(--ease-out);
+}
+
+.s-chip:hover {
+  color: var(--frost);
+  border-color: var(--frost-5);
+}
+
+.s-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------- assembly */
+
+.s-assembly {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  display: grid;
+  place-items: center;
+  padding: var(--s-6);
+  background: rgb(5 8 22 / 82%);
+  backdrop-filter: var(--blur-2);
+  animation: s-fade var(--d) var(--ease-out);
+}
+
+@keyframes s-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.s-assembly__skip {
+  position: absolute;
+  top: var(--s-5);
+  right: var(--s-5);
+  font: inherit;
+  font-size: var(--t-micro);
+  color: var(--frost-4);
+  background: transparent;
+  border: 1px solid var(--frost-6);
+  border-radius: 100px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+
+.s-assembly__skip:hover {
+  color: var(--frost);
+  border-color: var(--frost-5);
+}
+
+.s-assembly__stage {
+  width: min(720px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+}
+
+.s-assembly__intent {
+  margin: 0;
+  font-size: var(--t-display);
+  font-weight: 500;
+  letter-spacing: var(--track-display);
+  line-height: 1.2;
+  color: var(--frost);
+  opacity: 0;
+  transform: translate3d(0, 12px, 0);
+  transition: all var(--d-slow) var(--ease-out);
+}
+
+.s-assembly__quote {
+  color: var(--accent);
+}
+
+.s-assembly__row {
+  display: grid;
+  grid-template-columns: 116px 1fr;
+  gap: var(--s-4);
+  align-items: baseline;
+  opacity: 0;
+  transform: translate3d(0, 10px, 0);
+  transition: all var(--d-slow) var(--ease-out);
+}
+
+.s-assembly__intent.is-in,
+.s-assembly__row.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+.s-assembly__step {
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-micro);
+  text-transform: uppercase;
+  color: var(--frost-4);
+  text-align: right;
+}
+
+.s-assembly__objective,
+.s-assembly__proposal {
+  margin: 0;
+  font-size: var(--t-lead);
+  color: var(--frost-2);
+}
+
+.s-assembly__proposal {
+  color: var(--accent);
+}
+
+.s-assembly__agents {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.s-assembly__agent {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--t-meta);
+  color: var(--frost-2);
+  padding: 5px 11px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 100px;
+  opacity: 0;
+  transform: scale(0.9);
+  transition: all var(--d) var(--ease-spring);
+}
+
+.s-assembly__agent.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* A wireframe of the workspace about to exist. The slots carry the same
+   certainty data as the real panels, so the shape you see forming IS the
+   shape you get. */
+.s-assembly__frame {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 6px;
+}
+
+.s-assembly__slot {
+  grid-column: span var(--span, 4);
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid var(--frost-5);
+  opacity: 0;
+  transform: scale(0.94);
+  transition: all var(--d) var(--ease-spring);
+  transition-delay: calc(var(--i) * 70ms);
+}
+
+.s-assembly__slot[data-certainty='provisional'] {
+  border-style: dashed;
+}
+
+.s-assembly__slot[data-certainty='resolved'] {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+.s-assembly__slot.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+.s-empty-os {
+  display: grid;
+  place-items: center;
+  height: 100dvh;
+  color: var(--frost-3);
+}
+
+/* ------------------------------------------------------------ responsive
+ *
+ * Not a stacked desktop. On a phone the active context IS the screen:
+ * navigation becomes a horizontal switcher, intelligence becomes a bottom
+ * sheet you pull up, and the command field sits above it within thumb reach.
+ */
+
+@media (width <= 1180px) {
+  .s-os {
+    grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-areas:
+      'nav work'
+      'nav command';
+  }
+
+  .s-intel {
+    position: fixed;
+    inset: auto 0 0 0;
+    max-height: 78dvh;
+    border-left: 0;
+    border-top: 1px solid var(--frost-5);
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+    transform: translate3d(0, calc(100% - 56px), 0);
+    transition: transform var(--d-slow) var(--ease-out);
+    background: rgb(8 13 34 / 92%);
+    backdrop-filter: var(--blur-2);
+  }
+
+  .s-intel.is-open {
+    transform: none;
+  }
+
+  .s-intel__grip {
+    cursor: pointer;
+    height: 56px;
+  }
+
+  .s-command {
+    padding-bottom: calc(56px + var(--s-4));
+  }
+}
+
+@media (width <= 720px) {
+  .s-os {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'nav'
+      'work'
+      'command';
+  }
+
+  /* The rail becomes a switcher: contexts scroll horizontally. */
+  .s-nav {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--s-3);
+    padding: var(--s-3) var(--s-4);
+    border-right: 0;
+    border-bottom: 1px solid var(--frost-6);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .s-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .s-nav__list {
+    flex-direction: row;
+    overflow: visible;
+    gap: var(--s-2);
+  }
+
+  .s-nav__item {
+    grid-template-columns: 3px auto auto;
+    white-space: nowrap;
+  }
+
+  .s-nav__title {
+    max-width: 15ch;
+  }
+
+  .s-nav__hint,
+  .s-nav__kind {
+    display: none;
+  }
+
+  .s-work {
+    padding: var(--s-4) var(--s-4) var(--s-3);
+  }
+
+  .s-work__title h1 {
+    font-size: 25px;
+  }
+
+  /* Every panel goes full width. Certainty still shows through edge, glow and
+     elevation — the shape signal degrades gracefully to a colour signal. */
+  .s-work__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .s-surface {
+    grid-column: span 1 !important;
+  }
+
+  .s-command {
+    padding: 0 var(--s-4) calc(56px + var(--s-3));
+  }
+
+  .s-assembly__row {
+    grid-template-columns: 1fr;
+    gap: var(--s-2);
+  }
+
+  .s-assembly__step {
+    text-align: left;
+  }
+
+  .s-assembly__intent {
+    font-size: 24px;
+  }
+}
+
+/* Fault state. Never a blank screen. */
+.s-fault {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  align-items: flex-start;
+  padding: var(--s-7);
+  min-height: 100dvh;
+  background: var(--void);
+  color: var(--frost);
+}
+
+.s-fault h1 {
+  margin: 0;
+  font-size: var(--t-title);
+  font-weight: 600;
+  letter-spacing: var(--track-title);
+}
+
+.s-fault__msg {
+  margin: 0;
+  color: var(--coral);
+  font-family: var(--mono);
+  font-size: var(--t-body);
+}
+
+.s-fault__stack {
+  margin: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: var(--s-3);
+  border-radius: var(--r);
+  border: 1px solid var(--frost-6);
+  background: rgb(255 255 255 / 3%);
+  color: var(--frost-3);
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  line-height: 1.6;
+}
+
+/* ------------------------------------------------------- polish pass ---
+ *
+ * Panel height. Lenses legitimately produce a lot of content — the Japan
+ * itinerary is 1 791px of real detail — but a grid whose first row is taller
+ * than the viewport stops being a composition and becomes a stack. You lose
+ * the one thing the layout is for: seeing at a glance that two things are
+ * settled and one is still open.
+ *
+ * So the body is capped and scrolls inside itself. Short panels never reach the
+ * cap and never show a scrollbar, so nothing that fits is penalised.
+ */
+.s-surface__body {
+  max-height: 46vh;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--frost-5) transparent;
+  /* Room for the scrollbar so text never sits under it. */
+  padding-right: 2px;
+}
+
+.s-surface__body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.s-surface__body::-webkit-scrollbar-thumb {
+  background: var(--frost-5);
+  border-radius: 3px;
+}
+
+/* A resolved panel has earned more room: the answer should be readable
+   without scrolling where the open questions still need digging. */
+.s-surface--resolved .s-surface__body {
+  max-height: 54vh;
+}
+
+/* Wide content — comparison tables, sequence diagrams, maps — must scroll
+   HORIZONTALLY inside its own panel rather than clipping. The research
+   comparison was truncating real figures ("reconfigurab", "no decoherenc"),
+   which is the worst kind of visual bug: it looks like a design choice. */
+.s-surface__body table,
+.s-surface__body svg {
+  max-width: 100%;
+}
+
+.s-surface__body > * {
+  min-width: 0;
+}
+
+/* The workspace scrolls under the floating command field, so the last row
+   needs clearance or it can never be read. */
+.s-work__grid {
+  padding-bottom: 140px;
+}
+
+/* Nav items are buttons whose name comes from nested spans. Giving the label
+   its own element keeps the accessible name stable if the visual structure
+   changes again. */
+.s-nav__item .s-nav__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The mobile switcher was collapsing each context to one character.
+ *
+ * `.s-nav__text` carries `min-width: 0` so titles can ellipsis inside the
+ * desktop rail — correct there, fatal here, because in a horizontal flex row
+ * that permission lets every item shrink to nothing. A switcher you cannot read
+ * is not a switcher.
+ *
+ * The fix is a floor, not a fixed width: items still size to their content and
+ * still scroll horizontally, they simply cannot shrink below legibility.
+ */
+@media (width <= 720px) {
+  .s-nav__item {
+    min-width: 10.5rem;
+  }
+
+  .s-nav__title {
+    max-width: none;
+    min-width: 0;
+  }
+
+  /* Kind label is worth its line back on mobile: with only a truncated title,
+     "PROBLEM SOLVING" is what tells you which context this is. */
+  .s-nav__kind {
+    display: block;
+    font-size: 9px;
+  }
+
+  .s-nav__item {
+    grid-template-columns: 3px minmax(0, 1fr) auto;
+  }
+
+  /* Placeholder must fit the field it sits in. */
+  .s-command__input {
+    font-size: var(--t-body);
+  }
+}
