@@ -277,3 +277,44 @@ describe('the catalogue the UI is given', () => {
     expect(vars.size).toBe(PROVIDERS.length);
   });
 });
+
+describe('the model the user chose is the model that runs', () => {
+  it('sets the primary model, because onboard has no flag for it', async () => {
+    // The bug this guards: `openclaw onboard` accepts no --model for the primary
+    // model, so it picks its own default. On a real machine the user selected
+    // claude-opus-5 and OpenClaw was configured for claude-opus-4-8 — SairiOS
+    // reported one model while a different one did the thinking.
+    const { setup, claw } = make();
+    await setup.configure({ provider: 'anthropic', model: MODEL, apiKey: FAKE_KEY });
+
+    const set = claw.calls.find((c) => c.args[0] === 'config' && c.args[1] === 'set');
+    expect(set, 'no `openclaw config set` call was made').toBeDefined();
+    expect(set!.args).toEqual(['config', 'set', 'agents.defaults.model.primary', MODEL]);
+  });
+
+  it('never puts the key in the config-set environment', async () => {
+    const { setup, claw } = make();
+    await setup.configure({ provider: 'anthropic', model: MODEL, apiKey: FAKE_KEY });
+    const set = claw.calls.find((c) => c.args[0] === 'config')!;
+    expect(JSON.stringify(set.env)).not.toContain(FAKE_KEY);
+    expect(set.args.join(' ')).not.toContain(FAKE_KEY);
+  });
+
+  it('still reports success when setting the model fails', async () => {
+    // A credential that is already written plus a working gateway is a
+    // connected provider on the wrong model. Failing the whole setup would
+    // leave the key on disk while telling the user nothing worked.
+    const { setup } = make({
+      runOpenclaw: async (args: string[]) => {
+        if (args[0] === 'config') throw new Error('config set exploded');
+        return { stdout: '2026.7.1-2', stderr: '' };
+      },
+    });
+    const result = await setup.configure({
+      provider: 'anthropic',
+      model: MODEL,
+      apiKey: FAKE_KEY,
+    });
+    expect(result.ok).toBe(true);
+  });
+});

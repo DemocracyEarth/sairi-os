@@ -146,13 +146,27 @@ Two ways round it, and neither involves putting a key in the image.
 make vm-connect
 ```
 
+The VM must already be running — `make vm-run` first, or you get
+`Connection refused` on the SSH port.
+
 It opens an SSH tunnel to the guest's agent bridge and drives the same
 `POST /setup` the wizard drives, so the real path runs: shape validation, the
 0600 write, `openclaw onboard --secret-input-mode ref`, and the path unit
-starting the gateway. The key is read from a hidden prompt or
-`SAIRIOS_PROVIDER_KEY`, piped to curl on stdin, and never appears in argv, in
-your shell history, or on the host's disk. There is deliberately no `--api-key`
-flag; passing one is refused with an explanation.
+starting the gateway. The key is read from a hidden prompt, piped to curl on
+stdin, and never appears in argv or on the host's disk. There is deliberately no
+`--api-key` flag; passing one is refused with an explanation.
+
+**Prefer the prompt.** If you must run it non-interactively, read the key from a
+file:
+
+```bash
+SAIRIOS_PROVIDER_KEY="$(cat ~/.anthropic-key)" make vm-connect
+```
+
+Do **not** inline the key as `SAIRIOS_PROVIDER_KEY=sk-ant-… make vm-connect`. An
+environment-assignment prefix is recorded in your shell's history file, in the
+clear, in a place nobody treats as a secret store. A key that has been typed
+that way should be rotated.
 
 **Or use the wizard from your own browser**, where paste works normally:
 

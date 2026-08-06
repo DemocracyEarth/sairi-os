@@ -229,6 +229,28 @@ export class ProviderSetup {
     try {
       const run = this.#deps.runOpenclaw ?? this.#spawnOpenclaw.bind(this);
       await run(args, { ...process.env, [provider.envVar]: apiKey });
+
+      // `onboard` has NO flag for the primary model — only --custom-model-id,
+      // which is for custom providers. Left alone it picks its own default, so
+      // the model a person chose in SairiOS was recorded here and then quietly
+      // ignored by the thing that actually runs. Found on a real machine: the
+      // user selected claude-opus-5 and OpenClaw was configured for
+      // claude-opus-4-8.
+      //
+      // `config set` is the documented non-interactive way to fix that, and it
+      // is a separate call because onboarding cannot take it. Failure here is
+      // NOT fatal: the credential is already written and the gateway works, so
+      // the honest outcome is a connected provider on the wrong model rather
+      // than a failed setup with a key on disk. It is surfaced as a warning.
+      try {
+        await run(['config', 'set', 'agents.defaults.model.primary', String(input.model)], {
+          ...process.env,
+        });
+      } catch {
+        this.#deps.logger.warn('could not set the primary model; OpenClaw keeps its default', {
+          requested: input.model,
+        });
+      }
     } catch (cause) {
       // The message may quote our arguments back; it never contains the key,
       // because the key was never an argument.

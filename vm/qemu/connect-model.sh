@@ -32,10 +32,19 @@
 #   - never prints it, and disables shell tracing around it
 #
 # Usage:
-#   ./vm/qemu/connect-model.sh                          # prompts, hidden
-#   SAIRIOS_PROVIDER_KEY=sk-ant-… ./vm/qemu/connect-model.sh
+#   ./vm/qemu/connect-model.sh                          # prompts, hidden — prefer this
 #   ./vm/qemu/connect-model.sh --provider openai --model openai/gpt-5
-#   ./vm/qemu/connect-model.sh --status                 # just report
+#   ./vm/qemu/connect-model.sh --status                 # just report, changes nothing
+#
+# Non-interactively, read the key from a FILE. Never inline it:
+#
+#   SAIRIOS_PROVIDER_KEY="$(cat ~/.anthropic-key)" ./vm/qemu/connect-model.sh
+#
+# An inline `SAIRIOS_PROVIDER_KEY=sk-ant-… cmd` is an environment-assignment
+# prefix, and every interactive shell records those in its history file. This
+# file used to show that form as the example and it taught exactly the mistake
+# the rest of the script exists to prevent — a key written, in the clear, to a
+# file nobody thinks of as a secret store.
 
 set -euo pipefail
 
