@@ -52,7 +52,7 @@ subsystems.
       field they are about — each of them enforced in setup.ts and asserted in
       its tests.
 - [x] End-to-end test of the full flow in mock mode against the real services
-- [x] 355 tests, none requiring a credential or the network
+- [x] 380 tests, none requiring a credential or the network
 
 ### Verified by actually running it
 
@@ -286,6 +286,26 @@ exit criterion also asks that every claim in the README has been demonstrated.
 
 - Context memory that is actually used: retrieval, summarization, and an
   explicit distinction between durable and working memory in the UI.
+
+- **Make the agent roster real.** The interface for it exists and is worth
+  keeping: agents have a durable identity across contexts, a visible track
+  record, and a small set of standing notes that travel with them — each one
+  attributed to the context that produced it and retirable on the spot
+  ([roster.ts](apps/shell/src/sairi/roster.ts)). Assembly says which agents have
+  done this kind of work before.
+
+  All of it is fixtures. Nothing persists, nothing is produced by a model, and
+  no note has ever crossed a real context boundary.
+
+  Making it real is mostly a security job, not a UI one. A note travelling from
+  context A to context B is the same escape crystallization already guards, so
+  `carryForward` — the allow-list that decides what an agent may take with it —
+  belongs next to
+  [crystallize.ts](packages/context-schema/src/crystallize.ts) with its tests,
+  before a model rather than a human is writing the notes. What would verify it:
+  a model-authored note containing a secret, a path and another context's
+  intention, and a test proving none of the three arrives.
+
 - Artifacts as first-class citizens: import files into a context sandbox, track
   provenance, mark untrusted content everywhere it surfaces.
 - Sub-contexts. An investigation should be able to spawn a bounded task without

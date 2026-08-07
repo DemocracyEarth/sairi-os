@@ -1,5 +1,20 @@
-import { useEffect, useRef, useState, type CSSProperties, type JSX, type ReactNode } from 'react';
-import { CERTAINTY_VALUE, type Agent, type Certainty, type Spectral } from './state.js';
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type CSSProperties,
+  type JSX,
+  type ReactNode,
+} from 'react';
+import { isReturning, standing, trackRecord, type AgentRecord } from './roster.js';
+import {
+  CERTAINTY_VALUE,
+  type Agent,
+  type Certainty,
+  type SairiContext,
+  type Spectral,
+} from './state.js';
 
 /**
  * The Sairi primitive set.
@@ -125,13 +140,21 @@ export function StatusOrb({
 
 export function AgentPresence({
   agent,
+  record,
+  kind,
   onPause,
   onRedirect,
+  onRetireNote,
   compact = false,
 }: {
   agent: Agent;
+  /** Its durable record, if it has one. Absent means show only the present. */
+  record?: AgentRecord;
+  /** The kind of context it is working in now, so continuity can say "again". */
+  kind?: SairiContext['kind'];
   onPause?: (id: string) => void;
   onRedirect?: (id: string) => void;
+  onRetireNote?: (agentId: string, noteId: string, retired: boolean) => void;
   compact?: boolean;
 }): JSX.Element {
   const working = agent.status === 'working';
@@ -196,7 +219,127 @@ export function AgentPresence({
           <StatusOrb hue="amber" pulse size={6} /> waiting on your decision
         </p>
       )}
+
+      {record && !compact && <Continuity kind={kind} onRetireNote={onRetireNote} record={record} />}
     </article>
+  );
+}
+
+/* ------------------------------------------------------------------------ *
+ * Continuity — what this agent brings with it
+ *
+ * The visible half of roster.ts. Two things, and the second is the one that
+ * matters: where this agent has worked, and exactly what it still believes as a
+ * result. Every standing note names the context that produced it and can be
+ * retired on the spot.
+ *
+ * That is deliberate. Compounding memory is easy to sell and hard to trust —
+ * an agent that "learns about you" and never shows its working is a black box
+ * you are asked to like. So the interface treats accumulated belief the way the
+ * rest of this system treats a privileged action: visible, attributable, and
+ * refusable.
+ *
+ * Collapsed by default, because the present tense is what an agent card is for.
+ * ------------------------------------------------------------------------ */
+
+export function Continuity({
+  record,
+  kind,
+  onRetireNote,
+}: {
+  record: AgentRecord;
+  kind?: SairiContext['kind'];
+  onRetireNote?: (agentId: string, noteId: string, retired: boolean) => void;
+}): JSX.Element | null {
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+
+  const track = trackRecord(record);
+  const live = standing(record);
+  if (track.engagements === 0 && record.notes.length === 0) return null;
+
+  const again = kind ? isReturning(record, kind) : false;
+  const settled = track.accepted + track.revised + track.rejected;
+
+  return (
+    <div className="s-cont">
+      <button
+        aria-controls={panelId}
+        aria-expanded={open}
+        className="s-cont__grip"
+        onClick={() => setOpen((v) => !v)}
+        type="button"
+      >
+        <span aria-hidden="true" className={`s-cont__caret${open ? ' is-open' : ''}`} />
+        <span className="s-cont__summary">
+          {again && <span className="s-cont__again">worked this before</span>}
+          {track.engagements === 1 ? '1 context' : `${track.engagements} contexts`}
+          {/* No rate until something has settled: 0 of 0 would render as a
+              track record of failure rather than as an agent on its first job. */}
+          {settled > 0 && ` · ${track.accepted} of ${settled} accepted`}
+          {live.length > 0 && ` · ${live.length} carried`}
+        </span>
+      </button>
+
+      <div className="s-cont__panel" hidden={!open} id={panelId}>
+        {record.engagements.length > 0 && (
+          <>
+            <h4 className="s-cont__heading">Where it has worked</h4>
+            <ul className="s-cont__history">
+              {record.engagements.map((e) => (
+                <li className="s-cont__engagement" key={e.contextId}>
+                  <span className={`s-cont__outcome s-cont__outcome--${e.outcome}`}>
+                    {e.outcome}
+                  </span>
+                  <span className="s-cont__where">
+                    <span className="s-cont__intention">{e.intention}</span>
+                    <span className="s-cont__contribution">{e.contribution}</span>
+                  </span>
+                  <span className="s-cont__when">
+                    {e.outcome === 'ongoing' ? 'now' : `${e.daysAgo}d`}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+
+        {record.notes.length > 0 && (
+          <>
+            <h4 className="s-cont__heading">
+              What it carries forward
+              <span className="s-cont__note-hint">travels into every new context</span>
+            </h4>
+            <ul className="s-cont__notes">
+              {record.notes.map((n) => {
+                const source = record.engagements.find((e) => e.contextId === n.from);
+                return (
+                  <li className={`s-cont__note${n.retired ? ' is-retired' : ''}`} key={n.id}>
+                    <p className="s-cont__note-text">{n.text}</p>
+                    <p className="s-cont__note-foot">
+                      <span className="s-cont__note-from">
+                        {/* Provenance is not decoration: a note you cannot
+                            attribute is one you cannot evaluate. */}
+                        from “{source?.intention ?? n.from}”
+                      </span>
+                      {onRetireNote && (
+                        <button
+                          className="s-mini"
+                          onClick={() => onRetireNote(record.id, n.id, !n.retired)}
+                          type="button"
+                        >
+                          {n.retired ? 'Restore' : 'Retire'}
+                        </button>
+                      )}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 

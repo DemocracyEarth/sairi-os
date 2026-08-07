@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties, type JSX } from 'react';
 import { StatusOrb, hue } from './primitives.js';
+import { ROSTER, isReturning, recordFor, type Roster } from './roster.js';
 import { BEAT_MS, KIND_LABEL, nextBeat, type AssemblyBeat, type SairiContext } from './state.js';
 
 /**
@@ -26,11 +27,13 @@ export function Assembly({
   beat,
   onAdvance,
   onSkip,
+  roster = ROSTER,
 }: {
   context: SairiContext;
   beat: AssemblyBeat;
   onAdvance: (next: AssemblyBeat) => void;
   onSkip: () => void;
+  roster?: Roster;
 }): JSX.Element | null {
   const [shown, setShown] = useState(0);
 
@@ -105,16 +108,25 @@ export function Assembly({
         <div className={`s-assembly__row${reached('agents') ? ' is-in' : ''}`}>
           <span className="s-assembly__step">{KIND_LABEL[context.kind].toLowerCase()} agents</span>
           <ul className="s-assembly__agents">
-            {context.agents.map((a, i) => (
-              <li
-                className={`s-assembly__agent${i < shown || reached('workspace') ? ' is-in' : ''}`}
-                key={a.id}
-                style={{ '--accent': hue(a.hue) } as CSSProperties}
-              >
-                <StatusOrb hue={a.hue} pulse size={6} />
-                <span className="s-assembly__agentrole">{a.role}</span>
-              </li>
-            ))}
+            {context.agents.map((a, i) => {
+              /* The one beat where the roster is visible in motion. Sairi is not
+                 assembling five interchangeable workers — some of these have
+                 done this exact kind of work for you before, and saying which
+                 is the difference between a staffing animation and a
+                 recollection. */
+              const again = isReturning(recordFor(a, roster), context.kind);
+              return (
+                <li
+                  className={`s-assembly__agent${i < shown || reached('workspace') ? ' is-in' : ''}`}
+                  key={a.id}
+                  style={{ '--accent': hue(a.hue) } as CSSProperties}
+                >
+                  <StatusOrb hue={a.hue} pulse size={6} />
+                  <span className="s-assembly__agentrole">{a.role}</span>
+                  {again && <span className="s-assembly__again">again</span>}
+                </li>
+              );
+            })}
           </ul>
         </div>
 

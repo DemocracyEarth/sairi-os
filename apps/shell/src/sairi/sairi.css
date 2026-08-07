@@ -709,6 +709,222 @@
   color: var(--amber);
 }
 
+/* ------------------------------------------------------------ continuity
+ *
+ * An agent's past, kept quieter than its present. The whole block sits at
+ * --frost-3 or below and only lifts on interaction: what the agent is doing
+ * now should always win the card, and history that competes with it turns a
+ * collaborator into a profile page.
+ */
+
+.s-cont {
+  border-top: 1px solid var(--frost-6);
+  padding-top: var(--s-2);
+}
+
+.s-cont__grip {
+  font: inherit;
+  font-size: var(--t-micro);
+  color: var(--frost-3);
+  background: none;
+  border: 0;
+  padding: 2px 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: color var(--d-fast) var(--ease-out);
+}
+
+.s-cont__grip:hover {
+  color: var(--frost-2);
+}
+
+.s-cont__grip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+.s-cont__caret {
+  width: 0;
+  height: 0;
+  flex-shrink: 0;
+  border-left: 4px solid currentcolor;
+  border-top: 3px solid transparent;
+  border-bottom: 3px solid transparent;
+  transition: transform var(--d-fast) var(--ease-out);
+}
+
+.s-cont__caret.is-open {
+  transform: rotate(90deg);
+}
+
+.s-cont__summary {
+  min-width: 0;
+}
+
+/* The one part of the block that is allowed to carry the accent: an agent
+   that has done this exact kind of work before is the reason to look. */
+.s-cont__again {
+  color: var(--accent);
+  margin-right: 6px;
+}
+
+.s-cont__again::after {
+  content: ' ·';
+  color: var(--frost-4);
+}
+
+.s-cont__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-3) 0 var(--s-1);
+}
+
+.s-cont__panel[hidden] {
+  display: none;
+}
+
+.s-cont__heading {
+  margin: 0;
+  font-size: var(--t-micro);
+  font-weight: 550;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--frost-4);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px var(--s-2);
+}
+
+/* Pushed right when both fit on one line, dropped to its own line when they do
+   not. The intelligence panel is narrow and this heading is the longest string
+   in it, so the two-column case is the exception rather than the layout. */
+.s-cont__note-hint {
+  margin-left: auto;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--frost-4);
+}
+
+.s-cont__history,
+.s-cont__notes {
+  list-style: none;
+  margin: var(--s-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.s-cont__engagement {
+  display: grid;
+  grid-template-columns: 60px 1fr auto;
+  gap: var(--s-2);
+  align-items: baseline;
+  font-size: var(--t-micro);
+}
+
+/* Outcome is the track record, so it is the only coloured thing in the list.
+   `revised` is mint rather than amber on purpose — the user improving an
+   agent's work is a normal collaboration, not a warning. */
+.s-cont__outcome {
+  font-size: var(--t-micro);
+  letter-spacing: 0.04em;
+  color: var(--frost-4);
+}
+
+.s-cont__outcome--accepted {
+  color: var(--mint);
+}
+
+.s-cont__outcome--revised {
+  color: var(--frost-2);
+}
+
+.s-cont__outcome--rejected {
+  color: var(--coral);
+}
+
+.s-cont__outcome--ongoing {
+  color: var(--accent);
+}
+
+.s-cont__where {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.s-cont__intention {
+  color: var(--frost-2);
+}
+
+.s-cont__contribution {
+  color: var(--frost-4);
+}
+
+.s-cont__when {
+  color: var(--frost-4);
+  font-variant-numeric: tabular-nums;
+}
+
+.s-cont__note {
+  border-left: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  padding-left: var(--s-3);
+}
+
+/* A retired note is struck through rather than removed: seeing what an agent
+   used to believe, and that you stopped it, is the point of retiring. */
+.s-cont__note.is-retired .s-cont__note-text {
+  color: var(--frost-4);
+  text-decoration: line-through;
+}
+
+.s-cont__note.is-retired {
+  border-left-color: var(--frost-6);
+}
+
+.s-cont__note-text {
+  margin: 0;
+  font-size: var(--t-micro);
+  color: var(--frost-2);
+}
+
+.s-cont__note-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  margin: 4px 0 0;
+  font-size: var(--t-micro);
+  color: var(--frost-4);
+}
+
+.s-cont__note-from {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .s-cont__engagement {
+    grid-template-columns: 1fr auto;
+  }
+
+  .s-cont__outcome {
+    grid-column: 1 / -1;
+  }
+}
+
 /* --------------------------------------------------------- intelligence */
 
 .s-intel {
@@ -1062,6 +1278,17 @@
 .s-assembly__agent.is-in {
   opacity: 1;
   transform: none;
+}
+
+/* Marks an agent that has worked this kind of context before. Small, and
+   inside the pill rather than beside it: it qualifies the agent, it is not a
+   second thing in the list. */
+.s-assembly__again {
+  font-size: var(--t-micro);
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  padding-left: 7px;
+  border-left: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 /* A wireframe of the workspace about to exist. The slots carry the same
