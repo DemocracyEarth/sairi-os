@@ -12,6 +12,7 @@ import { AmbientBackground } from './AmbientBackground.js';
 import { Assembly } from './Assembly.js';
 import { SetupWizard } from './SetupWizard.js';
 import { AgentPresence, ConvergenceMeter, ContextSurface, StatusOrb, hue } from './primitives.js';
+import { ROSTER, recordFor, setNoteRetired, type Roster } from './roster.js';
 import {
   convergence,
   readIntention,
@@ -62,6 +63,10 @@ export function SairiOS(): JSX.Element {
   const [intelOpen, setIntelOpen] = useState(false);
   const [switching, setSwitching] = useState(false);
   const [setup, setSetup] = useState<SetupStatusRecord | null>(null);
+  /* The roster is shell state rather than per-context state, which is the whole
+     point of it: retiring a note here stops that note travelling into every
+     context, not just this one. Nothing persists it yet — see roster.ts. */
+  const [roster, setRoster] = useState<Roster>(ROSTER);
   // Starts dismissed so nothing flashes before the bridge answers. Opens itself
   // exactly once, when the status comes back unconfigured.
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -165,6 +170,10 @@ export function SairiOS(): JSX.Element {
             },
       ),
     );
+  }, []);
+
+  const retireNote = useCallback((agentId: string, noteId: string, retired: boolean) => {
+    setRoster((r) => setNoteRetired(r, agentId, noteId, retired));
   }, []);
 
   if (!active) return <main className="sairi s-empty-os">No contexts.</main>;
@@ -323,8 +332,11 @@ export function SairiOS(): JSX.Element {
               <AgentPresence
                 agent={agent}
                 key={agent.id}
+                kind={active.kind}
                 onPause={(id) => pauseAgent(active.id, id)}
                 onRedirect={() => inputRef.current?.focus()}
+                onRetireNote={retireNote}
+                record={recordFor(agent, roster)}
               />
             ))}
           </div>
@@ -362,7 +374,13 @@ export function SairiOS(): JSX.Element {
       </form>
 
       {assembling && (
-        <Assembly context={assembling} beat={beat} onAdvance={advance} onSkip={finishAssembly} />
+        <Assembly
+          beat={beat}
+          context={assembling}
+          onAdvance={advance}
+          onSkip={finishAssembly}
+          roster={roster}
+        />
       )}
 
       {setup && wizardOpen && (
