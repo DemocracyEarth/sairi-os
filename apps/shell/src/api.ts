@@ -14,9 +14,22 @@ import type {
  * that is not running produces a legible offline state instead of a white screen.
  */
 
-const CONTEXT_BASE = import.meta.env['VITE_CONTEXT_SERVICE'] ?? 'http://127.0.0.1:7801';
-const BRIDGE_BASE = import.meta.env['VITE_AGENT_BRIDGE'] ?? 'http://127.0.0.1:7802';
-const BROKER_BASE = import.meta.env['VITE_PERMISSION_BROKER'] ?? 'http://127.0.0.1:7803';
+/**
+ * Same-origin path prefixes, not absolute service origins.
+ *
+ * The shell talks to whatever is serving it, and that server proxies onward —
+ * `serve.mjs` in production, Vite's dev proxy in development. Three things fall
+ * out of it: `connect-src 'self'` is a sufficient CSP so the policy no longer
+ * has to name port numbers at build time, CORS stops applying because no
+ * request is cross-origin any more, and a tunnel forwards one port.
+ *
+ * The `VITE_*` overrides remain for pointing a dev shell at services running
+ * somewhere else. Setting one puts you back on the cross-origin path, which
+ * means the CSP and the services' allow-lists both have to agree again.
+ */
+const CONTEXT_BASE = import.meta.env['VITE_CONTEXT_SERVICE'] ?? '/ctx';
+const BRIDGE_BASE = import.meta.env['VITE_AGENT_BRIDGE'] ?? '/bridge';
+const BROKER_BASE = import.meta.env['VITE_PERMISSION_BROKER'] ?? '/broker';
 
 export type ApiResult<T> = { ok: true; value: T } | { ok: false; code: string; message: string };
 
@@ -258,8 +271,26 @@ export const bridgeApi = {
   },
 };
 
+/**
+ * Absolute forms of the three bases, for showing a human where a call went.
+ *
+ * A failed request that reports `/ctx` tells you nothing you did not know. The
+ * useful thing is the URL the browser actually dialled, which after the move to
+ * same-origin prefixes includes the shell's own origin — and on a remote
+ * deployment that origin is the whole answer to "which machine did I just fail
+ * to reach".
+ */
+function absolute(base: string): string {
+  try {
+    return new URL(base, globalThis.location?.href).href.replace(/\/$/, '');
+  } catch {
+    // No document (a test, or a non-browser import) and a relative base.
+    return base;
+  }
+}
+
 export const serviceEndpoints = {
-  contextService: CONTEXT_BASE,
-  agentBridge: BRIDGE_BASE,
-  permissionBroker: BROKER_BASE,
+  contextService: absolute(CONTEXT_BASE),
+  agentBridge: absolute(BRIDGE_BASE),
+  permissionBroker: absolute(BROKER_BASE),
 };

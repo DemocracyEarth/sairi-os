@@ -255,12 +255,48 @@ Every rule follows from that asymmetry:
 
 - All services bind to `127.0.0.1` by default. `startupChecks` warns loudly if
   that is changed, because **the services have no authentication**.
-- CORS uses an explicit loopback allowlist, never `*`.
+- The browser reaches the services through same-origin prefixes proxied by the
+  shell process ([ADR 0011](docs/adr/0011-same-origin-service-proxy.md)). The
+  proxy's route table is fixed at load and its upstream host is a constant:
+  nothing about the destination comes from the request, because a proxy that
+  reads its target from a path or a header is an SSRF primitive, and this one
+  sits in front of the permission broker.
+- Collapsing four origins into one makes a single authenticated front door
+  **possible**. It does not add one. The services still have no authentication
+  and this changes nothing about that; see the note on remote access below.
+- CORS uses an explicit loopback allowlist, never `*`. It no longer applies to
+  the browser path at all, since same-origin requests are not checked — it
+  remains for a dev shell pointed at services directly with `VITE_*`.
 - The shell ships a Content Security Policy with `script-src 'self'`, no `eval`,
-  and `connect-src` restricted to the three local services.
+  and `connect-src 'self'` — no origin beyond its own.
 - `network.fetch` is simulated in v0. No egress happens on an agent's behalf.
 - The gateway transport refuses an unencrypted `ws://` connection to anything
   other than loopback.
+
+### Remote access is a precondition, not a configuration
+
+Reaching SairiOS from another machine is not a matter of binding to `0.0.0.0`
+or putting a proxy in front. **The permission broker's three-phase separation
+does not survive a network path as currently written.**
+
+`POST /requests`, `POST /requests/{id}/decision` and `POST /requests/{id}/execute`
+are three unauthenticated routes. Anyone who can reach port 7803 performs all
+three — _including the approval_ — and can set `remember: true, global: true`
+for a grant the UI cannot revoke (limitation 10 below). The "human in the loop"
+that the whole design rests on is, at the transport layer, an unauthenticated
+HTTP route.
+
+On loopback, on a single-user machine, that is a defensible v0 posture: the only
+party who can reach it is the party the grant is for. The moment a network path
+exists it is not a posture, it is a hole.
+
+So, in order, and the order is the point:
+
+1. The decision route must require something the network cannot supply — a
+   local-only channel, or a verified identity the broker checks itself.
+2. A grant must be revocable before it can be made remotely.
+3. Only then, transport. Prefer an overlay network or a tunnel that keeps the
+   services on loopback over anything that terminates TLS off-box.
 
 ## Container posture
 

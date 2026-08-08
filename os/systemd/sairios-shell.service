@@ -100,10 +100,12 @@ LockPersonality=yes
 SystemCallFilter=@system-service
 SystemCallErrorNumber=EPERM
 SystemCallArchitectures=native
-# Loopback only. The shell serves static files to a browser on the same machine and has
-# no reason to reach anything else. All backend traffic from the page goes to 127.0.0.1
-# from the browser process, not from this one. Best-effort in a user unit; the
-# authoritative control is --host 127.0.0.1 above.
+# Loopback only, and now in both directions. This process serves static files to a
+# browser on the same machine AND reverse-proxies the page's API calls to the three
+# services on 127.0.0.1:7801-7803 — so unlike before, it does open outbound connections.
+# They are all loopback, which IPAddressAllow=localhost already permits; nothing else is
+# reachable. Best-effort in a user unit; the authoritative control is --host 127.0.0.1
+# above.
 IPAddressAllow=localhost
 IPAddressDeny=any
 UMask=0077

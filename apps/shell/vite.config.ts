@@ -10,6 +10,33 @@ const BRIDGE_PORT = Number(process.env['SAIRIOS_AGENT_BRIDGE_PORT'] ?? 7802);
 const BROKER_PORT = Number(process.env['SAIRIOS_PERMISSION_BROKER_PORT'] ?? 7803);
 
 /**
+ * The dev server's copy of the same-origin route table in
+ * [proxy.mjs](./proxy.mjs). Two implementations of one mapping is a duplication
+ * worth accepting: Vite cannot import the runtime proxy's plumbing, and the
+ * alternative — a shared module both can read — would put a build-time
+ * dependency into the file the guest runs with `npm ci --omit=dev`.
+ *
+ * `proxy.test.ts` asserts the two tables name the same prefixes and ports, so
+ * the duplication cannot drift silently.
+ */
+function servicePrefixes(): Record<string, { target: string; rewrite: (p: string) => string }> {
+  const routes: Record<string, number> = {
+    '/ctx': CONTEXT_PORT,
+    '/bridge': BRIDGE_PORT,
+    '/broker': BROKER_PORT,
+  };
+  return Object.fromEntries(
+    Object.entries(routes).map(([prefix, port]) => [
+      prefix,
+      {
+        target: `http://127.0.0.1:${port}`,
+        rewrite: (path: string) => path.slice(prefix.length) || '/',
+      },
+    ]),
+  );
+}
+
+/**
  * Injects the shell's Content Security Policy into the built index.html.
  *
  * Build only. The dev server needs inline scripts for React Refresh, and
@@ -22,17 +49,17 @@ const BROKER_PORT = Number(process.env['SAIRIOS_PERMISSION_BROKER_PORT'] ?? 7803
  * colours; `script-src` stays `'self'`.
  */
 function csp(): Plugin {
-  const services = [CONTEXT_PORT, BRIDGE_PORT, BROKER_PORT]
-    .flatMap((port) => [`http://127.0.0.1:${port}`, `http://localhost:${port}`])
-    .join(' ');
-
   const policy = [
     "default-src 'none'",
     "script-src 'self'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self'",
-    `connect-src 'self' ${services}`,
+    // `'self'` and nothing else. The shell reaches the three services through
+    // same-origin prefixes that the serving process proxies onward, so this
+    // policy no longer has to know a single port number — which also means it
+    // cannot go stale against a deployment that moved one.
+    "connect-src 'self'",
     "base-uri 'none'",
     "form-action 'none'",
     "frame-ancestors 'none'",
@@ -88,6 +115,10 @@ export default defineConfig({
     host: '127.0.0.1',
     port: SHELL_PORT,
     strictPort: true,
+    // The dev-mode half of the same-origin proxy. `serve.mjs` does this in
+    // production; keeping both in step is what makes `make dev` and the VM
+    // exercise the same request paths instead of two different topologies.
+    proxy: servicePrefixes(),
   },
   preview: {
     host: '127.0.0.1',
