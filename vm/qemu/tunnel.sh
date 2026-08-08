@@ -10,16 +10,20 @@
 #   2. Devtools. The guest runs cog, which has none.
 #
 # ---------------------------------------------------------------------------
-# Why all four ports, and not just 7800
+# One port, not four
 # ---------------------------------------------------------------------------
-# Forwarding only the shell gets you a page where every request fails. The shell
-# is served from 7800 but talks to the context service on 7801, the agent bridge
-# on 7802 and the permission broker on 7803, and its CORS allowlist names those
-# exact loopback origins. Tunnel one port and you get a desktop with no data and
-# a console full of connection errors — which reads like a broken build rather
-# than a missing tunnel.
+# This script used to forward 7800-7803, because the page was served from 7800
+# but called the context service on 7801, the agent bridge on 7802 and the
+# permission broker on 7803 as separate origins. Forwarding one port produced a
+# desktop with no data and a console full of connection errors, which reads like
+# a broken build rather than a missing tunnel.
 #
-# QEMU's own `hostfwd` cannot do this at all: it forwards to the guest's DHCP
+# The shell now reaches those services through same-origin prefixes — /ctx,
+# /bridge and /broker — which the guest's own `serve.mjs` proxies onward to
+# loopback inside the guest. So everything arrives on 7800 and there is nothing
+# else to forward. See apps/shell/proxy.mjs.
+#
+# QEMU's own `hostfwd` still cannot do this: it forwards to the guest's DHCP
 # address (10.0.2.15), and every SairiOS service binds 127.0.0.1 inside the
 # guest on purpose. An SSH tunnel terminates inside the guest, so it reaches
 # loopback. That is why `--forward-shell` prints a warning instead of working.
@@ -58,34 +62,24 @@ done
 	exit 1
 }
 
-# Refuse rather than half-work: a port already in use would silently leave one
-# service unreachable, and the symptom (a desktop with some panels empty) is
-# much harder to read than this message.
-BUSY=0
-for port in 7800 7801 7802 7803; do
-	if lsof -ti:"$port" >/dev/null 2>&1; then
-		printf 'tunnel.sh: port %s is already in use on this machine.\n' "$port" >&2
-		BUSY=1
-	fi
-done
-[ "$BUSY" -eq 0 ] || {
+# Refuse rather than half-work: the forward would fail and ssh -N would sit
+# there looking connected, so the symptom is a page that never loads.
+if lsof -ti:7800 >/dev/null 2>&1; then
+	printf 'tunnel.sh: port 7800 is already in use on this machine.\n' >&2
 	printf '  Stop whatever holds it (often a local `make dev`) and try again.\n' >&2
 	exit 1
-}
+fi
 
-printf '==> Tunnelling guest 7800-7803 to this machine\n'
+printf '==> Tunnelling guest 7800 to this machine\n'
 printf '    shell     http://127.0.0.1:7800/#/os   (Sairi OS)\n'
 printf '              http://127.0.0.1:7800/       (v0 desktop)\n'
-printf '    services  7801 contexts · 7802 bridge · 7803 broker\n'
+printf '    services  same origin, under /ctx /bridge /broker\n'
 printf '\n'
 printf '    Paste works here. Ctrl-C to close the tunnel.\n'
 printf '\n'
 
 exec ssh -N \
 	-L 7800:127.0.0.1:7800 \
-	-L 7801:127.0.0.1:7801 \
-	-L 7802:127.0.0.1:7802 \
-	-L 7803:127.0.0.1:7803 \
 	-p "$SSH_PORT" -i "$KEY" \
 	-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR \
 	-o ExitOnForwardFailure=yes \

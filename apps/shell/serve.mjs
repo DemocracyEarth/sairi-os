@@ -21,12 +21,17 @@
  * Node standard library only, no dependencies, no writes. It reads from `dist`
  * and nothing else: every request path is resolved and checked against the root,
  * so a traversal attempt gets a 403 rather than a file.
+ *
+ * It also reverse-proxies the three services under `/ctx`, `/bridge` and
+ * `/broker` so the whole system answers on one origin. See proxy.mjs for why
+ * that is worth a hundred lines.
  */
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createProxy } from './proxy.mjs';
 
 const ROOT = resolve(fileURLToPath(new URL('./dist', import.meta.url)));
 const HOST = process.env['SAIRIOS_BIND_HOST'] ?? '127.0.0.1';
@@ -58,13 +63,24 @@ function send(res, status, body, headers = {}) {
   res.end(body);
 }
 
+const { routeFor, forward } = createProxy();
+
 const server = createServer((req, res) => {
   void (async () => {
+    const url = new URL(req.url ?? '/', `http://${HOST}:${PORT}`);
+
+    // Proxy routing comes first, and before the method check: the services take
+    // POST, PATCH and DELETE, while the static half of this server is
+    // deliberately read-only. Routing on the RAW pathname, not the decoded one,
+    // because `%2e%2e` and friends are the file server's problem and must not
+    // become a way to reach a service.
+    const route = routeFor(url.pathname);
+    if (route) return forward(req, res, route, url.search);
+
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       return send(res, 405, 'method not allowed', { allow: 'GET, HEAD' });
     }
 
-    const url = new URL(req.url ?? '/', `http://${HOST}:${PORT}`);
     const requested = decodeURIComponent(url.pathname);
 
     // Resolve, then prove the result is inside the root. `normalize` alone is not

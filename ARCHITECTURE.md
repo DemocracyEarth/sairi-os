@@ -66,6 +66,18 @@ Four processes in development, each with one job:
 | agent-bridge      | 7802 | Normalize an agent behind one interface.   | provider, broker, context-service |
 | permission-broker | 7803 | Decide and execute privileged actions.     | the sandbox                       |
 
+**One origin.** The browser only ever talks to 7800. The shell process serves
+the bundle and reverse-proxies `/ctx`, `/bridge` and `/broker` to 7801-7803 on
+loopback, so the page makes no cross-origin request and the services' ports are
+not part of its build. That is why the shell's `connect-src` is `'self'` alone,
+why CORS no longer applies on the browser path, and why a tunnel forwards one
+port. See [ADR 0011](docs/adr/0011-same-origin-service-proxy.md) and
+[apps/shell/proxy.mjs](apps/shell/proxy.mjs).
+
+The ports above are still real and still reachable directly on loopback —
+`connect-model.sh` uses 7802 that way. The proxy is the browser's path in, not a
+replacement for the boundary.
+
 Two rules hold across all of them:
 
 1. **The shell never talks to a model.** It talks to the bridge, which talks to
