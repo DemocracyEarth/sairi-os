@@ -32,10 +32,38 @@ import { createServer } from 'node:http';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createProxy } from './proxy.mjs';
+import { guard, resolveAccess } from './access.mjs';
 
 const ROOT = resolve(fileURLToPath(new URL('./dist', import.meta.url)));
-const HOST = process.env['SAIRIOS_BIND_HOST'] ?? '127.0.0.1';
+
+/**
+ * The shell has its OWN bind host, deliberately not `SAIRIOS_BIND_HOST`.
+ *
+ * That variable is shared by the three services, so honouring it here meant
+ * "expose the shell" and "expose the unauthenticated permission broker" were
+ * the same instruction — and the remote-access documentation told people to set
+ * it. Exposing the shell is a supported thing to do, because the shell has a
+ * front door. Exposing the services is not.
+ *
+ * `||` rather than `??`: an empty value binds every interface.
+ */
+const HOST = process.env['SAIRIOS_SHELL_BIND_HOST'] || '127.0.0.1';
 const PORT = Number(process.env['SAIRIOS_SHELL_PORT'] ?? 7800);
+
+/**
+ * Resolved before the server is created, so an unsafe configuration cannot
+ * reach a listening socket even briefly. Off loopback with no token is a
+ * startup error with no override — see access.mjs for why that is a refusal
+ * rather than a warning.
+ */
+const ACCESS = resolveAccess({ token: process.env['SAIRIOS_ACCESS_TOKEN'], bindHost: HOST });
+if (!ACCESS.ok) {
+  process.stderr.write(`sairios-shell: ${ACCESS.message}\n`);
+  process.exit(1);
+}
+// Only meaningful when something terminates TLS in front of this process; the
+// cookie is marked Secure so it is never sent back in the clear afterwards.
+const SECURE_COOKIE = process.env['SAIRIOS_BEHIND_TLS'] === 'true';
 
 const TYPES = new Map(
   Object.entries({
@@ -68,6 +96,10 @@ const { routeFor, forward } = createProxy();
 const server = createServer((req, res) => {
   void (async () => {
     const url = new URL(req.url ?? '/', `http://${HOST}:${PORT}`);
+
+    // The front door comes before everything, including the proxy. A guard
+    // placed after routing is a guard somebody eventually routes around.
+    if (guard(req, res, url, ACCESS, { secureCookie: SECURE_COOKIE })) return;
 
     // Proxy routing comes first, and before the method check: the services take
     // POST, PATCH and DELETE, while the static half of this server is
@@ -143,6 +175,11 @@ server.on('error', (error) => {
 
 server.listen(PORT, HOST, () => {
   process.stdout.write(`sairios-shell: serving ${ROOT} on http://${HOST}:${PORT}\n`);
+  process.stdout.write(
+    ACCESS.required
+      ? 'sairios-shell: access token required; sign in at /access\n'
+      : 'sairios-shell: loopback only, no access token required\n',
+  );
 });
 
 for (const signal of ['SIGINT', 'SIGTERM']) {

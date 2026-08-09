@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readEnv, startupChecks } from './env.js';
+import { assertBindSafe, readEnv, startupChecks } from './env.js';
 
 /**
  * The peer-URL split matters: `bindHost` answers "where do I listen", and in a
@@ -52,10 +52,63 @@ describe('startup checks', () => {
     expect(checks.find((c) => c.name === 'agent-provider')?.status).toBe('warn');
   });
 
-  it('warns loudly when the services are not bound to loopback', () => {
+  it('errors, not warns, when the services are not bound to loopback', () => {
+    // It used to warn, which is to say it did nothing: an operator who set
+    // 0.0.0.0 got a log line and a fully exposed permission broker. The
+    // services now refuse to start; see assertBindSafe.
     const checks = startupChecks(readEnv({ SAIRIOS_BIND_HOST: '0.0.0.0' }));
     const bind = checks.find((c) => c.name === 'bind-host');
-    expect(bind?.status).toBe('warn');
+    expect(bind?.status).toBe('error');
     expect(bind?.detail).toContain('NO authentication');
+  });
+
+  it('downgrades to a warning once the operator has acknowledged it', () => {
+    // Containers legitimately need 0.0.0.0 on an internal network.
+    const checks = startupChecks(
+      readEnv({
+        SAIRIOS_BIND_HOST: '0.0.0.0',
+        SAIRIOS_ALLOW_UNAUTHENTICATED_BIND: 'yes-i-understand',
+      }),
+    );
+    expect(checks.find((c) => c.name === 'bind-host')?.status).toBe('warn');
+  });
+
+  it('treats an empty SAIRIOS_BIND_HOST as unset rather than as every interface', () => {
+    // `listen(port, '')` binds every interface, so the nullish default turned a
+    // blank line in a .env into an exposed service.
+    expect(readEnv({ SAIRIOS_BIND_HOST: '' }).bindHost).toBe('127.0.0.1');
+  });
+});
+
+describe('assertBindSafe', () => {
+  it('refuses a routable bind with no acknowledgement', () => {
+    const message = assertBindSafe(readEnv({ SAIRIOS_BIND_HOST: '0.0.0.0' }), 'test-service');
+    expect(message).toContain('refusing to bind');
+    expect(message).toContain('SAIRIOS_ALLOW_UNAUTHENTICATED_BIND');
+  });
+
+  it('permits loopback, and an acknowledged routable bind', () => {
+    expect(assertBindSafe(readEnv({}), 'x')).toBeUndefined();
+    expect(
+      assertBindSafe(
+        readEnv({
+          SAIRIOS_BIND_HOST: '0.0.0.0',
+          SAIRIOS_ALLOW_UNAUTHENTICATED_BIND: 'yes-i-understand',
+        }),
+        'x',
+      ),
+    ).toBeUndefined();
+  });
+
+  it('is not satisfied by a truthy-but-wrong acknowledgement', () => {
+    // The value is a deliberate sentence, not a boolean, so nobody sets it by
+    // copying `=true` from another variable.
+    for (const value of ['true', '1', 'yes', 'YES-I-UNDERSTAND']) {
+      const env = readEnv({
+        SAIRIOS_BIND_HOST: '0.0.0.0',
+        SAIRIOS_ALLOW_UNAUTHENTICATED_BIND: value,
+      });
+      expect(assertBindSafe(env, 'x')).toBeDefined();
+    }
   });
 });

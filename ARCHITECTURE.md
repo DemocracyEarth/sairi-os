@@ -78,6 +78,14 @@ The ports above are still real and still reachable directly on loopback —
 `connect-model.sh` uses 7802 that way. The proxy is the browser's path in, not a
 replacement for the boundary.
 
+**One door.** Because there is one origin, there is one place to authenticate.
+`SAIRIOS_ACCESS_TOKEN` guards every path the shell process serves, service
+prefixes included, and the process **refuses to start** bound anywhere other
+than loopback without it. The services stay unauthenticated and stay on
+loopback; nothing about them changed. See
+[ADR 0013](docs/adr/0013-authenticated-front-door.md) and
+[docs/REMOTE.md](docs/REMOTE.md).
+
 Two rules hold across all of them:
 
 1. **The shell never talks to a model.** It talks to the bridge, which talks to

@@ -1,6 +1,11 @@
 import { join } from 'node:path';
 import { createLogger } from '@sairios/shared';
-import { attachListenDiagnostics, readEnv, startupChecks } from '@sairios/shared/node';
+import {
+  assertBindSafe,
+  attachListenDiagnostics,
+  readEnv,
+  startupChecks,
+} from '@sairios/shared/node';
 import { FileAuditLog } from './audit.js';
 import { PermissionBroker } from './broker.js';
 import { createPermissionBrokerServer } from './server.js';
@@ -15,6 +20,14 @@ const broker = new PermissionBroker({
 });
 
 await broker.load();
+
+// Before anything binds. A service with no authentication must not reach a
+// listening socket on a routable address by accident; see assertBindSafe.
+const unsafeBind = assertBindSafe(env, 'permission-broker');
+if (unsafeBind) {
+  process.stderr.write(`${unsafeBind}\n`);
+  process.exit(1);
+}
 
 for (const check of startupChecks(env)) {
   const line = `${check.name}: ${check.detail}`;
