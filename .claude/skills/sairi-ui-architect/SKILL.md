@@ -38,7 +38,7 @@ Sairi OS is:
 - adaptive
 - spatial
 - calm
-- cinematic
+- composed
 - intelligent
 - elegant
 - alive
@@ -55,30 +55,41 @@ Sairi OS is not:
 
 ## Visual direction
 
-Create a premium, cinematic interface with extraordinary eye candy and disciplined restraint.
+Create a restrained, editorial interface with extraordinary craft and almost no colour.
+
+The brief, in one line: **what if the original Macintosh team had kept evolving the same
+design language for forty years, without ever passing through skeuomorphism, glassmorphism,
+or generic SaaS?** Macintosh 1984 × NeXTSTEP × Braun/Rams × modern high-DPI typography.
+
+This REPLACED an earlier dark, spectral, cinematic direction. That version decorated
+indiscriminately — a knowledge graph and a warning both glowed, so neither meant anything.
+See [ADR 0014](../../../docs/adr/0014-monochrome-editorial-language.md).
 
 The visual system should combine:
 
-- deep midnight navy and near-black backgrounds
-- subtle spatial gradients
-- translucent layered surfaces
-- delicate spectral borders
-- blue, cyan, violet, magenta, coral, amber, and mint light
-- soft volumetric illumination
-- crisp typography
-- generous spacing
-- shallow depth and atmospheric perspective
-- responsive motion
-- luminous data visualization
-- ambient animated backgrounds
-- carefully controlled reflections and highlights
+- off-white paper, graphite ink, charcoal chrome
+- exactly ONE accent, carrying state and nothing else
+- 1px rules as the primary means of separation
+- crisp geometry: slightly rounded rectangles, far less pill than contemporary SaaS
+- typography doing the heavy lifting — strong hierarchy, small-caps labels
+- information density without clutter
+- shallow, almost invisible elevation
+- motion that explains causality
+- monochrome data visualisation, differentiated by value rather than hue
 
 The result should feel like:
 
-- a world-class operating system from the near future
-- a premium cinematic product demonstration
-- intelligence made visible
+- an instrument, not a brand
+- a workbench that rearranges itself around the problem in front of you
+- intelligence made legible
 - a digital environment rather than a website
+
+Explicitly NOT:
+
+- backdrop blur, glassmorphism, or any `filter: blur` atmosphere
+- glow, volumetric light, or drifting coloured fields
+- colour used for identity ("this workspace is the violet one")
+- capsules and pills as the default shape
 
 Do not copy Apple, Linear, Arc, Vision Pro, or any existing product directly.
 
@@ -223,8 +234,8 @@ Build reusable primitives such as:
 - Timeline
 - StatusOrb
 - AmbientBackground
-- SpectralBorder
-- GlowDivider
+- Rule
+- Ledger
 - FocusMode
 - ContextTransition
 
@@ -255,37 +266,28 @@ Tertiary controls should nearly disappear until needed.
 
 ## Color system
 
-Base palette:
+Base palette (light is the design; dark is a re-picked peer, never an inversion):
 
-- void: #050816
-- midnight: #080D22
-- deep blue: #0C1533
-- frost: rgba(255,255,255,0.72)
-- muted frost: rgba(255,255,255,0.48)
+- paper: #F7F6F3
+- paper raised: #FFFEFC
+- charcoal chrome: #26262A
+- ink: #1A1A18 · ink-2 #47453F · ink-3 #605D55 · ink-4 #6F6C64
+- rules: rgb(26 26 24 / 16%) and / 8%
 
-Spectral accents:
+The one accent — Braun signal orange:
 
-- electric blue
-- cyan
-- violet
-- magenta
-- coral
-- amber
-- mint
+- signal: #D4571F (marks and fills)
+- signal-ink: #B84714 (the same colour taken down until it passes 4.5:1 as text)
 
-Use gradients as light, not as paint.
+Colour communicates STATE and nothing else. If the accent appears anywhere decorative,
+delete it: its entire value is that the eye has learned it always means something.
 
-Gradients should suggest:
+Tones (`--tone-*`) are a monochrome VALUE ramp for marks — strokes, fills, spines — spaced
+to clear 3:1 and to stay separable from one another. Text has a 4.5 floor and uses the ink
+ramp. Conflating the two is how a chart colour ends up in a paragraph.
 
-- intelligence
-- activity
-- focus
-- state transitions
-- relationships between information
-
-Do not fill every object with rainbow gradients.
-
-Reserve strong spectral color for focal points and active intelligence.
+Every token lives in `apps/shell/src/sairi/tokens.css`. Check contrast before shipping a
+new value; the ramp was re-spaced once because a token used as text 79 times sat at 2.42:1.
 
 ## Typography
 
@@ -338,17 +340,12 @@ Respect reduced-motion preferences.
 
 ## Ambient effects
 
-Use subtle ambient effects to make the interface feel alive:
+Almost none, and that is the point. The ground is flat paper plus a few percent of grain,
+which exists to stop large flat fields banding on 8-bit panels rather than as texture.
 
-- slow gradient drift
-- faint particles
-- moving light fields
-- soft reflections
-- restrained noise textures
-- localized glows
-- gentle agent activity pulses
-
-Ambient effects must never reduce readability or performance.
+Do not add: drifting light fields, particles, breathing glows, reflections, or anything
+that moves while nobody is looking at it. Liveliness comes from agents actually working
+and from surfaces changing as certainty changes — not from the background.
 
 ## Interaction quality
 
@@ -384,7 +381,7 @@ On smaller screens:
 - prioritize the active context
 - transform navigation into a context switcher
 - surface agent activity contextually
-- preserve cinematic depth without visual overload
+- preserve hierarchy without visual overload
 - keep primary actions thumb-accessible
 - use bottom sheets, progressive disclosure, and focus modes
 

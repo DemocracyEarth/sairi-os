@@ -1,105 +1,178 @@
 /*
- * Sairi OS — the cinematic token layer.
- *
- * Scoped to `.sairi` on purpose. The shipped desktop is a warm, light,
- * early-Macintosh system with its own token set in
- * packages/ui-components/src/tokens.css, and it is verified and in use. This
- * layer does not touch it: both can exist, and a machine can show either.
+ * Sairi OS — the token layer.
  *
  * ---------------------------------------------------------------------------
- * Convergence: the one idea these tokens exist to express
+ * The design brief, in one line
  * ---------------------------------------------------------------------------
- * A surface's appearance is a function of how CERTAIN its contents are, not of
- * what kind of widget it is. Three states, and they are visually different
- * kinds of object rather than three shades of the same one:
+ * What if the original Macintosh team had kept evolving the same design
+ * language for forty years, without ever passing through skeuomorphism,
+ * glassmorphism, or generic SaaS?
  *
- *   provisional  wide, dim, cool, dashed edge, low elevation. A question.
- *   forming      tightening, warming, edge solidifying. Work in progress.
- *   resolved     narrow, luminous, warm, solid edge, raised. An answer.
+ * Macintosh 1984 × NeXTSTEP × Braun/Rams × modern high-DPI typography. The
+ * machine should read as an instrument, not a brand.
  *
- * Every `--c-*` token below interpolates across that axis. A panel sets
- * `--certainty` (0..1) and inherits its whole appearance from it, which is why
- * the layout can change meaning without any component knowing about layout.
+ * This layer replaced a dark, spectral, cinematic one. That version expressed
+ * everything with colour and light — seven hues, volumetric glow, backdrop
+ * blur. It photographed well and it decorated indiscriminately: a knowledge
+ * graph and a warning both glowed, so neither meant anything. The rule now is
+ * that **colour communicates state and nothing else**. Everything that used to
+ * be carried by hue is carried by ink weight, rule weight, and space.
  *
  * ---------------------------------------------------------------------------
- * Performance
+ * Convergence, re-expressed
  * ---------------------------------------------------------------------------
- * Backdrop blur is expensive and is therefore rationed: two levels, used on at
- * most a handful of surfaces at a time. Animation is restricted to transform
- * and opacity, which the compositor can run without layout or paint. There is
- * no requestAnimationFrame loop anywhere in this build — ambient motion is CSS
- * keyframes on a small number of elements, which the browser can throttle when
- * the tab is hidden and which cost nothing on the main thread.
+ * The one idea worth keeping: a surface's appearance is a function of how
+ * CERTAIN its contents are, not of what kind of widget it is.
+ *
+ *   provisional  grey ink, dashed hairline, flat.        A question.
+ *   forming      darkening ink, solid hairline.          Work in progress.
+ *   resolved     black ink, full-weight rule, a ledger.  An answer.
+ *
+ * It used to be drawn with glow, which monochrome does not have. It is drawn
+ * now the way a press draws certainty — the panel **sets like type** as it
+ * resolves. That is a stronger instrument than glow, because ink weight and
+ * rule solidity are the two resources an editorial layout actually has, and
+ * they survive being printed, dimmed, or read by someone colour-blind.
+ *
+ * ---------------------------------------------------------------------------
+ * Light first, dark as a peer
+ * ---------------------------------------------------------------------------
+ * The light theme is the design; the dark theme is a counterpart, not an
+ * inversion. Paper does not become black — the ink and the ground trade roles
+ * and every value is re-picked so that contrast ratios and the sense of weight
+ * survive the trip. Both honour `prefers-color-scheme`, and `[data-theme]`
+ * overrides it in both directions.
  */
 
 .sairi {
-  /* --- the void ------------------------------------------------------- */
-  --void: #050816;
-  --midnight: #080d22;
-  --deep: #0c1533;
-  --deep-2: #101c40;
+  /* --- ground ---------------------------------------------------------- *
+   * Warm off-white rather than #fff. A pure white field makes 1px rules look
+   * like scratches and makes black type look like it is floating; a few
+   * points of warmth gives the hairlines something to sit on. */
+  --paper: #f7f6f3;
+  --paper-raised: #fffefc;
+  --paper-sunk: #eeece7;
+  /* Chrome is charcoal, not black: the frame around the work, and the one
+     place the interface admits it is a machine. */
+  --charcoal: #26262a;
+  --charcoal-2: #34343a;
 
-  /* Frost. Text and hairlines are white at graded alpha rather than grey,
-     so they pick up whatever light sits behind them. */
-  --frost: rgb(255 255 255 / 92%);
-  --frost-2: rgb(255 255 255 / 72%);
-  --frost-3: rgb(255 255 255 / 48%);
-  --frost-4: rgb(255 255 255 / 28%);
-  --frost-5: rgb(255 255 255 / 12%);
-  --frost-6: rgb(255 255 255 / 6%);
+  /* --- ink ------------------------------------------------------------- *
+   * Four steps, and they are steps rather than a gradient: a reader can tell
+   * primary from secondary at a glance only if the gap is decisive. Graphite
+   * rather than pure black, which on a bright field reads as a hole. */
+  --ink: #1a1a18;
+  --ink-2: #47453f;
+  --ink-3: #605d55;
+  --ink-4: #6f6c64;
 
-  /* --- spectral ------------------------------------------------------- *
-   * Seven hues, each with a job. Never decorative: if one of these appears,
-   * it is carrying a meaning from the list below.
+  /* Hairlines. `--rule` is meant to be seen; `--rule-soft` is meant to be
+     felt. Nothing between them, because a third weight always ends up used
+     to avoid a layout decision. */
+  --rule: rgb(26 26 24 / 16%);
+  --rule-soft: rgb(26 26 24 / 8%);
+
+  /* --- the accent ------------------------------------------------------ *
+   * One colour in the entire system. Braun's signal orange, and it appears
+   * ONLY where the machine needs a human: an approval waiting, an alert, the
+   * live microphone. If it shows up anywhere decorative, delete it — its
+   * whole value is that the eye has learned it always means something. */
+  --signal: #d4571f;
+  --signal-deep: #a83d12;
+  /* Braun's orange is 3.75:1 on paper — right for a mark, too light to read as
+     small text. This is the same colour taken down until it passes, and it is
+     what the accent must use whenever it is words rather than a shape. */
+  --signal-ink: #b84714;
+  --signal-wash: rgb(212 87 31 / 10%);
+  --signal-edge: rgb(212 87 31 / 42%);
+
+  /*
+   * `--accent` is a constant now, and that is the whole change.
    *
-   *   cyan     an agent is working
-   *   violet   synthesis, a knowledge relation
-   *   magenta  a conflict, a contradiction, a blocked path
-   *   coral    a failure, an alert, something wrong
-   *   amber    awaiting a human decision
-   *   mint     resolved, confirmed, safe
-   *   blue     structural, neutral, the default light
+   * It used to be set per context from the context's hue, so research was
+   * violet, travel was cyan, an incident was coral — and every focus ring,
+   * active spine and selected row inherited it. That made colour mean "which
+   * workspace am I in", which is something the title already says, and it left
+   * nothing to say "this needs you" with.
+   *
+   * Components no longer override it. If something is accented, it is because
+   * the machine wants a human.
    */
-  --blue: #4c8dff;
-  --cyan: #35d6f0;
-  --violet: #9b7bff;
-  --magenta: #e061c8;
-  --coral: #ff7a66;
-  --amber: #f5b944;
-  --mint: #4fe0a8;
+  --accent: var(--signal);
 
-  /* --- convergence axis ---------------------------------------------- *
-   * A surface sets --certainty: 0 (a question) .. 1 (an answer).
-   * Everything below is derived from it. */
+  /* The identity value a component inherits when nothing sets one. Ink-2
+     rather than the accent, so an unstyled mark is quiet by default. */
+  --tone: var(--ink-2);
+
+  /* --- tones ----------------------------------------------------------- *
+   * What the seven spectral hues became. They are a VALUE ramp now, not a
+   * colour wheel, so a chart with four series is still readable — that is how
+   * Braun-era instrumentation and every printed chart before 1990 did it, and
+   * it is the only approach that also works in greyscale and for the eight
+   * percent of men who cannot separate red from green.
+   *
+   * `--tone-settled` is full ink on purpose: a settled thing is not a colour,
+   * it is the darkest mark on the page.
+   *
+   * These are values for MARKS — strokes, fills, spines — and they are spaced
+   * to clear 3:1 against the field and to stay separable from each other. Text
+   * has a 4.5 floor and uses the ink ramp instead. Conflating the two is how a
+   * chart colour ended up in a paragraph, three times. */
+  --tone-structural: #3a3934;
+  --tone-active: #6b6860;
+  --tone-relation: #52504a;
+  --tone-conflict: #8a877e;
+  --tone-settled: var(--ink);
+  --alert: var(--signal-deep);
+
+  /* --- convergence axis ------------------------------------------------ *
+   * A surface sets --certainty: 0 (a question) .. 1 (an answer) and inherits
+   * its whole appearance. No component needs to know about layout, which is
+   * why the workbench can change what a panel MEANS without touching it. */
   --certainty: 0;
 
-  /* Edge: dashed and cool when provisional, solid and warm when resolved. */
-  --c-edge-alpha: calc(0.1 + var(--certainty) * 0.34);
-  --c-edge: rgb(255 255 255 / calc(var(--c-edge-alpha) * 100%));
-  /* Fill lifts slightly as it resolves, so a resolved surface reads nearer. */
-  --c-fill: rgb(255 255 255 / calc((0.022 + var(--certainty) * 0.045) * 100%));
-  /* Glow only exists once there is something worth looking at. */
-  --c-glow-alpha: calc(var(--certainty) * var(--certainty) * 0.5);
-  /* Type sharpens as certainty rises. */
-  --c-ink: rgb(255 255 255 / calc((0.5 + var(--certainty) * 0.42) * 100%));
-  --c-lift: calc(var(--certainty) * -3px);
+  /* Ink darkens from tertiary to full as the thing becomes true. */
+  --c-ink: color-mix(in srgb, var(--ink) calc(45% + var(--certainty) * 55%), transparent);
+  /* The rule gains weight rather than glow. Border-style cannot interpolate,
+     so `s-surface--provisional` flips it to dashed; this carries the rest. */
+  --c-rule: color-mix(in srgb, var(--ink) calc(10% + var(--certainty) * 26%), transparent);
+  /* A resolved surface sits on raised paper; a provisional one on the field
+     itself, so it reads as not-yet-a-thing. */
+  --c-fill: color-mix(in srgb, var(--paper-raised) calc(var(--certainty) * 100%), transparent);
+  --c-lift: calc(var(--certainty) * -1px);
+  /* Retained so the old glow references resolve to nothing rather than to an
+     error. Nothing in the new language glows. */
+  --c-glow-alpha: 0;
 
-  /* --- elevation ------------------------------------------------------ */
+  /* --- elevation ------------------------------------------------------- *
+   * Depth comes from rules. These exist for the three surfaces that genuinely
+   * float — a sheet, a palette, the command field — and they are deliberately
+   * almost invisible. If a shadow is legible as a shadow, it is too big. */
   --e-0: none;
-  --e-1: 0 1px 2px rgb(0 0 0 / 40%);
-  --e-2: 0 2px 8px rgb(0 0 0 / 45%), 0 12px 32px rgb(0 0 0 / 30%);
-  --e-3: 0 4px 16px rgb(0 0 0 / 50%), 0 24px 64px rgb(0 0 0 / 40%);
+  --e-1: 0 1px 0 rgb(26 26 24 / 5%);
+  --e-2: 0 1px 2px rgb(26 26 24 / 7%), 0 4px 10px rgb(26 26 24 / 5%);
+  --e-3: 0 2px 4px rgb(26 26 24 / 9%), 0 14px 34px rgb(26 26 24 / 8%);
 
-  /* Rationed. Two levels, and a budget of a few elements each. */
-  --blur-1: blur(14px);
-  --blur-2: blur(28px);
+  /* No blur. The tokens survive so the handful of old call sites resolve to a
+     no-op instead of breaking, but glassmorphism is gone from the language:
+     it costs a compositor pass per surface and it makes every layer look like
+     the same layer. Hierarchy comes from rules and ink. */
+  --blur-1: none;
+  --blur-2: none;
 
-  /* --- geometry ------------------------------------------------------- */
-  --r-sm: 6px;
-  --r: 12px;
-  --r-lg: 18px;
-  --r-xl: 26px;
+  /* --- geometry -------------------------------------------------------- *
+   * Slightly rounded rectangles, and much less pill than contemporary SaaS.
+   * 3px reads as "cut with care"; 14px reads as a toy. --r-pill exists for the
+   * two places a capsule is genuinely right (a status chip, a toggle track). */
+  --r-sm: 2px;
+  --r: 3px;
+  --r-lg: 5px;
+  --r-xl: 8px;
+  --r-pill: 100px;
 
+  /* A 4px rhythm. Compact by modern standards on purpose: old Macs showed a
+     surprising amount because the hierarchy was good, not because the rows
+     were tall. */
   --s-1: 4px;
   --s-2: 8px;
   --s-3: 12px;
@@ -109,33 +182,42 @@
   --s-7: 48px;
   --s-8: 64px;
 
-  /* --- type ----------------------------------------------------------- *
-   * System stack: no webfont to download, no layout shift, and the CSP
-   * forbids a foreign font host anyway. */
+  /* --- type ------------------------------------------------------------ *
+   * Typography does the heavy lifting, so the scale has real contrast between
+   * steps rather than a smooth ramp — display against body is a 2.5× jump.
+   * System stack: nothing to download, no layout shift, and the CSP forbids a
+   * foreign font host anyway. */
   --font: ui-sans-serif, -apple-system, 'SF Pro Text', 'Segoe UI', Inter, system-ui, sans-serif;
   --mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace;
 
-  --t-display: 34px;
-  --t-title: 21px;
-  --t-lead: 16px;
+  --t-display: 32px;
+  --t-title: 19px;
+  --t-lead: 15px;
   --t-body: 13.5px;
   --t-meta: 12px;
   --t-micro: 10.5px;
 
-  --track-display: -0.028em;
-  --track-title: -0.018em;
-  --track-micro: 0.09em;
+  /* Tighter as it gets larger, which is what makes a heading look set rather
+     than typed. The label tracking is wide because small caps need air. */
+  --track-display: -0.022em;
+  --track-title: -0.014em;
+  --track-label: 0.08em;
+  --track-micro: 0.05em;
 
-  /* --- motion --------------------------------------------------------- *
-   * One easing for entrances (decelerate — arrives with weight), one for
-   * exits, one spring-ish for anything the pointer drives. */
+  --w-regular: 400;
+  --w-medium: 500;
+  --w-semi: 600;
+
+  /* --- motion ---------------------------------------------------------- *
+   * Motion explains causality: a panel emerges from whatever summoned it, an
+   * object shrinks into its destination. Nothing moves to be pretty. */
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.34, 1.4, 0.5, 1);
-  --d-fast: 140ms;
-  --d: 260ms;
-  --d-slow: 520ms;
-  --d-cine: 900ms;
+  --d-fast: 120ms;
+  --d: 200ms;
+  --d-slow: 380ms;
+  --d-cine: 700ms;
 
   --z-bg: 0;
   --z-surface: 10;
@@ -144,16 +226,100 @@
   --z-command: 40;
   --z-overlay: 50;
 
-  color-scheme: dark;
+  color-scheme: light;
   font-family: var(--font);
-  color: var(--frost);
-  background: var(--void);
+  font-size: var(--t-body);
+  color: var(--ink);
+  background: var(--paper);
+  /* Compact type at high DPI needs this or it renders heavier than designed. */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 /*
- * Reduced motion is honoured by removing MOVEMENT, not by removing the
- * interface. The assembly sequence still runs and still explains what Sairi
- * did — it simply arrives rather than travels.
+ * The dark counterpart.
+ *
+ * Re-picked rather than inverted. Ink on paper and paper on ink are not the
+ * same optical problem: light type on a dark field blooms, so the ramp is
+ * compressed at the top (an off-white that is not #fff) and the rules are
+ * proportionally brighter than their light-mode counterparts to survive it.
+ * Signal orange is lifted a little, because the same orange on charcoal reads
+ * muddier than it does on paper.
+ */
+@media (prefers-color-scheme: dark) {
+  .sairi:not([data-theme='light']) {
+    --paper: #17181a;
+    --paper-raised: #202124;
+    --paper-sunk: #101113;
+    --charcoal: #0c0d0e;
+    --charcoal-2: #1b1c1f;
+
+    --ink: #edece8;
+    --ink-2: #bab8b1;
+    --ink-3: #9a9890;
+    --ink-4: #84827b;
+
+    --rule: rgb(237 236 232 / 17%);
+    --rule-soft: rgb(237 236 232 / 9%);
+
+    --signal: #f0733a;
+    --signal-deep: #ff9a63;
+    --signal-ink: #f0733a;
+    --signal-wash: rgb(240 115 58 / 14%);
+    --signal-edge: rgb(240 115 58 / 45%);
+
+    --tone-structural: #d6d4ce;
+    --tone-active: #96938c;
+    --tone-relation: #b6b3ac;
+    --tone-conflict: #7e7b74;
+
+    --c-fill: color-mix(in srgb, var(--paper-raised) calc(var(--certainty) * 100%), transparent);
+    --e-1: 0 1px 0 rgb(0 0 0 / 30%);
+    --e-2: 0 1px 2px rgb(0 0 0 / 40%), 0 4px 10px rgb(0 0 0 / 30%);
+    --e-3: 0 2px 4px rgb(0 0 0 / 45%), 0 14px 34px rgb(0 0 0 / 40%);
+
+    color-scheme: dark;
+  }
+}
+
+/* An explicit choice beats the system preference, in both directions. */
+.sairi[data-theme='dark'] {
+  --paper: #17181a;
+  --paper-raised: #202124;
+  --paper-sunk: #101113;
+  --charcoal: #0c0d0e;
+  --charcoal-2: #1b1c1f;
+
+  --ink: #edece8;
+  --ink-2: #bab8b1;
+  --ink-3: #9a9890;
+  --ink-4: #84827b;
+
+  --rule: rgb(237 236 232 / 17%);
+  --rule-soft: rgb(237 236 232 / 9%);
+
+  --signal: #f0733a;
+  --signal-deep: #ff9a63;
+  --signal-ink: #f0733a;
+  --signal-wash: rgb(240 115 58 / 14%);
+  --signal-edge: rgb(240 115 58 / 45%);
+
+  --tone-structural: #d6d4ce;
+  --tone-active: #96938c;
+  --tone-relation: #b6b3ac;
+  --tone-conflict: #7e7b74;
+
+  --e-1: 0 1px 0 rgb(0 0 0 / 30%);
+  --e-2: 0 1px 2px rgb(0 0 0 / 40%), 0 4px 10px rgb(0 0 0 / 30%);
+  --e-3: 0 2px 4px rgb(0 0 0 / 45%), 0 14px 34px rgb(0 0 0 / 40%);
+
+  color-scheme: dark;
+}
+
+/*
+ * Reduced motion removes MOVEMENT, not the interface. The assembly sequence
+ * still runs and still explains what Sairi did — it arrives rather than
+ * travels.
  */
 @media (prefers-reduced-motion: reduce) {
   .sairi *,

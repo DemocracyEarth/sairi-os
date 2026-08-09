@@ -207,7 +207,7 @@ function CanvasLens({ board }: { board: CanvasBoard }): JSX.Element {
               className="s-dsn-chip"
               key={c.id}
               onClick={() => setFocus(focus === c.id ? null : c.id)}
-              style={{ '--accent': hue(c.accent) } as CSSProperties}
+              style={{ '--tone': hue(c.accent) } as CSSProperties}
               type="button"
             >
               {c.label}
@@ -216,7 +216,7 @@ function CanvasLens({ board }: { board: CanvasBoard }): JSX.Element {
         </div>
         <ul className="s-dsn-legend">
           {(Object.keys(NOTE_ACCENT) as NoteKind[]).map((k) => (
-            <li key={k} style={{ '--accent': hue(NOTE_ACCENT[k]) } as CSSProperties}>
+            <li key={k} style={{ '--tone': hue(NOTE_ACCENT[k]) } as CSSProperties}>
               <span aria-hidden="true" className="s-dsn-legend__swatch" />
               {NOTE_LABEL[k]}
             </li>
@@ -240,7 +240,7 @@ function CanvasLens({ board }: { board: CanvasBoard }): JSX.Element {
               key={c.id}
               style={
                 {
-                  '--accent': hue(c.accent),
+                  '--tone': hue(c.accent),
                   left: `${c.x}%`,
                   top: `${c.y}%`,
                   width: `${c.w}%`,
@@ -286,7 +286,7 @@ function CanvasLens({ board }: { board: CanvasBoard }): JSX.Element {
               key={n.id}
               style={
                 {
-                  '--accent': hue(NOTE_ACCENT[n.kind]),
+                  '--tone': hue(NOTE_ACCENT[n.kind]),
                   '--tilt': `${n.tilt}deg`,
                   '--i': i,
                   left: `${n.x}%`,
@@ -366,7 +366,7 @@ function InsightsLens({ board }: { board: InsightBoard }): JSX.Element {
           <section
             className="s-dsn-theme"
             key={theme.id}
-            style={{ '--accent': hue(theme.accent) } as CSSProperties}
+            style={{ '--tone': hue(theme.accent) } as CSSProperties}
           >
             <header className="s-dsn-theme__head">
               <h4 className="s-dsn-theme__label">{theme.label}</h4>
@@ -477,7 +477,7 @@ function ConceptsLens({ set }: { set: ConceptSet }): JSX.Element {
         <article
           className={`s-dsn-concept${c.leading ? ' is-leading' : ''}`}
           key={c.id}
-          style={{ '--accent': hue(c.leading ? 'amber' : 'blue') } as CSSProperties}
+          style={{ '--tone': hue(c.leading ? 'amber' : 'blue') } as CSSProperties}
         >
           <div className="s-dsn-concept__mark" aria-hidden="true">
             {c.mark}

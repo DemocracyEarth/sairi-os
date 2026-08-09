@@ -247,9 +247,9 @@ export function SairiOS(): JSX.Element {
   return (
     <div
       className={`sairi s-os${switching ? ' is-switching' : ''}`}
-      style={{ '--accent': hue(active.hue) } as CSSProperties}
+      style={{ '--tone': hue(active.hue) } as CSSProperties}
     >
-      <AmbientBackground accent={active.hue} />
+      <AmbientBackground />
 
       {/* ---------------------------------------------------------------- *
        * Navigation layer
@@ -272,7 +272,7 @@ export function SairiOS(): JSX.Element {
                   onClick={() => switchTo(c.id)}
                   style={
                     {
-                      '--accent': hue(c.hue),
+                      '--tone': hue(c.hue),
                       // Heat: recent contexts sit forward, older ones recede.
                       '--heat': Math.max(0.25, 1 - c.lastActive / 240),
                     } as CSSProperties

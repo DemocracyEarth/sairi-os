@@ -951,7 +951,7 @@ function SourceRow({ source, rank }: { source: ResearchSource; rank?: number }):
             aria-label={`recency ${pips} of 4`}
             className="s-res-src__pips"
             role="img"
-            style={{ '--accent': hue('violet') } as CSSProperties}
+            style={{ '--tone': hue('violet') } as CSSProperties}
           >
             {[0, 1, 2, 3].map((i) => (
               <span className={`s-res-src__pip${i < pips ? ' is-on' : ''}`} key={i} />
@@ -972,7 +972,7 @@ function SourceRow({ source, rank }: { source: ResearchSource; rank?: number }):
           style={
             {
               '--v': source.credibility,
-              '--accent': hue(source.credibility < 0.4 ? 'magenta' : 'mint'),
+              '--tone': hue(source.credibility < 0.4 ? 'magenta' : 'mint'),
             } as CSSProperties
           }
         >
@@ -1213,7 +1213,7 @@ function ComparisonLens(input: LensInput): JSX.Element {
                   className="s-res-cmp__colhead"
                   key={c.id}
                   scope="col"
-                  style={{ '--accent': hue(c.accent) } as CSSProperties}
+                  style={{ '--tone': hue(c.accent) } as CSSProperties}
                 >
                   <span className="s-res-cmp__name">{c.name}</span>
                   <span className="s-res-cmp__sub">{c.sub}</span>
@@ -1243,7 +1243,7 @@ function ComparisonLens(input: LensInput): JSX.Element {
                     <td
                       className={`s-res-cmp__cell${cell.caveat ? ' s-res-cmp__cell--caveat' : ''}`}
                       key={`${row.metric}-${col?.id ?? i}`}
-                      style={{ '--accent': hue(col?.accent ?? 'blue') } as CSSProperties}
+                      style={{ '--tone': hue(col?.accent ?? 'blue') } as CSSProperties}
                     >
                       <span className="s-res-cmp__val">
                         {cell.value}
@@ -1320,7 +1320,7 @@ function TimelineLens(input: LensInput): JSX.Element {
                 '--t0': m.t0,
                 '--t1': m.t1,
                 '--k': m.confidence,
-                '--accent': hue(m.accent),
+                '--tone': hue(m.accent),
               } as CSSProperties
             }
           >

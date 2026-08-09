@@ -1,24 +1,21 @@
-import { type CSSProperties, type JSX } from 'react';
-import { hue } from './primitives.js';
-import type { Spectral } from './state.js';
+import { type JSX } from 'react';
 
 /**
- * The atmosphere behind everything.
+ * The ground the work sits on.
  *
- * Three slow-drifting light fields plus a fine grain. It carries the active
- * context's hue, so switching contexts changes the colour of the room rather
- * than just the contents of a panel — which is most of why a switch feels
- * spatial instead of like a tab change.
+ * This used to be three slow-drifting coloured light fields carrying the active
+ * context's hue, so switching contexts changed the colour of the room. It was
+ * the single most decorative thing in the build and it is gone: paper does not
+ * glow, and a moving light behind the text was competing with the text.
  *
- * Deliberately CSS-only. A canvas particle field would cost a permanent
- * main-thread loop for something nobody consciously looks at; three transformed
- * radial gradients cost the compositor almost nothing, keep working when the
- * tab is backgrounded, and stop entirely under prefers-reduced-motion.
+ * What remains is deliberately almost nothing — a flat field and a few percent
+ * of grain. The grain is not decoration but a technical fix: large flat areas
+ * band visibly on 8-bit panels, and noise at this amplitude hides it entirely
+ * while being invisible as texture.
  *
- * The grain is an inline SVG turbulence as a data URI. It exists because large
- * flat gradients band badly on 8-bit displays, and a few percent of noise hides
- * it completely — this is the one decorative element here that is really a
- * technical fix.
+ * Switching contexts still has to feel spatial. That now comes from the work
+ * itself moving (see `is-switching` in sairi.css), which is the honest place
+ * for it — the room is not what changed, the contents are.
  */
 
 const GRAIN =
@@ -33,16 +30,9 @@ const GRAIN =
      </svg>`,
   );
 
-export function AmbientBackground({ accent = 'blue' }: { accent?: Spectral }): JSX.Element {
+export function AmbientBackground(): JSX.Element {
   return (
-    <div
-      aria-hidden="true"
-      className="s-ambient"
-      style={{ '--accent': hue(accent) } as CSSProperties}
-    >
-      <span className="s-ambient__field s-ambient__field--1" />
-      <span className="s-ambient__field s-ambient__field--2" />
-      <span className="s-ambient__field s-ambient__field--3" />
+    <div aria-hidden="true" className="s-ambient">
       <span className="s-ambient__grain" style={{ backgroundImage: `url("${GRAIN}")` }} />
     </div>
   );

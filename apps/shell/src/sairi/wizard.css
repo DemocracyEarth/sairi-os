@@ -16,12 +16,7 @@
   place-items: center;
   padding: var(--s-5);
   overflow-y: auto;
-  background: radial-gradient(
-    120% 90% at 50% -10%,
-    var(--deep) 0%,
-    var(--midnight) 45%,
-    var(--void) 100%
-  );
+  background: var(--paper);
   animation: s-wiz-in var(--d-slow) var(--ease-out);
 }
 
@@ -31,35 +26,12 @@
   }
 }
 
-/* One light behind the panel, in the chosen provider's hue, so the choice is
-   felt before it is read. */
-.s-wiz__glow {
-  position: absolute;
-  width: min(760px, 90vw);
-  height: min(760px, 90vw);
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--accent) 30%, transparent);
-  filter: blur(120px);
-  opacity: 0.5;
-  pointer-events: none;
-  transition: background var(--d-cine) var(--ease-out);
-  animation: s-wiz-breathe 14s var(--ease-in-out) infinite alternate;
-}
-
-@keyframes s-wiz-breathe {
-  to {
-    transform: scale(1.12);
-    opacity: 0.32;
-  }
-}
-
 .s-wiz__panel {
   position: relative;
   width: min(680px, 100%);
   border-radius: var(--r-xl);
-  border: 1px solid var(--frost-5);
-  background: rgb(8 13 34 / 74%);
-  backdrop-filter: var(--blur-2);
+  border: 1px solid var(--rule);
+  background: var(--paper-raised);
   box-shadow: var(--e-3);
   padding: var(--s-6);
   display: flex;
@@ -83,9 +55,9 @@
   align-items: center;
   gap: 7px;
   font-size: var(--t-micro);
-  letter-spacing: var(--track-micro);
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  color: var(--frost-4);
+  color: var(--ink-4);
   flex: 1;
   min-width: 0;
 }
@@ -95,7 +67,7 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: var(--frost-6);
+  background: var(--rule-soft);
   transition: background var(--d-slow) var(--ease-out);
 }
 
@@ -107,32 +79,31 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  border: 1px solid var(--frost-5);
+  border: 1px solid var(--rule);
   flex-shrink: 0;
   transition: all var(--d) var(--ease-spring);
 }
 
 .s-wiz__beat--done {
-  color: var(--frost-3);
+  color: var(--ink-3);
 }
 
 .s-wiz__beat--done .s-wiz__dot {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--tone);
+  border-color: var(--tone);
 }
 
 .s-wiz__beat--done::after {
-  background: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--tone) 45%, transparent);
 }
 
 .s-wiz__beat--now {
-  color: var(--frost);
+  color: var(--ink);
 }
 
 .s-wiz__beat--now .s-wiz__dot {
-  background: var(--accent);
-  border-color: var(--accent);
-  box-shadow: 0 0 12px var(--accent);
+  background: var(--tone);
+  border-color: var(--tone);
   transform: scale(1.35);
 }
 
@@ -173,9 +144,9 @@
 .s-wiz__eyebrow {
   margin: 0;
   font-size: var(--t-micro);
-  letter-spacing: var(--track-micro);
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--tone);
 }
 
 .s-wiz__title {
@@ -184,7 +155,7 @@
   font-weight: 600;
   letter-spacing: var(--track-display);
   line-height: 1.2;
-  color: var(--frost);
+  color: var(--ink);
   max-width: 24ch;
 }
 
@@ -196,7 +167,7 @@
   margin: 0;
   font-size: var(--t-body);
   line-height: 1.65;
-  color: var(--frost-3);
+  color: var(--ink-3);
   max-width: 58ch;
 }
 
@@ -215,7 +186,7 @@
   gap: var(--s-3);
   align-items: baseline;
   font-size: var(--t-body);
-  color: var(--frost-2);
+  color: var(--ink-2);
   line-height: 1.55;
 }
 
@@ -228,48 +199,48 @@
   align-items: start;
   padding: var(--s-4);
   border-radius: var(--r);
-  border: 1px solid var(--frost-6);
-  background: rgb(255 255 255 / 2.5%);
+  border: 1px solid var(--rule-soft);
+  background: var(--rule-soft);
 }
 
 .s-wiz__check.is-ok {
-  border-color: color-mix(in srgb, var(--mint) 32%, transparent);
-  background: color-mix(in srgb, var(--mint) 6%, transparent);
+  border-color: color-mix(in srgb, var(--tone-settled) 32%, transparent);
+  background: color-mix(in srgb, var(--tone-settled) 6%, transparent);
 }
 
 .s-wiz__check.is-missing {
-  border-color: color-mix(in srgb, var(--amber) 32%, transparent);
-  background: color-mix(in srgb, var(--amber) 6%, transparent);
+  border-color: color-mix(in srgb, var(--signal) 32%, transparent);
+  background: color-mix(in srgb, var(--signal) 6%, transparent);
 }
 
 .s-wiz__checkline {
   margin: 0 0 4px;
   font-family: var(--mono);
   font-size: var(--t-meta);
-  color: var(--frost);
+  color: var(--ink);
 }
 
 .s-wiz__checknote {
   margin: 0;
   font-size: var(--t-micro);
   line-height: 1.6;
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 .s-wiz__checknote code {
   font-family: var(--mono);
-  color: var(--frost-3);
+  color: var(--ink-3);
 }
 
 .s-wiz__code {
   margin: 0;
   padding: var(--s-3) var(--s-4);
   border-radius: var(--r-sm);
-  border: 1px solid var(--frost-6);
+  border: 1px solid var(--rule-soft);
   background: rgb(0 0 0 / 30%);
   font-family: var(--mono);
   font-size: var(--t-meta);
-  color: var(--cyan);
+  color: var(--tone-active);
   overflow-x: auto;
 }
 
@@ -294,9 +265,9 @@
   align-items: flex-start;
   padding: var(--s-4);
   border-radius: var(--r);
-  border: 1px solid var(--frost-5);
+  border: 1px solid var(--rule);
   background: transparent;
-  color: var(--frost-2);
+  color: var(--ink-2);
   font: inherit;
   cursor: pointer;
   text-align: left;
@@ -304,15 +275,14 @@
 }
 
 .s-wiz__provider:hover {
-  border-color: var(--frost-4);
-  background: var(--frost-6);
+  border-color: var(--ink-4);
+  background: var(--rule-soft);
 }
 
 .s-wiz__provider.is-chosen {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: var(--frost);
-  box-shadow: 0 0 26px color-mix(in srgb, var(--accent) 26%, transparent);
+  border-color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 12%, transparent);
+  color: var(--ink);
 }
 
 .s-wiz__provider:focus-visible,
@@ -323,12 +293,12 @@
 
 .s-wiz__providername {
   font-size: var(--t-lead);
-  font-weight: 550;
+  font-weight: var(--w-medium);
 }
 
 .s-wiz__providermeta {
   font-size: var(--t-micro);
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 .s-wiz__models {
@@ -345,8 +315,8 @@
   padding: var(--s-3) var(--s-4);
   border-radius: var(--r-sm);
   border: 1px solid transparent;
-  background: var(--frost-6);
-  color: var(--frost-2);
+  background: var(--rule-soft);
+  color: var(--ink-2);
   font: inherit;
   cursor: pointer;
   text-align: left;
@@ -354,13 +324,13 @@
 }
 
 .s-wiz__model:hover {
-  background: var(--frost-5);
+  background: var(--rule);
 }
 
 .s-wiz__model.is-chosen {
-  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  color: var(--frost);
+  border-color: color-mix(in srgb, var(--tone) 50%, transparent);
+  background: color-mix(in srgb, var(--tone) 10%, transparent);
+  color: var(--ink);
 }
 
 .s-wiz__modelname {
@@ -371,7 +341,7 @@
 .s-wiz__modelid {
   font-family: var(--mono);
   font-size: var(--t-micro);
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 /* ------------------------------------------------------------------ key */
@@ -380,9 +350,9 @@
   width: 100%;
   padding: var(--s-4);
   border-radius: var(--r);
-  border: 1px solid var(--frost-5);
+  border: 1px solid var(--rule);
   background: rgb(0 0 0 / 28%);
-  color: var(--frost);
+  color: var(--ink);
   font-family: var(--mono);
   font-size: var(--t-lead);
   letter-spacing: 0.06em;
@@ -391,25 +361,25 @@
 }
 
 .s-wiz__key::placeholder {
-  color: var(--frost-4);
+  color: var(--ink-4);
   letter-spacing: normal;
 }
 
 .s-wiz__key:focus {
-  border-color: var(--accent);
+  border-color: var(--tone);
   box-shadow:
-    0 0 0 1px var(--accent),
-    0 0 34px color-mix(in srgb, var(--accent) 26%, transparent);
+    0 0 0 1px var(--tone),
+    0 0 34px color-mix(in srgb, var(--tone) 26%, transparent);
 }
 
 .s-wiz__where {
   margin: 0;
   font-size: var(--t-micro);
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 .s-wiz__where a {
-  color: var(--accent);
+  color: var(--tone);
 }
 
 /* The promise, next to the field it is about. */
@@ -418,8 +388,8 @@
   margin: 0;
   padding: var(--s-4);
   border-radius: var(--r);
-  border-left: 2px solid color-mix(in srgb, var(--accent) 50%, transparent);
-  background: rgb(255 255 255 / 2.5%);
+  border-left: 2px solid color-mix(in srgb, var(--tone) 50%, transparent);
+  background: var(--rule-soft);
   display: flex;
   flex-direction: column;
   gap: 7px;
@@ -428,15 +398,15 @@
 .s-wiz__promise li {
   font-size: var(--t-micro);
   line-height: 1.55;
-  color: var(--frost-3);
+  color: var(--ink-3);
 }
 
 .s-wiz__error {
   margin: 0;
   padding: var(--s-3);
   border-radius: var(--r-sm);
-  background: color-mix(in srgb, var(--coral) 14%, transparent);
-  color: var(--frost);
+  background: color-mix(in srgb, var(--alert) 14%, transparent);
+  color: var(--ink);
   font-size: var(--t-meta);
   line-height: 1.55;
 }
@@ -452,8 +422,7 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 14px var(--accent);
+  background: var(--tone);
   animation: s-wiz-bounce 1.3s var(--ease-in-out) infinite;
 }
 
@@ -488,11 +457,11 @@
 
 .s-btn--quiet {
   border-color: transparent;
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 .s-btn--quiet:hover {
-  color: var(--frost-2);
+  color: var(--ink-2);
 }
 
 /* ----------------------------------------------------------- responsive */
