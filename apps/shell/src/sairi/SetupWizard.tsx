@@ -1,16 +1,6 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-  type FormEvent,
-  type JSX,
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type JSX } from 'react';
 import { bridgeApi, type SetupProviderRecord, type SetupStatusRecord } from '../api.js';
-import { StatusOrb, hue } from './primitives.js';
-import type { Spectral } from './state.js';
+import { StatusOrb } from './primitives.js';
 import './wizard.css';
 
 /**
@@ -57,11 +47,6 @@ const STEP_LABEL: Record<Step, string> = {
 };
 
 /** Colour per provider, so the choice is recognisable later in the rail. */
-const PROVIDER_HUE: Record<string, Spectral> = {
-  anthropic: 'coral',
-  openai: 'mint',
-};
-
 export function SetupWizard({
   status,
   onDone,
@@ -83,8 +68,6 @@ export function SetupWizard({
     () => live.providers.find((p) => p.id === providerId) ?? live.providers[0],
     [live.providers, providerId],
   );
-
-  const accent = PROVIDER_HUE[provider?.id ?? ''] ?? 'cyan';
 
   // Keep the model valid for the chosen provider. The service would reject a
   // mismatch, but the UI should never offer one in the first place.
@@ -145,7 +128,7 @@ export function SetupWizard({
       aria-modal="true"
       aria-label="Connect Sairi to a model"
     >
-      <div className="s-wiz__panel" style={{ '--tone': hue(accent) } as CSSProperties}>
+      <div className="s-wiz__panel">
         {/* The spine: where you are, and how much is left. */}
         <ol className="s-wiz__spine" aria-label="Setup progress">
           {ORDER.filter((s) => s !== 'connecting').map((s) => {
@@ -172,16 +155,16 @@ export function SetupWizard({
               </p>
               <ul className="s-wiz__facts">
                 <li>
-                  <StatusOrb hue={accent} size={6} /> You use your own account. Sairi never bills
-                  you and never calls a provider itself.
+                  <StatusOrb size={6} /> You use your own account. Sairi never bills you and never
+                  calls a provider itself.
                 </li>
                 <li>
-                  <StatusOrb hue={accent} size={6} /> The key is stored in one file on this machine,
-                  readable only by SairiOS.
+                  <StatusOrb size={6} /> The key is stored in one file on this machine, readable
+                  only by SairiOS.
                 </li>
                 <li>
-                  <StatusOrb hue={accent} size={6} /> You can skip this. Everything keeps working on
-                  the mock agent.
+                  <StatusOrb size={6} /> You can skip this. Everything keeps working on the mock
+                  agent.
                 </li>
               </ul>
               <div className="s-wiz__actions">
@@ -207,11 +190,7 @@ export function SetupWizard({
               </h1>
 
               <div className={`s-wiz__check${live.openclawInstalled ? ' is-ok' : ' is-missing'}`}>
-                <StatusOrb
-                  hue={live.openclawInstalled ? 'mint' : 'amber'}
-                  pulse={!live.openclawInstalled}
-                  size={9}
-                />
+                <StatusOrb pulse={!live.openclawInstalled} size={9} />
                 <div>
                   <p className="s-wiz__checkline">
                     {live.openclawInstalled
@@ -270,7 +249,6 @@ export function SetupWizard({
                       key={p.id}
                       onClick={() => setProviderId(p.id)}
                       role="radio"
-                      style={{ '--tone': hue(PROVIDER_HUE[p.id] ?? 'cyan') } as CSSProperties}
                       type="button"
                     >
                       <span className="s-wiz__providername">{p.label}</span>
@@ -382,7 +360,7 @@ export function SetupWizard({
 
           {step === 'done' && (
             <section className="s-wiz__step s-wiz__step--center">
-              <StatusOrb hue="mint" pulse size={14} />
+              <StatusOrb pulse size={14} />
               <h1 className="s-wiz__title">Sairi is connected.</h1>
               <p className="s-wiz__lede">
                 {live.provider} · {live.model}

@@ -1,5 +1,3 @@
-import type { Agent, SairiContext, Spectral } from './state.js';
-
 /**
  * The roster: agents as durable colleagues rather than per-context fixtures.
  *
@@ -62,7 +60,7 @@ export interface Engagement {
   contextId: string;
   /** The intention it served, for the user's recall. Does NOT travel forward. */
   intention: string;
-  kind: SairiContext['kind'];
+  kind: string;
   /** One line: what this agent actually contributed there. */
   contribution: string;
   outcome: EngagementOutcome;
@@ -90,7 +88,6 @@ export interface AgentRecord {
   /** Stable across contexts. This is what makes an agent the same agent. */
   id: string;
   role: string;
-  hue: Spectral;
   /** What this agent is for, independent of any one job. */
   charter: string;
   engagements: Engagement[];
@@ -203,7 +200,7 @@ export function standing(record: AgentRecord): StandingNote[] {
 }
 
 /** Has this agent worked this kind of context before? Drives assembly. */
-export function isReturning(record: AgentRecord, kind: SairiContext['kind']): boolean {
+export function isReturning(record: AgentRecord, kind: string): boolean {
   return record.engagements.some((e) => e.kind === kind);
 }
 
@@ -213,19 +210,8 @@ export function isReturning(record: AgentRecord, kind: SairiContext['kind']): bo
  * Synthesised rather than seeded so a new agent is handled by construction: no
  * lookup can fail, and no fixture has to be written for an agent with no past.
  */
-export function recordFor(agent: Agent, roster: Roster = ROSTER): AgentRecord {
-  return (
-    roster[agent.id] ?? {
-      id: agent.id,
-      role: agent.role,
-      hue: agent.hue,
-      // Its current job stands in for a charter until it has done enough for
-      // one to be visible. An agent with no past is described by its present.
-      charter: agent.task ?? '',
-      engagements: [],
-      notes: [],
-    }
-  );
+export function recordFor(id: string, role: string, roster: Roster = ROSTER): AgentRecord {
+  return roster[id] ?? { id, role, charter: '', engagements: [], notes: [] };
 }
 
 /** Retire or restore one note, returning a new roster. */
@@ -261,345 +247,17 @@ export type Roster = Record<string, AgentRecord>;
  * only ever returns to the same kind of work is just a template with a memory.
  * ------------------------------------------------------------------------ */
 
-export const ROSTER: Roster = {
-  'agent-metrologist': {
-    id: 'agent-metrologist',
-    role: 'Metrologist',
-    hue: 'cyan',
-    charter: 'Puts claimed numbers on a common scale before anyone compares them.',
-    engagements: [
-      {
-        contextId: 'ctx-research',
-        intention: 'Analyse recent quantum-computing breakthroughs',
-        kind: 'research',
-        contribution: 'Rebuilt every fidelity claim as a randomised-benchmarking median.',
-        outcome: 'ongoing',
-        daysAgo: 0,
-      },
-      {
-        contextId: 'ctx-sensor-claims',
-        intention: 'Are the air-quality sensor accuracy claims defensible?',
-        kind: 'design',
-        contribution: 'Found three of five competitor accuracy figures were lab-only.',
-        outcome: 'accepted',
-        daysAgo: 12,
-      },
-      {
-        contextId: 'ctx-latency-budget',
-        intention: 'Where is the checkout latency budget actually going?',
-        kind: 'incident',
-        contribution: 'Separated p99 from mean in four dashboards that had conflated them.',
-        outcome: 'accepted',
-        daysAgo: 34,
-      },
-      {
-        contextId: 'ctx-battery',
-        intention: 'Compare battery life across the review sites',
-        kind: 'research',
-        contribution: 'Normalised to a common discharge test; two rankings inverted.',
-        outcome: 'revised',
-        daysAgo: 61,
-      },
-    ],
-    notes: [
-      {
-        id: 'n-met-1',
-        text: 'A vendor’s headline figure is almost always its best unit or best pair. Ask for the median and the sample size before comparing it to anything.',
-        from: 'ctx-battery',
-      },
-      {
-        id: 'n-met-2',
-        text: 'Lab conditions and field conditions are different measurements wearing the same unit. Say which one a number is, every time.',
-        from: 'ctx-sensor-claims',
-      },
-      {
-        id: 'n-met-3',
-        text: 'This user wants the raw spread, not the summary statistic. They have asked for it in four contexts.',
-        from: 'ctx-latency-budget',
-      },
-    ],
-  },
-
-  'agent-librarian': {
-    id: 'agent-librarian',
-    role: 'Source librarian',
-    hue: 'violet',
-    charter: 'Ranks what a claim rests on, and refuses to promote a claim past its evidence.',
-    engagements: [
-      {
-        contextId: 'ctx-research',
-        intention: 'Analyse recent quantum-computing breakthroughs',
-        kind: 'research',
-        contribution: 'Tiered 41 sources by venue, independence and primary-data release.',
-        outcome: 'ongoing',
-        daysAgo: 0,
-      },
-      {
-        contextId: 'ctx-battery',
-        intention: 'Compare battery life across the review sites',
-        kind: 'research',
-        contribution: 'Caught two review sites republishing the same vendor test.',
-        outcome: 'accepted',
-        daysAgo: 61,
-      },
-    ],
-    notes: [
-      {
-        id: 'n-lib-1',
-        text: 'Hold a vendor blog at tier 3 until a primary artefact exists — a dataset, a preprint, a referee file. Press coverage of a blog is still the blog.',
-        from: 'ctx-battery',
-      },
-      {
-        id: 'n-lib-2',
-        text: 'Two sources that cite each other are one source. Check the citation graph before counting independence.',
-        from: 'ctx-battery',
-      },
-    ],
-  },
-
-  'agent-adversary': {
-    id: 'agent-adversary',
-    role: 'Adversary',
-    hue: 'magenta',
-    charter: 'Tries to break the conclusion the other agents are converging on.',
-    engagements: [
-      {
-        contextId: 'ctx-research',
-        intention: 'Analyse recent quantum-computing breakthroughs',
-        kind: 'research',
-        contribution: 'Attacking the topological-qubit claim from the published referee file.',
-        outcome: 'ongoing',
-        daysAgo: 0,
-      },
-      {
-        contextId: 'ctx-vendor-sla',
-        intention: 'Should we sign the three-year support agreement?',
-        kind: 'research',
-        contribution: 'Broke the availability case; the SLA excluded the failure mode we had.',
-        outcome: 'accepted',
-        daysAgo: 22,
-      },
-      {
-        contextId: 'ctx-pricing',
-        intention: 'Pricing strategy for the second product line',
-        kind: 'design',
-        contribution: 'Argued the elasticity read was an artefact of one promotion window.',
-        outcome: 'rejected',
-        daysAgo: 47,
-      },
-    ],
-    notes: [
-      {
-        id: 'n-adv-1',
-        text: 'When a result depends on data nobody outside the group has seen, that dependency is the finding. Say so before arguing about the result.',
-        from: 'ctx-vendor-sla',
-      },
-      {
-        id: 'n-adv-2',
-        text: 'One rejected objection is not a reason to stop objecting, but it is a reason to say how confident I am up front.',
-        from: 'ctx-pricing',
-      },
-    ],
-  },
-
-  'agent-correlator': {
-    id: 'agent-correlator',
-    role: 'Log correlator',
-    hue: 'cyan',
-    charter: 'Joins large volumes of machine output to the small number of things that went wrong.',
-    engagements: [
-      {
-        contextId: 'ctx-incident',
-        intention: 'Checkout payments are failing for some users',
-        kind: 'incident',
-        contribution: 'Joined 41.2M gateway lines to 4,218 failed carts.',
-        outcome: 'ongoing',
-        daysAgo: 0,
-      },
-      {
-        contextId: 'ctx-latency-budget',
-        intention: 'Where is the checkout latency budget actually going?',
-        kind: 'incident',
-        contribution: 'Attributed 60% of the budget to one retry loop.',
-        outcome: 'accepted',
-        daysAgo: 34,
-      },
-      {
-        contextId: 'ctx-webhook',
-        intention: 'Webhooks are arriving twice for some tenants',
-        kind: 'incident',
-        contribution: 'Showed duplicates were redeliveries, not double-sends.',
-        outcome: 'accepted',
-        daysAgo: 58,
-      },
-    ],
-    notes: [
-      {
-        id: 'n-cor-1',
-        text: 'Start from the failures and join outward. Starting from the log volume means reading everything and finding whatever is loudest.',
-        from: 'ctx-webhook',
-      },
-      {
-        id: 'n-cor-2',
-        text: 'The rows that do not match the pattern are worth more than the ones that do. Always report the residual count.',
-        from: 'ctx-latency-budget',
-      },
-      {
-        id: 'n-cor-3',
-        text: 'This estate keeps its region tag in a different field per service. Confirm the field before joining across regions.',
-        from: 'ctx-latency-budget',
-      },
-    ],
-  },
-
-  'agent-remedy': {
-    id: 'agent-remedy',
-    role: 'Remediation drafter',
-    hue: 'amber',
-    charter: 'Prepares the smallest change that would end the incident, and never applies it.',
-    engagements: [
-      {
-        contextId: 'ctx-incident',
-        intention: 'Checkout payments are failing for some users',
-        kind: 'incident',
-        contribution: 'Holding a two-region rollback of payments-gateway v2.31.0.',
-        outcome: 'ongoing',
-        daysAgo: 0,
-      },
-      {
-        contextId: 'ctx-webhook',
-        intention: 'Webhooks are arriving twice for some tenants',
-        kind: 'incident',
-        contribution: 'Drafted an idempotency-key fix; you shipped a narrower one.',
-        outcome: 'revised',
-        daysAgo: 58,
-      },
-    ],
-    notes: [
-      {
-        id: 'n-rem-1',
-        text: 'State the blast radius in the first line — pods, regions, whether the schema moves. It is the only part read under time pressure.',
-        from: 'ctx-webhook',
-      },
-      {
-        id: 'n-rem-2',
-        text: 'This user prefers a rollback to a forward fix during an active incident, and wants the forward fix drafted separately.',
-        from: 'ctx-webhook',
-      },
-    ],
-  },
-
-  keeper: {
-    id: 'keeper',
-    role: 'Budget keeper',
-    hue: 'mint',
-    charter: 'Keeps the real total in front of the decision while it is still reversible.',
-    engagements: [
-      {
-        contextId: 'ctx-travel',
-        intention: 'Plan a multi-city trip to Japan in April',
-        kind: 'travel',
-        contribution: 'Reconciling a rail pass against point-to-point fares.',
-        outcome: 'ongoing',
-        daysAgo: 0,
-      },
-      {
-        contextId: 'ctx-launch-budget',
-        intention: 'What does the March launch actually cost?',
-        kind: 'design',
-        contribution: 'Found the media plan double-counted the agency retainer.',
-        outcome: 'accepted',
-        daysAgo: 9,
-      },
-      {
-        contextId: 'ctx-portugal',
-        intention: 'A week in Portugal in October',
-        kind: 'travel',
-        contribution: 'Showed the flexible fare paid for itself against one likely change.',
-        outcome: 'accepted',
-        daysAgo: 140,
-      },
-    ],
-    notes: [
-      {
-        id: 'n-kee-1',
-        text: 'A rail pass loses to point-to-point below roughly six long legs. Check the leg count before pricing the pass.',
-        from: 'ctx-portugal',
-      },
-      {
-        id: 'n-kee-2',
-        text: 'Price the cancellable option next to the cheap one whenever any leg is unsettled — this user changes plans mid-trip.',
-        from: 'ctx-portugal',
-      },
-    ],
-  },
-
-  'a-synth': {
-    id: 'a-synth',
-    role: 'Insight synthesist',
-    hue: 'violet',
-    charter: 'Clusters what people said into themes that survive their own sample size.',
-    engagements: [
-      {
-        contextId: 'ctx-design',
-        intention: 'Launch strategy for a new product',
-        kind: 'design',
-        contribution: 'Clustered 214 beta interviews into four themes holding at n ≥ 30.',
-        outcome: 'ongoing',
-        daysAgo: 0,
-      },
-      {
-        contextId: 'ctx-churn',
-        intention: 'Why did the February cohort churn?',
-        kind: 'research',
-        contribution: 'Two of six themes collapsed under a leave-one-out check.',
-        outcome: 'accepted',
-        daysAgo: 28,
-      },
-    ],
-    notes: [
-      {
-        id: 'n-syn-1',
-        text: 'Report the n on every theme, in the theme. A cluster without its size gets quoted as though it were universal.',
-        from: 'ctx-churn',
-      },
-      {
-        id: 'n-syn-2',
-        text: 'Themes that appear in no requirement document are the ones worth surfacing first. The rest confirm what was already written.',
-        from: 'ctx-churn',
-      },
-    ],
-  },
-
-  'a-scan': {
-    id: 'a-scan',
-    role: 'Market scanner',
-    hue: 'cyan',
-    charter: 'Watches what competitors actually do, as distinct from what they announce.',
-    engagements: [
-      {
-        contextId: 'ctx-design',
-        intention: 'Launch strategy for a new product',
-        kind: 'design',
-        contribution: 'Tracking price and claim moves across four launch markets.',
-        outcome: 'ongoing',
-        daysAgo: 0,
-      },
-      {
-        contextId: 'ctx-pricing',
-        intention: 'Pricing strategy for the second product line',
-        kind: 'design',
-        contribution: 'Built the price ladder that the positioning was written against.',
-        outcome: 'accepted',
-        daysAgo: 47,
-      },
-    ],
-    notes: [
-      {
-        id: 'n-sca-1',
-        text: 'A list price is a claim; the street price is the fact. Check a retailer before quoting a competitor’s number.',
-        from: 'ctx-pricing',
-      },
-    ],
-  },
-};
+/**
+ * Empty, and honestly so.
+ *
+ * This held eight richly-described colleagues — a Metrologist, a Source
+ * librarian — with engagement histories and standing notes. Every one of them
+ * described work that never happened, so they went with the rest of the
+ * fixtures.
+ *
+ * The machinery above is kept because it is the part that was worth building:
+ * `carryForward` is the allow-list that decides what an agent may take from one
+ * context into another, and its tests are the security-relevant ones. Records
+ * will arrive here from real sessions. See Milestone 2.
+ */
+export const ROSTER: Roster = {};

@@ -8,13 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import { isReturning, standing, trackRecord, type AgentRecord } from './roster.js';
-import {
-  CERTAINTY_VALUE,
-  type Agent,
-  type Certainty,
-  type SairiContext,
-  type Spectral,
-} from './state.js';
+import { CERTAINTY_VALUE, RUN_LABEL, type Certainty, type RunState } from './state.js';
 
 /**
  * The Sairi primitive set.
@@ -23,34 +17,6 @@ import {
  * these, which is what keeps four very different workspaces feeling like one
  * operating system.
  */
-
-/**
- * A tone, not a colour.
- *
- * The `Spectral` union survives because the domain genuinely has seven roles —
- * an agent working, a relation, a contradiction, a settled result — and lenses
- * still need to tell four series apart in a chart. What changed is what those
- * roles look like: a monochrome VALUE ramp instead of a colour wheel, which is
- * how printed instrumentation differentiated before colour was cheap, and which
- * keeps working in greyscale and for anyone who cannot separate red from green.
- *
- * Two names are not tones at all. `amber` and `coral` were the two that always
- * meant "a human is needed" and "something is wrong", so they resolve to the
- * single accent — the only colour in the system.
- */
-const TONE: Record<Spectral, string> = {
-  blue: 'var(--tone-structural)',
-  cyan: 'var(--tone-active)',
-  violet: 'var(--tone-relation)',
-  magenta: 'var(--tone-conflict)',
-  mint: 'var(--tone-settled)',
-  amber: 'var(--signal)',
-  coral: 'var(--alert)',
-};
-
-export function hue(h: Spectral): string {
-  return TONE[h];
-}
 
 /* ------------------------------------------------------------------------ *
  * ContextSurface — the certainty-aware panel
@@ -69,7 +35,6 @@ export interface ContextSurfaceProps {
   /** Small label above the title: what kind of thing this is. */
   kind?: string;
   certainty?: Certainty;
-  accent?: Spectral;
   /** Grid span at desktop, 1..12. */
   span?: number;
   /** Who produced it. Rendered as a provenance mark. */
@@ -85,7 +50,6 @@ export function ContextSurface({
   title,
   kind,
   certainty = 'forming',
-  accent = 'blue',
   span = 4,
   author,
   actions,
@@ -95,7 +59,6 @@ export function ContextSurface({
 }: ContextSurfaceProps): JSX.Element {
   const style = {
     '--certainty': CERTAINTY_VALUE[certainty],
-    '--tone': hue(accent),
     '--span': span,
     '--i': index,
   } as CSSProperties;
@@ -134,12 +97,10 @@ export function ContextSurface({
  * ------------------------------------------------------------------------ */
 
 export function StatusOrb({
-  hue: h = 'cyan',
   pulse = false,
   size = 8,
   label,
 }: {
-  hue?: Spectral;
   pulse?: boolean;
   size?: number;
   label?: string;
@@ -149,7 +110,7 @@ export function StatusOrb({
       aria-label={label}
       className={`s-orb${pulse ? ' s-orb--pulse' : ''}`}
       role={label ? 'img' : undefined}
-      style={{ '--tone': hue(h), '--orb': `${size}px` } as CSSProperties}
+      style={{ '--orb': `${size}px` } as CSSProperties}
     />
   );
 }
@@ -162,89 +123,46 @@ export function StatusOrb({
  * talking beside it.
  * ------------------------------------------------------------------------ */
 
-export function AgentPresence({
-  agent,
-  record,
-  kind,
-  onPause,
-  onRedirect,
-  onRetireNote,
-  compact = false,
-}: {
-  agent: Agent;
-  /** Its durable record, if it has one. Absent means show only the present. */
-  record?: AgentRecord;
-  /** The kind of context it is working in now, so continuity can say "again". */
-  kind?: SairiContext['kind'];
-  onPause?: (id: string) => void;
-  onRedirect?: (id: string) => void;
-  onRetireNote?: (agentId: string, noteId: string, retired: boolean) => void;
-  compact?: boolean;
-}): JSX.Element {
-  const working = agent.status === 'working';
-  const needsYou = agent.status === 'awaiting-approval';
+/**
+ * The live agent session.
+ *
+ * This replaced `AgentPresence`, which drew five named colleagues — a Source
+ * librarian, a Metrologist — each with a role, a task and a progress bar. They
+ * were fixtures. A context has ONE agent session, and what it actually emits is
+ * a status and a trail of things it did.
+ *
+ * The trail is an activity log and deliberately not a transcript: newest first,
+ * capped, and phrased as actions rather than as speech. The moment it reads as
+ * dialogue this has become the chat window invariant 2 forbids.
+ */
+export function RunPresence({ run }: { run: RunState }): JSX.Element {
+  const busy = run.status === 'thinking' || run.status === 'streaming';
+  const needsYou = run.status === 'waiting-permission';
 
   return (
-    <article
-      className={`s-agent${compact ? ' s-agent--compact' : ''}${needsYou ? ' s-agent--attention' : ''}`}
-      style={{ '--tone': hue(agent.hue) } as CSSProperties}
-    >
-      <div className="s-agent__top">
-        <span className="s-agent__ring" data-status={agent.status}>
-          <StatusOrb hue={agent.hue} pulse={working} size={7} />
+    <article className={`s-run${needsYou ? ' s-run--attention' : ''}`}>
+      <div className="s-run__top">
+        <span className="s-run__ring" data-status={run.status}>
+          <StatusOrb pulse={busy} size={7} />
         </span>
-        <div className="s-agent__id">
-          <span className="s-agent__role">{agent.role}</span>
-          <span className="s-agent__task">{agent.task}</span>
-        </div>
-        {!compact && (onPause || onRedirect) && (
-          <div className="s-agent__controls">
-            {onPause && (
-              <button
-                className="s-mini"
-                onClick={() => onPause(agent.id)}
-                title={working ? 'Pause this agent' : 'Resume this agent'}
-                type="button"
-              >
-                {working ? 'Pause' : 'Resume'}
-              </button>
-            )}
-            {onRedirect && (
-              <button
-                className="s-mini"
-                onClick={() => onRedirect(agent.id)}
-                title="Redirect this agent"
-                type="button"
-              >
-                Redirect
-              </button>
-            )}
-          </div>
-        )}
+        <span className="s-run__status">{RUN_LABEL[run.status]}</span>
       </div>
 
-      {working && (
-        <div
-          aria-label={`${agent.role} progress`}
-          aria-valuemax={100}
-          aria-valuemin={0}
-          aria-valuenow={Math.round(agent.progress * 100)}
-          className="s-agent__track"
-          role="progressbar"
-        >
-          <span className="s-agent__fill" style={{ width: `${agent.progress * 100}%` }} />
-        </div>
+      {run.error && <p className="s-run__error">{run.error}</p>}
+
+      {run.trail.length > 0 && (
+        <ol className="s-run__trail">
+          {run.trail.map((line, i) => (
+            <li className="s-run__line" key={`${i}-${line.slice(0, 24)}`}>
+              {line}
+            </li>
+          ))}
+        </ol>
       )}
 
-      {agent.output && !compact && <p className="s-agent__output">{agent.output}</p>}
-
-      {needsYou && (
-        <p className="s-agent__flag">
-          <StatusOrb hue="amber" pulse size={6} /> waiting on your decision
-        </p>
+      {run.trail.length === 0 && !run.error && run.status === 'idle' && (
+        <p className="s-run__quiet">Nothing running. State an intention to begin.</p>
       )}
-
-      {record && !compact && <Continuity kind={kind} onRetireNote={onRetireNote} record={record} />}
     </article>
   );
 }
@@ -272,7 +190,8 @@ export function Continuity({
   onRetireNote,
 }: {
   record: AgentRecord;
-  kind?: SairiContext['kind'];
+  /** The kind of context it is working in now, so continuity can say "again". */
+  kind?: string;
   onRetireNote?: (agentId: string, noteId: string, retired: boolean) => void;
 }): JSX.Element | null {
   const [open, setOpen] = useState(false);
@@ -375,13 +294,7 @@ export function Continuity({
  * the layout becomes readable.
  * ------------------------------------------------------------------------ */
 
-export function ConvergenceMeter({
-  value,
-  accent = 'blue',
-}: {
-  value: number;
-  accent?: Spectral;
-}): JSX.Element {
+export function ConvergenceMeter({ value }: { value: number }): JSX.Element {
   const pct = Math.round(value * 100);
   const label = value < 0.3 ? 'exploring' : value < 0.7 ? 'converging' : 'decided';
   return (
@@ -392,7 +305,7 @@ export function ConvergenceMeter({
       aria-valuenow={pct}
       className="s-conv"
       role="meter"
-      style={{ '--tone': hue(accent), '--v': value } as CSSProperties}
+      style={{ '--v': value } as CSSProperties}
     >
       <span className="s-conv__label">{label}</span>
       <span className="s-conv__rail">
@@ -407,32 +320,21 @@ export function ConvergenceMeter({
  * Small shared pieces
  * ------------------------------------------------------------------------ */
 
-export function GlowDivider({ accent = 'blue' }: { accent?: Spectral }): JSX.Element {
-  return (
-    <span
-      aria-hidden="true"
-      className="s-divider"
-      style={{ '--tone': hue(accent) } as CSSProperties}
-    />
-  );
+export function Rule(): JSX.Element {
+  return <span aria-hidden="true" className="s-rule" />;
 }
 
 export function Metric({
   value,
   label,
-  accent,
   trend,
 }: {
   value: string;
   label: string;
-  accent?: Spectral;
   trend?: 'up' | 'down' | 'flat';
 }): JSX.Element {
   return (
-    <div
-      className="s-metric"
-      style={accent ? ({ '--tone': hue(accent) } as CSSProperties) : undefined}
-    >
+    <div className="s-metric">
       <span className="s-metric__value">
         {value}
         {trend && (
@@ -446,21 +348,12 @@ export function Metric({
 
 export function Tag({
   children,
-  accent = 'blue',
   solid = false,
 }: {
   children: ReactNode;
-  accent?: Spectral;
   solid?: boolean;
 }): JSX.Element {
-  return (
-    <span
-      className={`s-tag${solid ? ' s-tag--solid' : ''}`}
-      style={{ '--tone': hue(accent) } as CSSProperties}
-    >
-      {children}
-    </span>
-  );
+  return <span className={`s-tag${solid ? ' s-tag--solid' : ''}`}>{children}</span>;
 }
 
 /** Empty state. Never a shrug — always says what would fill it. */

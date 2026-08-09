@@ -12,7 +12,52 @@ import {
   type AgentRecord,
   type Roster,
 } from './roster.js';
-import type { Agent } from './state.js';
+
+/**
+ * The seeded roster used to supply these. It described eight colleagues who had
+ * never worked, so it went with the rest of the fixtures — and the records the
+ * tests need now live here, which is where a test's fixtures belong anyway.
+ */
+const METROLOGIST: AgentRecord = {
+  id: 'agent-metrologist',
+  role: 'Metrologist',
+  charter: 'Puts claimed numbers on a common scale.',
+  engagements: [
+    {
+      contextId: 'c1',
+      intention: 'i1',
+      kind: 'research',
+      contribution: 'x',
+      outcome: 'ongoing',
+      daysAgo: 0,
+    },
+    {
+      contextId: 'c2',
+      intention: 'i2',
+      kind: 'design',
+      contribution: 'x',
+      outcome: 'accepted',
+      daysAgo: 12,
+    },
+    {
+      contextId: 'c3',
+      intention: 'i3',
+      kind: 'incident',
+      contribution: 'x',
+      outcome: 'accepted',
+      daysAgo: 34,
+    },
+    {
+      contextId: 'c4',
+      intention: 'i4',
+      kind: 'research',
+      contribution: 'x',
+      outcome: 'revised',
+      daysAgo: 61,
+    },
+  ],
+  notes: [],
+};
 
 /**
  * These tests are modelled on the crystallization tests, and for the same
@@ -30,7 +75,6 @@ const hostile: AgentRecord = {
   id: 'agent-hostile',
   role: 'Metrologist',
   charter: 'Puts claimed numbers on a common scale.',
-  hue: 'cyan',
   engagements: [
     {
       contextId: 'ctx-acquisition',
@@ -128,7 +172,7 @@ describe('carryForward', () => {
   });
 
   it('returns nothing to carry for an agent with no past', () => {
-    const fresh = recordFor({ id: 'nobody', role: 'Scout', hue: 'blue' } as Agent, {});
+    const fresh = recordFor('nobody', 'Scout', {});
     expect(carryForward(fresh).notes).toEqual([]);
     expect(carryForward(fresh).priorContexts).toBe(0);
   });
@@ -162,7 +206,7 @@ describe('trackRecord', () => {
   });
 
   it('counts each outcome and rates only the settled ones', () => {
-    const t = trackRecord(ROSTER['agent-metrologist']!);
+    const t = trackRecord(METROLOGIST);
     expect(t.engagements).toBe(4);
     expect(t.accepted).toBe(2);
     expect(t.revised).toBe(1);
@@ -174,8 +218,7 @@ describe('trackRecord', () => {
 
 describe('recordFor', () => {
   it('synthesises a blank record rather than failing for a first-time agent', () => {
-    const agent = { id: 'unseen', role: 'Scout', hue: 'blue', task: 'Looking' } as Agent;
-    const record = recordFor(agent, {});
+    const record = recordFor('unseen', 'Scout', {});
     expect(record.id).toBe('unseen');
     expect(record.role).toBe('Scout');
     expect(record.engagements).toEqual([]);
@@ -183,7 +226,7 @@ describe('recordFor', () => {
   });
 
   it('finds a seeded agent by the id its context already uses', () => {
-    expect(recordFor({ id: 'keeper' } as Agent).role).toBe('Budget keeper');
+    expect(recordFor('keeper', 'Budget keeper', { keeper: METROLOGIST }).role).toBe('Metrologist');
   });
 });
 
@@ -215,31 +258,17 @@ describe('setNoteRetired', () => {
 
 describe('isReturning', () => {
   it('is true only for a kind the agent has actually worked', () => {
-    const metrologist = ROSTER['agent-metrologist']!;
+    const metrologist = METROLOGIST;
     expect(isReturning(metrologist, 'research')).toBe(true);
     expect(isReturning(metrologist, 'incident')).toBe(true);
     expect(isReturning(metrologist, 'travel')).toBe(false);
   });
 });
 
-describe('the seeded roster', () => {
-  it('keys every record by the id the record itself carries', () => {
-    for (const [key, record] of Object.entries(ROSTER)) expect(record.id).toBe(key);
-  });
-
-  it('traces every note to an engagement of the same agent', () => {
-    // An untraceable note is one the user cannot evaluate, which is the same
-    // failure as one they cannot delete.
-    for (const record of Object.values(ROSTER)) {
-      const seen = new Set(record.engagements.map((e) => e.contextId));
-      for (const note of record.notes) expect(seen.has(note.from)).toBe(true);
-    }
-  });
-
-  it('has at least one agent working across more than one kind of context', () => {
-    const spans = Object.values(ROSTER).filter(
-      (r) => new Set(r.engagements.map((e) => e.kind)).size > 1,
-    );
-    expect(spans.length).toBeGreaterThan(0);
+describe('the roster ships empty', () => {
+  it('seeds nobody', () => {
+    // A roster of colleagues who never worked is exactly the placeholder data
+    // this build removed. Records arrive from real sessions.
+    expect(Object.keys(ROSTER)).toEqual([]);
   });
 });
