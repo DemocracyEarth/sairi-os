@@ -133,7 +133,9 @@ Not bugs to be discovered later; they are listed because they are already known.
   `capability-honesty.test.ts` executes all twelve capabilities to assert the
   approval-time claim and the post-execution claim agree. Verified to fail when
   the bug is reintroduced.
-- **A granted permission cannot be revoked.** See Milestone 2.
+- ~~A granted permission cannot be revoked.~~ Fixed: `POST /policies/revoke`
+  withdraws one and audits it. No UI yet, and nothing clears a grant when its
+  context is archived — see Milestone 2.
 - **The OpenClaw approval relay is a new trust boundary, reviewed only by its
   author.** It decides whether an external agent runtime may act _outside_ the
   SairiOS sandbox, which makes it the most consequential seam added since the
@@ -284,15 +286,24 @@ exit criterion also asks that every claim in the README has been demonstrated.
 
 **Goal:** make a persistent context worth returning to after a month.
 
-- **Revoking a permission.** A remembered grant has no expiry and no removal
-  path: nothing clears it when its context is archived, and there is no endpoint
-  to withdraw it. Visibility without control is only half a permission system.
-  This is the first thing to fix in the broker, and it is a much smaller job
-  than anything below it.
+- ~~**Revoking a permission.**~~ Mostly done. `POST /policies/revoke` withdraws a
+  remembered grant by capability, by context, or — explicitly — all of them,
+  persists it and writes a `revoked` audit entry. It refuses an empty filter
+  rather than treating it as "everything", because that clears the one table a
+  user cannot reconstruct.
 
-  The OpenClaw approval relay raises the stakes: a relayed grant authorises an
-  action _outside_ the sandbox, so "I take that back" needs to be expressible
-  before that becomes routine.
+  What remains is the surface and the lifecycle: `brokerApi.revoke` is wired and
+  nothing in the desktop calls it, and nothing clears a grant when its context
+  is archived or deleted. Visibility now has control behind it, but the control
+  is an HTTP request rather than a button.
+
+- **Remote access, finished.** The front door exists —
+  [ADR 0013](docs/adr/0013-authenticated-front-door.md) — and the shell refuses
+  to bind off loopback without a token. What is missing is everything that makes
+  it pleasant and safe to actually run that way: a token rotated without a
+  restart, a way to see and end active sessions, and per-context rather than
+  whole-origin authorisation. Until then the honest recommendation is the tunnel,
+  and [docs/REMOTE.md](docs/REMOTE.md) says so.
 
 - Context memory that is actually used: retrieval, summarization, and an
   explicit distinction between durable and working memory in the UI.

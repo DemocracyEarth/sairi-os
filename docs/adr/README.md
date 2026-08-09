@@ -106,3 +106,4 @@ Small corrections (a broken link, a typo, a wrong path) are fine.
 | [0010](0010-provider-credential-custody.md)        | SairiOS takes custody of a provider key, and what that costs      | Accepted |
 | [0011](0011-same-origin-service-proxy.md)          | Serve the services from the shell's origin under path prefixes    | Accepted |
 | [0012](0012-voice-as-input-transport.md)           | Voice is an input transport; the microphone belongs to the broker | Accepted |
+| [0013](0013-authenticated-front-door.md)           | One authenticated front door, and a refusal to listen without it  | Accepted |

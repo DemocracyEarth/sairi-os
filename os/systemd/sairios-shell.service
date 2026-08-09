@@ -14,15 +14,14 @@
 # so the unit moved instead. User=sairi keeps the process unprivileged; the
 # system manager applies the confinement.
 
-# SairiOS shell — systemd USER unit.
+# Install to /etc/systemd/system/sairios-shell.service
 #
-# Install to ~/.config/systemd/user/sairios-shell.service
+#   systemctl daemon-reload
+#   systemctl enable --now sairios-shell.service
 #
-#   systemctl --user daemon-reload
-#   systemctl --user enable --now sairios-shell.service
-#
-# Serves the built shell bundle on 127.0.0.1:7800. The kiosk session
-# (sairios-session.service, a SYSTEM unit) waits for this port before starting cog.
+# Serves the built shell bundle on 127.0.0.1:7800 and reverse-proxies the three
+# services under /ctx, /bridge and /broker. The kiosk session
+# (sairios-session.service) waits for this port before starting cog.
 
 [Unit]
 Description=SairiOS shell (adaptive UI, 127.0.0.1:7800)
@@ -104,8 +103,10 @@ SystemCallArchitectures=native
 # browser on the same machine AND reverse-proxies the page's API calls to the three
 # services on 127.0.0.1:7801-7803 — so unlike before, it does open outbound connections.
 # They are all loopback, which IPAddressAllow=localhost already permits; nothing else is
-# reachable. Best-effort in a user unit; the authoritative control is --host 127.0.0.1
-# above.
+# reachable. The authoritative control is the bind host — SAIRIOS_SHELL_BIND_HOST,
+# which defaults to 127.0.0.1 and is deliberately SEPARATE from the services'
+# SAIRIOS_BIND_HOST, so that exposing the shell cannot also expose them. Exposing
+# the shell additionally requires SAIRIOS_ACCESS_TOKEN or it refuses to start.
 IPAddressAllow=localhost
 IPAddressDeny=any
 UMask=0077

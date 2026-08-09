@@ -68,6 +68,26 @@ export function createPermissionBrokerServer(deps: ServerDeps): Server {
         return;
       }
 
+      // Withdrawing a grant. POST rather than DELETE because a remembered
+      // decision has no url of its own — it is identified by the pair it was
+      // granted under, and that does not fit in a path segment.
+      if (method === 'POST' && path === '/policies/revoke') {
+        const body = await readJsonBody(req);
+        if (!body.ok) return sendError(res, 400, body.code, body.message);
+        const input = (body.value ?? {}) as Record<string, unknown>;
+        const result = await deps.broker.revoke({
+          ...(typeof input['capability'] === 'string'
+            ? { capability: input['capability'] as never }
+            : {}),
+          // `null` is meaningful here — it is how a global grant is addressed —
+          // so presence is tested rather than truthiness.
+          ...('contextId' in input ? { contextId: input['contextId'] as string | null } : {}),
+          ...(input['all'] === true ? { all: true } : {}),
+        });
+        if (!result.ok) return sendError(res, 400, result.error.code, result.error.message);
+        return sendJson(res, 200, result.value);
+      }
+
       if (method === 'GET' && path === '/audit') {
         const limit = Math.min(Number(url.searchParams.get('limit') ?? 100) || 100, 500);
         const contextId = url.searchParams.get('contextId') ?? undefined;

@@ -145,6 +145,11 @@ services:
       # relaxation of the loopback-only rule: the only path in from outside the
       # container is the 127.0.0.1-bound published port above.
       SAIRIOS_BIND_HOST: '0.0.0.0'
+      # These services have no authentication, so binding off loopback is a
+      # refusal unless it is acknowledged. It is correct here and only here:
+      # the compose network is internal, no port is published to the host,
+      # and the sandbox has no route off the box.
+      SAIRIOS_ALLOW_UNAUTHENTICATED_BIND: 'yes-i-understand'
       SAIRIOS_CONTEXT_SERVICE_PORT: '7801'
       SAIRIOS_DATA_DIR: '/app/var'
       SAIRIOS_STORE_DRIVER: '${SAIRIOS_STORE_DRIVER:-auto}'
@@ -184,6 +189,11 @@ services:
       - '127.0.0.1:${SAIRIOS_PERMISSION_BROKER_PORT:-7803}:7803'
     environment:
       SAIRIOS_BIND_HOST: '0.0.0.0'
+      # These services have no authentication, so binding off loopback is a
+      # refusal unless it is acknowledged. It is correct here and only here:
+      # the compose network is internal, no port is published to the host,
+      # and the sandbox has no route off the box.
+      SAIRIOS_ALLOW_UNAUTHENTICATED_BIND: 'yes-i-understand'
       SAIRIOS_PERMISSION_BROKER_PORT: '7803'
       SAIRIOS_DATA_DIR: '/app/var'
       # The ONLY directory agent-proposed file actions may touch, and it is a
@@ -229,6 +239,11 @@ services:
       - '127.0.0.1:${SAIRIOS_AGENT_BRIDGE_PORT:-7802}:7802'
     environment:
       SAIRIOS_BIND_HOST: '0.0.0.0'
+      # These services have no authentication, so binding off loopback is a
+      # refusal unless it is acknowledged. It is correct here and only here:
+      # the compose network is internal, no port is published to the host,
+      # and the sandbox has no route off the box.
+      SAIRIOS_ALLOW_UNAUTHENTICATED_BIND: 'yes-i-understand'
       SAIRIOS_AGENT_BRIDGE_PORT: '7802'
       # Hardcoded, not interpolated from .env. Changing this to `openclaw`
       # inside a container will not work; see the block comment above.

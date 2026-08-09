@@ -293,30 +293,62 @@ Every rule follows from that asymmetry:
 - The gateway transport refuses an unencrypted `ws://` connection to anything
   other than loopback.
 
-### Remote access is a precondition, not a configuration
+### Remote access, and the door in front of it
 
-Reaching SairiOS from another machine is not a matter of binding to `0.0.0.0`
-or putting a proxy in front. **The permission broker's three-phase separation
-does not survive a network path as currently written.**
+Reaching SairiOS from another machine used to be described here as a precondition
+rather than a configuration, because **the broker's three-phase separation does
+not survive a network path on its own**. `POST /requests`,
+`POST /requests/{id}/decision` and `POST /requests/{id}/execute` are three
+unauthenticated routes; anyone who could reach port 7803 performed all three
+— _including the approval_ — and the resulting grant could not be withdrawn.
+The "human in the loop" the whole design rests on was, at the transport layer,
+an unauthenticated HTTP route.
 
-`POST /requests`, `POST /requests/{id}/decision` and `POST /requests/{id}/execute`
-are three unauthenticated routes. Anyone who can reach port 7803 performs all
-three — _including the approval_ — and can set `remember: true, global: true`
-for a grant the UI cannot revoke (limitation 10 below). The "human in the loop"
-that the whole design rests on is, at the transport layer, an unauthenticated
-HTTP route.
+Those preconditions are now met, in the order they were written:
 
-On loopback, on a single-user machine, that is a defensible v0 posture: the only
-party who can reach it is the party the grant is for. The moment a network path
-exists it is not a posture, it is a hole.
+1. **The services are behind an authenticated front door.** Since
+   [ADR 0011](docs/adr/0011-same-origin-service-proxy.md) the shell process is
+   the only thing that needs to be reachable, and since
+   [ADR 0013](docs/adr/0013-authenticated-front-door.md) it refuses to listen
+   off loopback without an access token. Not a warning — a startup error, with
+   no override flag, because a control an operator has to remember to switch on
+   is off on the machine where it mattered.
 
-So, in order, and the order is the point:
+   The services gained the same refusal, because a door on the shell does
+   nothing for someone who dials port 7803 directly. `SAIRIOS_BIND_HOST` off
+   loopback is now a startup error too, unless
+   `SAIRIOS_ALLOW_UNAUTHENTICATED_BIND=yes-i-understand` is set — which the
+   containers do, being on an internal network with no route off the box. The
+   shell reads its own `SAIRIOS_SHELL_BIND_HOST`, so exposing the shell and
+   exposing the unauthenticated broker are no longer the same instruction.
 
-1. The decision route must require something the network cannot supply — a
-   local-only channel, or a verified identity the broker checks itself.
-2. A grant must be revocable before it can be made remotely.
-3. Only then, transport. Prefer an overlay network or a tunnel that keeps the
-   services on loopback over anything that terminates TLS off-box.
+2. **Grants are revocable.** `POST /policies/revoke` withdraws a remembered
+   decision by capability, by context, or — explicitly — all of them, and writes
+   a `revoked` entry to the audit log. Refusing to guess from an empty filter is
+   deliberate: a revoke that clears everything when its argument is accidentally
+   `undefined` is a footgun aimed at the one table a user cannot reconstruct.
+
+   Revocation also reaches requests already in flight. One that policy allowed
+   on its own is refused at execution with `grant_revoked` once the grant behind
+   it is gone; one a human explicitly allowed still runs, because withdrawing a
+   standing grant is not the same as retracting an individual "allow once".
+
+3. **Transport.** Prefer a tunnel or an overlay network that keeps the services
+   on loopback over anything that terminates TLS off-box. See
+   [docs/REMOTE.md](docs/REMOTE.md), which ranks the options and says why
+   Cloudflare Tunnel is not among the recommended ones.
+
+What the door is: a bearer token for a single-user machine, the same model
+code-server and Gitpod use. Whoever holds it is the user. The exchange sets an
+`HttpOnly; SameSite=Strict` cookie, and `SAIRIOS_BEHIND_TLS=true` adds `Secure`.
+
+What it is not: multi-user, per-context, expiring, or a defence against code
+already running on the machine — an agent there reaches 7801-7803 directly and
+never passes this door. The threat model above says the local machine is
+trusted; this protects the network edge, which is the boundary remote access
+actually creates. **It does not encrypt anything.** A bearer token over plain
+http on an untrusted network is readable in transit; the transport must carry
+the TLS.
 
 ## Container posture
 
@@ -353,13 +385,13 @@ marketing.
 8. **No rate limiting or resource accounting** on the local services.
 9. **`node:sqlite` is an experimental Node API.** Its stability guarantees are
    weaker than the rest of the standard library.
-10. **A remembered decision cannot be revoked from the UI.** `GET /policies` shows
-    every remembered grant and `GET /audit` shows the decision log, but no
-    endpoint removes a grant once made, and nothing clears one when its context
-    is archived or deleted. Today the only way to undo one is to edit
-    `permission-policies.json` under `SAIRIOS_DATA_DIR` and restart the broker.
-    The boundary therefore gives visibility but not control, and a grant made
-    once persists until a human edits a file.
+10. **A remembered decision can be revoked, but not yet from the desktop.**
+    `POST /policies/revoke` withdraws one by capability, by context, or all of
+    them, persists the change, and audits it — so a grant no longer survives
+    until someone edits a JSON file. What is still missing is the UI: the shell
+    exposes `brokerApi.revoke` and nothing calls it, so today revoking means an
+    HTTP request. Nothing clears a grant automatically when its context is
+    archived or deleted, either.
 
 ## Reporting scope
 

@@ -19,7 +19,21 @@ export type AuditPhase =
   | 'decided'
   | 'executed'
   | 'failed'
-  | 'cancelled';
+  | 'cancelled'
+  /**
+   * A remembered grant withdrawn. Not tied to a request — it undoes a decision
+   * made by some earlier one, possibly long ago, so `requestId` is the sentinel
+   * below rather than a real id.
+   */
+  | 'revoked';
+
+/**
+ * Stands in for `requestId` on entries that are not about a single request.
+ * A log where every row must name a request would otherwise force a revocation
+ * to borrow the id of the grant it cancels, which reads as if that request ran
+ * twice.
+ */
+export const NO_REQUEST = 'req_none';
 
 export interface AuditRecord {
   id: string;

@@ -4,7 +4,7 @@ import type { Capability } from '@sairios/context-schema';
 import { fail, newId, ok, systemClock, type Clock, type Result } from '@sairios/shared';
 import { type SairiEnv } from '@sairios/shared/node';
 import { executeAction, type ActionOutcome } from './actions.js';
-import type { AuditRecord, AuditSink } from './audit.js';
+import { NO_REQUEST, type AuditRecord, type AuditSink } from './audit.js';
 import {
   CAPABILITY_DESCRIPTORS,
   DEFAULT_POLICIES,
@@ -44,6 +44,16 @@ export interface PermissionRequest {
   status: RequestStatus;
   createdAt: string;
   decidedAt?: string;
+  /**
+   * True only when a human answered this specific request. False for one that
+   * policy allowed on its own — including from a remembered grant.
+   *
+   * `decidedAt` cannot stand in for this: propose() stamps it on auto-allowed
+   * requests too, so the two look identical afterwards. The distinction matters
+   * at execution, where a grant that has since been revoked must stop a request
+   * it authorised, while an explicit "allow once" must still be honoured.
+   */
+  userDecided?: boolean;
   executedAt?: string;
   /** Where the effective policy came from, shown to the user. */
   policySource: 'context-memory' | 'global-memory' | 'default';
@@ -187,6 +197,7 @@ export class PermissionBroker {
 
     request.status = input.decision === 'allow' ? 'allowed' : 'denied';
     request.decidedAt = this.#clock.isoNow();
+    request.userDecided = true;
     request.policySource = 'context-memory';
 
     if (input.remember) {
@@ -255,6 +266,22 @@ export class PermissionBroker {
     // Re-check the policy at execution time. A "deny and remember" recorded
     // between the decision and the execution must win.
     const current = this.effectivePolicy(request.capability, request.contextId);
+
+    // Two ways to lose authorisation between the decision and the execution.
+    //
+    // A recorded `deny` is the obvious one. The second is subtler and used to
+    // slip through: a request that policy allowed on its own, from a remembered
+    // grant that has since been REVOKED. Revocation leaves the policy at `ask`,
+    // not `deny`, so a check that only looked for `deny` let the request run on
+    // an authorisation that no longer existed — which would have made
+    // "revocable" untrue for anything already in flight.
+    //
+    // A request a human explicitly allowed is untouched. Withdrawing a standing
+    // grant is not the same as taking back an individual "allow once".
+    // Order matters. A hard `deny` is checked first and reports itself as one:
+    // both conditions are true for a denied capability whose state has been
+    // forged, and reporting that as a revoked grant would misdescribe an attack
+    // as an ordinary withdrawal. `broker.test.ts` pins it.
     if (current.decision === 'deny') {
       request.status = 'denied';
       await this.#audit.append({
@@ -265,6 +292,21 @@ export class PermissionBroker {
         summary: 'Denied at execution time by a policy recorded after the decision',
       });
       return fail('denied_by_policy', 'A deny policy was recorded for this capability.');
+    }
+
+    if (!request.userDecided && current.decision !== 'allow') {
+      request.status = 'denied';
+      await this.#audit.append({
+        contextId: request.contextId,
+        requestId: request.id,
+        capability: request.capability,
+        phase: 'auto-denied',
+        summary: 'Denied at execution time: the grant that authorised it was revoked',
+      });
+      return fail(
+        'grant_revoked',
+        'The remembered grant that allowed this was revoked before it ran.',
+      );
     }
 
     const outcome = await executeAction(request.capability, request.payload, {
@@ -343,6 +385,64 @@ export class PermissionBroker {
       // rather than failing to start. Defaults are the safe direction.
       this.#remembered = [];
     }
+  }
+
+  /**
+   * Withdraws remembered grants.
+   *
+   * Until this existed, "allow for this context" was permanent: nothing cleared
+   * it when the context was archived and there was no way to take it back. A
+   * permission system you can only add to is a ratchet, and a ratchet trains
+   * people to think before the first click and never again.
+   *
+   * It is also the precondition SECURITY.md names for remote access. A grant
+   * made from a laptop that is now on a train has to be withdrawable from
+   * somewhere else, or the honest advice is not to grant anything remotely.
+   *
+   * `all` is a separate flag rather than "omit the filters", because a revoke
+   * that clears everything when its argument is accidentally undefined is a
+   * footgun aimed at the one table the user cannot reconstruct.
+   */
+  async revoke(
+    filter: { capability?: Capability; contextId?: string | null; all?: boolean } = {},
+  ): Promise<Result<{ revoked: RememberedDecision[] }>> {
+    const { capability, contextId, all } = filter;
+    if (!all && !capability && contextId === undefined) {
+      return fail(
+        'invalid_revoke',
+        'Name a capability, a context, or pass all:true. Refusing to guess.',
+      );
+    }
+    if (capability !== undefined && !isKnownCapability(capability)) {
+      return fail('unknown_capability', `"${capability}" is not a SairiOS capability.`);
+    }
+
+    const matches = (r: RememberedDecision): boolean => {
+      if (all) return true;
+      if (capability !== undefined && r.capability !== capability) return false;
+      if (contextId !== undefined && r.contextId !== contextId) return false;
+      return true;
+    };
+
+    const revoked = this.#remembered.filter(matches);
+    if (revoked.length === 0) return ok({ revoked: [] });
+
+    this.#remembered = this.#remembered.filter((r) => !matches(r));
+    await this.#persistPolicies();
+
+    // Withdrawal is an event in its own right. An audit log that records every
+    // grant and no revocation reads as though permissions only ever widened.
+    for (const entry of revoked) {
+      await this.#audit.append({
+        contextId: entry.contextId ?? 'global',
+        requestId: NO_REQUEST,
+        capability: entry.capability,
+        phase: 'revoked',
+        summary: `Revoked remembered ${entry.decision} for ${entry.capability} (${entry.scope})`,
+      });
+    }
+
+    return ok({ revoked });
   }
 
   async #persistPolicies(): Promise<void> {

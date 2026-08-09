@@ -123,6 +123,15 @@ export interface PermissionRequestRecord {
   error?: { code: string; message: string };
 }
 
+export interface RememberedGrantRecord {
+  capability: string;
+  decision: 'allow' | 'deny';
+  scope: 'context' | 'global';
+  /** null for a global grant. */
+  contextId: string | null;
+  decidedAt: string;
+}
+
 export interface CapabilityDescriptorRecord {
   capability: string;
   summary: string;
@@ -137,6 +146,22 @@ export const brokerApi = {
 
   capabilities: () =>
     request<{ capabilities: CapabilityDescriptorRecord[] }>(`${BROKER_BASE}/capabilities`),
+
+  policies: () =>
+    request<{ defaults: Record<string, string>; remembered: RememberedGrantRecord[] }>(
+      `${BROKER_BASE}/policies`,
+    ),
+
+  /**
+   * Withdraws a remembered grant. `contextId: null` addresses a global one, so
+   * the field is only sent when it was supplied — omitting and nulling mean
+   * different things here.
+   */
+  revoke: (filter: { capability?: string; contextId?: string | null; all?: boolean }) =>
+    request<{ revoked: RememberedGrantRecord[] }>(`${BROKER_BASE}/policies/revoke`, {
+      method: 'POST',
+      body: JSON.stringify(filter),
+    }),
 
   forContext: (contextId: string) =>
     request<{ requests: PermissionRequestRecord[] }>(

@@ -1,5 +1,10 @@
 import { createLogger } from '@sairios/shared';
-import { attachListenDiagnostics, readEnv, startupChecks } from '@sairios/shared/node';
+import {
+  assertBindSafe,
+  attachListenDiagnostics,
+  readEnv,
+  startupChecks,
+} from '@sairios/shared/node';
 import { demoContexts } from './seeds.js';
 import { createContextServiceServer } from './server.js';
 import { ContextService } from './service.js';
@@ -18,6 +23,14 @@ if ((await service.list()).length === 0) {
     await store.put(context);
   }
   log.info('seeded demo contexts', { count: demoContexts().length });
+}
+
+// Before anything binds. A service with no authentication must not reach a
+// listening socket on a routable address by accident; see assertBindSafe.
+const unsafeBind = assertBindSafe(env, 'context-service');
+if (unsafeBind) {
+  process.stderr.write(`${unsafeBind}\n`);
+  process.exit(1);
 }
 
 for (const check of startupChecks(env)) {

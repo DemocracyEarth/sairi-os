@@ -1,6 +1,11 @@
 import { resolve } from 'node:path';
 import { createLogger } from '@sairios/shared';
-import { attachListenDiagnostics, readEnv, startupChecks } from '@sairios/shared/node';
+import {
+  assertBindSafe,
+  attachListenDiagnostics,
+  readEnv,
+  startupChecks,
+} from '@sairios/shared/node';
 import { AgentBridge } from './bridge.js';
 import { HttpBrokerClient, HttpContextClient } from './clients.js';
 import { MockAgentProvider } from './providers/mock.js';
@@ -34,6 +39,14 @@ const status = await provider.status();
 log.info(`provider ${status.provider}: ${status.detail}`);
 if (!status.configured) {
   log.warn('the selected provider is not configured; intentions will return an explanatory error');
+}
+
+// Before anything binds. A service with no authentication must not reach a
+// listening socket on a routable address by accident; see assertBindSafe.
+const unsafeBind = assertBindSafe(env, 'agent-bridge');
+if (unsafeBind) {
+  process.stderr.write(`${unsafeBind}\n`);
+  process.exit(1);
 }
 
 for (const check of startupChecks(env)) {
