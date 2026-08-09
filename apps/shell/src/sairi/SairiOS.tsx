@@ -13,6 +13,9 @@ import { Assembly } from './Assembly.js';
 import { SetupWizard } from './SetupWizard.js';
 import { AgentPresence, ConvergenceMeter, ContextSurface, StatusOrb, hue } from './primitives.js';
 import { ROSTER, recordFor, setNoteRetired, type Roster } from './roster.js';
+import { Glyph } from './Glyph.js';
+import { CommandList } from './CommandList.js';
+import { buildCommands, matchCommands, shouldAutoSelect } from './palette.js';
 import { Talk, TalkButton } from './Talk.js';
 import { useDictation } from './useDictation.js';
 import {
@@ -77,6 +80,13 @@ export function SairiOS(): JSX.Element {
      point of it: retiring a note here stops that note travelling into every
      context, not just this one. Nothing persists it yet — see roster.ts. */
   const [roster, setRoster] = useState<Roster>(ROSTER);
+  /* Explicit appearance beats the system preference, in both directions, and
+     `undefined` means "whatever the machine says" — a third state rather than a
+     boolean, because "not chosen" and "chose light" are different. */
+  const [theme, setTheme] = useState<'light' | 'dark' | undefined>();
+  /* -1 is the resting state: a command is visible but not under the Enter key
+     until the user arrows to it. See shouldAutoSelect. */
+  const [selected, setSelected] = useState(-1);
   // Starts dismissed so nothing flashes before the bridge answers. Opens itself
   // exactly once, when the status comes back unconfigured.
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -164,28 +174,6 @@ export function SairiOS(): JSX.Element {
     });
   }, []);
 
-  const submit = useCallback(
-    (event?: FormEvent) => {
-      event?.preventDefault();
-      const text = intent.trim();
-      if (!text) return;
-
-      // The intent decides the shape of the context. A real deployment reads
-      // this from the model; see readIntention() for why it is keywords here.
-      const kind = readIntention(text);
-      const template = CONTEXT_REGISTRY[kind];
-      const next: SairiContext = template
-        ? { ...template, id: `ctx-${Date.now()}`, intention: text, lastActive: 0 }
-        : blankContext(text, kind);
-
-      setAssembling(next);
-      setBeat('intention');
-      setIntent('');
-      inputRef.current?.blur();
-    },
-    [intent],
-  );
-
   const finishAssembly = useCallback(() => {
     setBeat('ready');
     setAssembling((pending) => {
@@ -218,6 +206,74 @@ export function SairiOS(): JSX.Element {
     [activeId],
   );
 
+  const systemDark =
+    typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches;
+  const effectiveTheme = theme ?? (systemDark ? 'dark' : 'light');
+
+  const commands = useMemo(
+    () =>
+      buildCommands({
+        contexts,
+        activeId: active?.id ?? '',
+        onSwitch: (id) => switchTo(id),
+        onOpenSetup: () => setWizardOpen(true),
+        onToggleTheme: () => setTheme(effectiveTheme === 'dark' ? 'light' : 'dark'),
+        theme: effectiveTheme,
+        ...(active ? { proposal: active.proposal, onProposal: () => undefined } : {}),
+      }),
+    [contexts, active, effectiveTheme, switchTo],
+  );
+
+  const matches = useMemo(() => matchCommands(intent, commands), [intent, commands]);
+
+  /* Recomputed on every keystroke rather than held: whether the top row may sit
+     under Enter depends on what was just typed, and a stale selection is how a
+     palette runs the wrong thing. */
+  useEffect(() => {
+    setSelected(shouldAutoSelect(intent, matches) ? 0 : -1);
+  }, [intent, matches]);
+
+  const runCommand = useCallback(
+    (index: number) => {
+      const match = matches[index];
+      if (!match) return;
+      setIntent('');
+      setSelected(-1);
+      match.command.run();
+    },
+    [matches],
+  );
+
+  const submit = useCallback(
+    (event?: FormEvent) => {
+      event?.preventDefault();
+
+      // Enter runs the highlighted command, and otherwise means what it always
+      // meant. The field never changes mode; the selection decides.
+      if (selected >= 0) {
+        runCommand(selected);
+        return;
+      }
+
+      const text = intent.trim();
+      if (!text) return;
+
+      // The intent decides the shape of the context. A real deployment reads
+      // this from the model; see readIntention() for why it is keywords here.
+      const kind = readIntention(text);
+      const template = CONTEXT_REGISTRY[kind];
+      const next: SairiContext = template
+        ? { ...template, id: `ctx-${Date.now()}`, intention: text, lastActive: 0 }
+        : blankContext(text, kind);
+
+      setAssembling(next);
+      setBeat('intention');
+      setIntent('');
+      inputRef.current?.blur();
+    },
+    [intent, selected, runCommand],
+  );
+
   const pauseAgent = useCallback((contextId: string, agentId: string) => {
     setContexts((list) =>
       list.map((c) =>
@@ -247,6 +303,7 @@ export function SairiOS(): JSX.Element {
   return (
     <div
       className={`sairi s-os${switching ? ' is-switching' : ''}`}
+      {...(theme ? { 'data-theme': theme } : {})}
       style={{ '--tone': hue(active.hue) } as CSSProperties}
     >
       <AmbientBackground />
@@ -299,7 +356,10 @@ export function SairiOS(): JSX.Element {
         </ul>
 
         <p className="s-nav__hint">
-          <kbd>⌘K</kbd> to start anything
+          <kbd>
+            <Glyph name="command" size={11} />K
+          </kbd>{' '}
+          to start anything, or type a command
           {talk.availability?.state === 'ready' && (
             <>
               <br />
@@ -417,14 +477,44 @@ export function SairiOS(): JSX.Element {
        * ---------------------------------------------------------------- */}
       <form className="s-command" onSubmit={submit} role="search">
         <Talk talk={talk} />
+        <CommandList
+          listId="sairi-palette"
+          matches={matches}
+          onHover={setSelected}
+          onRun={runCommand}
+          selected={selected}
+        />
         <div className="s-command__field">
           <StatusOrb hue={active.hue} pulse size={7} />
           <input
-            aria-label="What do you want to accomplish?"
+            aria-activedescendant={selected >= 0 ? `sairi-palette-${selected}` : undefined}
+            aria-autocomplete="list"
+            aria-controls="sairi-palette"
+            aria-expanded={matches.length > 0}
+            aria-label="What do you want to accomplish, or a command"
             className="s-command__input"
             onChange={(e) => setIntent(e.target.value)}
+            onKeyDown={(e) => {
+              if (matches.length === 0) return;
+              if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setSelected((i) => (i + 1) % matches.length);
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                // Up from the resting state wraps to the last row rather than
+                // doing nothing, so the list is reachable in one keystroke
+                // from either direction.
+                setSelected((i) => (i <= 0 ? matches.length - 1 : i - 1));
+              } else if (e.key === 'Escape' && selected >= 0) {
+                // Give up the selection before giving up the text: Escape
+                // twice clears, once un-selects.
+                e.preventDefault();
+                setSelected(-1);
+              }
+            }}
             placeholder="What do you want to accomplish?"
             ref={inputRef}
+            role="combobox"
             spellCheck={false}
             value={intent}
           />

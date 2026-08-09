@@ -200,10 +200,15 @@
 }
 
 .s-nav__hint kbd {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
   font-family: var(--mono);
   background: var(--rule-soft);
-  border-radius: 4px;
-  padding: 1px 5px;
+  border: 1px solid var(--rule-soft);
+  border-radius: var(--r-sm);
+  padding: 1px 4px;
+  vertical-align: -2px;
 }
 
 /* ------------------------------------------------------------ workspace */
@@ -1172,6 +1177,86 @@
 
 .s-talkbtn.is-live .s-talkbtn__mic::after {
   color: var(--alert);
+}
+
+/* -------------------------------------------------------- command list
+ *
+ * Grows upward out of the field that summoned it, which is the motion
+ * explaining where it came from. Not a modal: a palette that takes the screen
+ * is a second place to be, and putting commands in the intent field was how
+ * this system avoided having one.
+ */
+
+.s-pal {
+  list-style: none;
+  margin: 0 0 var(--s-2);
+  padding: var(--s-1);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  background: var(--paper-raised);
+  box-shadow: var(--e-3);
+  animation: s-pal-in var(--d-fast) var(--ease-out);
+  transform-origin: bottom center;
+}
+
+@keyframes s-pal-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0) scale(0.99);
+  }
+}
+
+.s-pal__row {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r);
+  cursor: pointer;
+  color: var(--ink-2);
+}
+
+/* The selected row is the one Enter will run, so it is the only row allowed to
+   carry the accent — the same rule as everywhere else. */
+.s-pal__row.is-on {
+  background: var(--signal-wash);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--signal-edge);
+}
+
+.s-pal__glyph {
+  color: var(--ink-4);
+}
+
+.s-pal__row.is-on .s-pal__glyph {
+  color: var(--signal-ink);
+}
+
+.s-pal__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--t-body);
+}
+
+/* The characters that actually matched. Weight rather than colour, so the
+   emphasis costs nothing from the one accent. */
+.s-pal__hit {
+  font-weight: var(--w-semi);
+  color: var(--ink);
+}
+
+.s-pal__hint {
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-4);
+  white-space: nowrap;
+}
+
+.s-pal__enter {
+  color: var(--signal-ink);
 }
 
 .s-command__field {
