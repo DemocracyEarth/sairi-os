@@ -74,7 +74,8 @@
         "clipboard.read",
         "clipboard.write",
         "notifications.send",
-        "system.settings.read"
+        "system.settings.read",
+        "audio.capture"
       ]
     },
     "policyDecision": { "enum": ["allow", "ask", "deny"] },

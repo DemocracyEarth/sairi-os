@@ -213,7 +213,7 @@ Worked examples, including two that are invalid on purpose, are in
 The broker separates **observation**, **proposal** and **execution**. The agent
 can observe and propose. Only a user decision executes.
 
-Four of the eleven do something real, six are simulated, one is unimplemented:
+Five of the twelve do something real, six are simulated, one is unimplemented:
 
 | Capability             | Default  | Real?         | What v0 actually does                       |
 | ---------------------- | -------- | ------------- | ------------------------------------------- |
@@ -221,6 +221,7 @@ Four of the eleven do something real, six are simulated, one is unimplemented:
 | `files.write`          | ask      | **real**      | writes a real file, sandbox only            |
 | `files.delete`         | **deny** | **real**      | real, sandbox only, non-recursive           |
 | `system.settings.read` | allow    | **real**      | live SairiOS settings, no secrets           |
+| `audio.capture`        | ask      | **real**      | authorises one push-to-talk dictation       |
 | `process.list`         | allow    | simulated     | SairiOS services only, never host processes |
 | `network.fetch`        | ask      | simulated     | no socket is opened                         |
 | `browser.open`         | ask      | simulated     | nothing is launched                         |

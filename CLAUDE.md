@@ -41,6 +41,23 @@ The agent's output is an **interface** plus an activity log, not a transcript.
 If you find yourself adding chat bubbles, a conversation scroll, or a "type a
 message" box inside a context window, stop and reconsider.
 
+**Voice is an input transport, not a conversational channel.** Speech becomes
+text becomes an intention; the system answers on the screen and in the activity
+log. **SairiOS never speaks in sentences.**
+
+That clause is load-bearing, and the letter-versus-spirit gap here is unusually
+wide. A voice loop has no message list, no scroll and no text box, and violates
+this invariant more completely than a chat window would — a chat transcript is
+at least scrollable, diffable and auditable, while a spoken exchange is a
+transcript nobody can read. It also breaks the honesty rule below: a spoken
+"done, I sent it" leaves no artifact to check the claim against.
+
+So: dictation into the intention field, yes. Text-to-speech, a wake word,
+ambient listening, multi-turn voice state, or spoken permission approval, no.
+The last one is an attack, not a purity argument — an agent holding
+`browser.open` could play audio that says "approve", and so could a television.
+See [ADR 0012](docs/adr/0012-voice-as-input-transport.md).
+
 ### 3. The UI protocol stays declarative
 
 The model returns a **SairiUI document**: JSON drawn from a fixed catalog,

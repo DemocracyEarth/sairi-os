@@ -127,7 +127,7 @@ Properties that hold by construction:
 
 Default policies:
 
-**Four of the eleven capabilities do something real. Six are simulated. One is
+**Five of the twelve capabilities do something real. Six are simulated. One is
 unimplemented.** Every row below says which, because describing only a
 capability's _scope_ is what let a wrong count into three documents.
 
@@ -137,6 +137,7 @@ capability's _scope_ is what let a wrong count into three documents.
 | `files.write`          | ask      | **real**      | writes a real file, sandbox only                            |
 | `files.delete`         | **deny** | **real**      | deletes a real file, sandbox only, non-recursive            |
 | `system.settings.read` | allow    | **real**      | returns live SairiOS settings. No env, no host, no secrets  |
+| `audio.capture`        | ask      | **real**      | authorises one dictation; the browser captures, not SairiOS |
 | `process.list`         | allow    | simulated     | SairiOS services only — host processes are never enumerated |
 | `network.fetch`        | ask      | simulated     | no socket is opened                                         |
 | `browser.open`         | ask      | simulated     | nothing is launched                                         |
@@ -159,6 +160,25 @@ Two defaults deserve explanation. `process.list` is allow-by-default, so it must
 not leak what the user is running — it reports SairiOS's own services and
 nothing else. `system.settings.read` is allow-by-default, so it exposes only
 provider mode, ports and the sandbox path.
+
+`audio.capture` is the odd one, and the difference is deliberate rather than an
+oversight. Every other capability names a resource the broker can reach: a file,
+a process, a setting. A microphone belongs to whichever machine runs the
+browser, which over a tunnel is the user's laptop and not the guest. **So the
+broker authorises this one without performing it**, and its enforcement is real
+but indirect: the shell opens no microphone without an allowed-and-executed
+request, and policy is re-checked per utterance, so a "deny and remember" stops
+the next one. What the broker cannot do is stop some other page on that machine
+from asking for the same microphone itself.
+
+The compensating property is the strongest privacy guarantee in the system.
+Capture and transcription both happen in the page against an on-device model, so
+**no audio and no transcript ever reach SairiOS** — the broker records that a
+microphone was authorised and is structurally unable to record what was said.
+`audio-capture.test.ts` asserts that from the other side: speech sent to the
+broker anyway is neither read nor echoed back. It is never `allow` by default,
+because a microphone records people who are not users of this machine and were
+never asked. See [ADR 0012](docs/adr/0012-voice-as-input-transport.md).
 
 Grant scopes are `allow once`, `allow for this context`, `deny`, and `deny and
 remember`. A remembered decision for a context never applies to another context.
