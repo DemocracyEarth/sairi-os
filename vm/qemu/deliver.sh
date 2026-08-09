@@ -125,6 +125,29 @@ done
 remote 'sudo systemctl start sairios-openclaw.path' 2>/dev/null ||
 	printf '    sairios-openclaw.path not started (OpenClaw may not be installed)\n'
 
+# ---------------------------------------------------------------------------
+# The graphical session, which is NOT optional
+# ---------------------------------------------------------------------------
+# cog loads the page once, at session start, and never reloads. Vite gives every
+# asset a content-hashed filename, so after a delivery the browser on the guest's
+# own screen is holding a bundle that no longer exists on disk - and it will hold
+# it forever, because nothing tells it otherwise.
+#
+# This used to print "reboot to bring up the graphical session" as a closing
+# suggestion. That reads as optional and it is not: the entire point of a
+# delivery is that the bundle changed, so the on-screen session is ALWAYS stale
+# afterwards. It cost an hour of "the VM is showing the old UI" when the guest
+# had been serving the new one correctly the whole time.
+#
+# Restarted rather than rebooted, because a reboot takes a minute and throws away
+# the running services that were just started.
+if remote 'systemctl list-unit-files sairios-session.service >/dev/null 2>&1'; then
+	remote 'sudo systemctl restart sairios-session.service' ||
+		printf '    the graphical session did not restart; the screen may still show an old page\n'
+else
+	printf '    no graphical session on this guest (headless); nothing on screen to reload\n'
+fi
+
 step 'Checking the services'
 sleep 8
 remote 'systemctl is-active sairios-context-service sairios-permission-broker sairios-agent-bridge sairios-shell || true'
@@ -138,6 +161,10 @@ remote 'for p in 7800 7801 7802 7803; do
 done'
 
 step 'Done'
-printf '    Reboot the guest to bring up the graphical session:\n'
-printf '      ssh -p %s -i %s debian@%s sudo reboot\n' "$PORT" "$KEY" "$HOST"
-printf '    Then run ./vm/qemu/run-vm.sh to watch it come up with a display.\n'
+printf '    The guest is serving this build and its screen has been reloaded.\n'
+printf '\n'
+printf '    Reach it from this machine:\n'
+printf '      ./vm/qemu/tunnel.sh      then open http://127.0.0.1:7800/#/os\n'
+printf '\n'
+printf '    If the guest has no display yet, boot it with one:\n'
+printf '      ./vm/qemu/run-vm.sh\n'
