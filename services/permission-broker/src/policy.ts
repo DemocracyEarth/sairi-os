@@ -20,6 +20,12 @@ export const DEFAULT_POLICIES: Readonly<Record<Capability, PolicyDecision>> = {
   'clipboard.write': 'ask',
   'notifications.send': 'ask',
   'system.settings.read': 'allow',
+  // Never 'allow'. `clipboard.read` is 'deny' by default on the reasoning that a
+  // passive read of the user's content is dangerous; a microphone is strictly
+  // worse, because it captures people who are not users of this machine and who
+  // were never asked. 'ask' rather than 'deny' only because push-to-talk makes
+  // the grant legible: one key press, one utterance, one audit entry.
+  'audio.capture': 'ask',
 };
 
 export type RiskLevel = 'low' | 'medium' | 'high';
@@ -135,6 +141,43 @@ export const CAPABILITY_DESCRIPTORS: Readonly<Record<Capability, CapabilityDescr
     // storeDriver and sandbox root. It is the only capability that returns real
     // data while mutating nothing, which is how it came to be the only one
     // whose two honesty flags disagreed.
+    realSideEffect: true,
+  },
+
+  /**
+   * The first capability whose resource is not on this machine.
+   *
+   * Every other capability names something the broker can reach: a file, a
+   * process, a setting. A microphone belongs to whichever machine is running the
+   * browser, and over an SSH tunnel that is the user's laptop, not the guest. So
+   * the broker cannot perform this one — it authorises it, and the browser
+   * performs it.
+   *
+   * That is a weaker guarantee than the others and it should be read as one. The
+   * broker's enforcement is real but indirect: the shell will not open a
+   * microphone without an allowed-and-executed request, and policy is re-checked
+   * on every utterance, so a "deny and remember" stops the next one. What the
+   * broker cannot do is prevent some other page on that machine from asking for
+   * the same microphone itself.
+   *
+   * What it buys in exchange is the strongest privacy property in the system:
+   * because capture and transcription both happen in the page, the audio and the
+   * text never reach SairiOS at all. The broker records THAT the microphone was
+   * used, and cannot record WHAT was said, because it never receives it.
+   */
+  'audio.capture': {
+    capability: 'audio.capture',
+    summary: 'Use the microphone while you hold the talk key, to dictate an intention.',
+    risk: 'high',
+    v0Behaviour:
+      'Authorises one push-to-talk dictation. Audio is captured and transcribed inside your ' +
+      'browser by an on-device model and never leaves it — SairiOS receives no audio, no ' +
+      'transcript, and nothing is sent to a network. The words land in the intention field for ' +
+      'you to edit; nothing is submitted for you.',
+    // Real. The microphone genuinely opens as a result of this, and nothing about
+    // the outcome is fabricated. Marking it simulated would tell the user that
+    // nothing happened while their microphone indicator is lit, which is the
+    // worse of the two lies available here.
     realSideEffect: true,
   },
 };

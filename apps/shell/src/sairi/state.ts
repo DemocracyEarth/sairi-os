@@ -102,6 +102,39 @@ export interface SairiContext {
   lastActive: number;
 }
 
+/**
+ * A broker-shaped id for a Sairi context.
+ *
+ * The permission broker attributes every request to a context and requires
+ * `ctx_` followed by 32 hex characters, because a grant that cannot be
+ * attributed cannot be scoped or revoked. These contexts are fixtures with ids
+ * like `ctx-research`, so they need mapping.
+ *
+ * Deterministic rather than random, so "allow for this context" survives a
+ * reload — a grant that silently forgot itself would train someone to click
+ * allow, which is the prompt-fatigue failure SECURITY.md names.
+ *
+ * The honest wart: these ids name contexts the context service has never heard
+ * of, so the audit log will carry entries for them. That is a consequence of
+ * the Sairi surface being a prototype that does not persist, and it goes away
+ * when it does.
+ */
+export function brokerContextId(id: string): string {
+  // FNV-1a, four times over with different offsets, to fill 32 hex digits.
+  // Not a security hash and not used as one: this is a stable name, and the
+  // only thing at stake in a collision is two fixtures sharing a grant.
+  let out = '';
+  for (let round = 0; round < 4; round += 1) {
+    let h = 0x811c9dc5 ^ round;
+    for (let i = 0; i < id.length; i += 1) {
+      h ^= id.charCodeAt(i);
+      h = Math.imul(h, 0x01000193) >>> 0;
+    }
+    out += h.toString(16).padStart(8, '0');
+  }
+  return `ctx_${out}`;
+}
+
 /** Aggregate convergence: how close this context is to an answer, 0..1. */
 export function convergence(context: SairiContext): number {
   if (context.panels.length === 0) return 0;

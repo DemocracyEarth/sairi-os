@@ -143,6 +143,16 @@ export const brokerApi = {
       `${BROKER_BASE}/requests?contextId=${encodeURIComponent(contextId)}`,
     ),
 
+  /**
+   * Records an intent to act. Never executes — that is the whole point of the
+   * three-phase separation, and the shell is not an exception to it.
+   */
+  propose: (input: { contextId: string; capability: string; reason: string; payload?: unknown }) =>
+    request<PermissionRequestRecord>(`${BROKER_BASE}/requests`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+
   decide: (
     requestId: string,
     decision: 'allow' | 'deny',

@@ -13,7 +13,10 @@ import { Assembly } from './Assembly.js';
 import { SetupWizard } from './SetupWizard.js';
 import { AgentPresence, ConvergenceMeter, ContextSurface, StatusOrb, hue } from './primitives.js';
 import { ROSTER, recordFor, setNoteRetired, type Roster } from './roster.js';
+import { Talk, TalkButton } from './Talk.js';
+import { useDictation } from './useDictation.js';
 import {
+  brokerContextId,
   convergence,
   readIntention,
   KIND_LABEL,
@@ -44,6 +47,13 @@ import './sairi.css';
  * bottom sheet, and the workspace keeps the whole screen, because on a phone
  * the active context is the only thing that matters.
  */
+
+/**
+ * How long ⌘K must be held before it becomes a microphone rather than a focus
+ * shortcut. Long enough that a normal tap never opens a microphone by accident,
+ * short enough that holding does not feel broken.
+ */
+const HOLD_MS = 350;
 
 const EXAMPLES = [
   'Analyse recent quantum-computing breakthroughs',
@@ -77,18 +87,71 @@ export function SairiOS(): JSX.Element {
     [assembling, contexts, activeId],
   );
 
-  /* Cmd/Ctrl-K focuses the intent field from anywhere. The universal field is
-     the primary way in, so it should never require finding it with a pointer. */
+  /* Dictation writes into the same field typing does, and never submits. The
+     transcript arrives as ordinary editable text, which turns voice's worst
+     property — an unrepairable command — into a normal edit. It is also why
+     nothing downstream can tell an intention was spoken: `readIntention` sees
+     exactly what the keyboard produces, so voice cannot grow its own pipeline. */
+  const talk = useDictation({
+    contextId: brokerContextId(active?.id ?? 'sairi-os'),
+    onTranscript: (text) => {
+      setIntent((current) => (current ? `${current} ${text}` : text));
+      inputRef.current?.focus();
+    },
+  });
+
+  /* Tap ⌘K to focus the intent field; HOLD ⌘K to talk into it.
+     One key, two gestures, and the hold is the permission grant: press,
+     speak, release. There is no listening state the user did not physically
+     hold open, which is the only version of a microphone this system can
+     honestly represent in a permission model. */
+  const talkRef = useRef(talk);
+  talkRef.current = talk;
   useEffect(() => {
+    let holdTimer = 0;
+    let holding = false;
+
     const onKey = (e: KeyboardEvent): void => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        inputRef.current?.focus();
-        inputRef.current?.select();
-      }
+      if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== 'k') return;
+      e.preventDefault();
+      // Key repeat fires this many times a second; only the first press counts.
+      if (e.repeat || holding) return;
+      holding = true;
+      inputRef.current?.focus();
+      inputRef.current?.select();
+      holdTimer = window.setTimeout(() => talkRef.current.begin(), HOLD_MS);
     };
+
+    const release = (): void => {
+      if (!holding) return;
+      holding = false;
+      window.clearTimeout(holdTimer);
+      talkRef.current.end();
+    };
+
+    const onKeyUp = (e: KeyboardEvent): void => {
+      // Releasing either half of the chord ends the utterance. Watching only
+      // for 'k' strands the recogniser open when ⌘ is lifted first, and macOS
+      // does not deliver keyup for letters while ⌘ is held.
+      if (e.key.toLowerCase() === 'k' || e.key === 'Meta' || e.key === 'Control') release();
+    };
+
+    const onEscape = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') talkRef.current.cancel();
+    };
+
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('keydown', onEscape);
+    window.addEventListener('keyup', onKeyUp);
+    // A lost focus mid-utterance must not leave the microphone open.
+    window.addEventListener('blur', release);
+    return () => {
+      window.clearTimeout(holdTimer);
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('keydown', onEscape);
+      window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', release);
+    };
   }, []);
 
   useEffect(() => {
@@ -237,6 +300,12 @@ export function SairiOS(): JSX.Element {
 
         <p className="s-nav__hint">
           <kbd>⌘K</kbd> to start anything
+          {talk.availability?.state === 'ready' && (
+            <>
+              <br />
+              hold it to talk
+            </>
+          )}
         </p>
       </nav>
 
@@ -347,6 +416,7 @@ export function SairiOS(): JSX.Element {
        * The universal intent field
        * ---------------------------------------------------------------- */}
       <form className="s-command" onSubmit={submit} role="search">
+        <Talk talk={talk} />
         <div className="s-command__field">
           <StatusOrb hue={active.hue} pulse size={7} />
           <input
@@ -358,6 +428,7 @@ export function SairiOS(): JSX.Element {
             spellCheck={false}
             value={intent}
           />
+          <TalkButton talk={talk} />
           <button className="s-command__go" disabled={!intent.trim()} type="submit">
             Begin
           </button>

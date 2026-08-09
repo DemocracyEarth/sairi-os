@@ -233,6 +233,27 @@ async function runAction(
       });
     }
 
+    case 'audio.capture': {
+      // The only capability the broker authorises without performing. See the
+      // descriptor in policy.ts for why, and for what that costs.
+      //
+      // Note what is NOT read from the payload: any audio, and any transcript.
+      // There is no field for either, so no future caller can quietly start
+      // posting speech here — the absence is the design, and
+      // `audio-capture.test.ts` asserts it stays absent.
+      const purpose = readString(payload, 'purpose', 120);
+      if (!purpose.ok) return purpose;
+      return ok({
+        capability,
+        simulated: false,
+        summary: 'Authorised one microphone dictation',
+        detail: {
+          purpose: purpose.value,
+          note: 'Captured and transcribed in the browser. SairiOS received no audio and no transcript.',
+        },
+      });
+    }
+
     case 'system.settings.read': {
       // SairiOS's own settings only. No environment variables, no host settings,
       // and nothing that could carry a credential.

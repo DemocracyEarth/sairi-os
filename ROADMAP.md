@@ -24,7 +24,7 @@ subsystems.
 - [x] Crystallization with allow-list sanitization and a user-visible preview
 - [x] SairiUI declarative protocol: JSON Schema, sixteen-component audited catalog
 - [x] Whole-document validation with a safe error state
-- [x] Permission broker: observation / proposal / execution, eleven capabilities,
+- [x] Permission broker: observation / proposal / execution, twelve capabilities,
       four grant scopes, policy re-check at execution, append-only audit log
 - [x] Sandbox path containment, symlink-aware
 - [x] Context service with SQLite (`node:sqlite`) and JSON stores
@@ -52,7 +52,12 @@ subsystems.
       field they are about — each of them enforced in setup.ts and asserted in
       its tests.
 - [x] End-to-end test of the full flow in mock mode against the real services
-- [x] 380 tests, none requiring a credential or the network
+- [x] **Hold-to-talk dictation**, on-device only. Hold ⌘K, speak, release; the
+      transcript lands in the intention field as editable text and is never
+      submitted for you. Voice is an input transport and nothing else — SairiOS
+      does not speak. Gated on the browser proving recognition is local, and it
+      refuses rather than falling back to a cloud recogniser.
+- [x] 414 tests, none requiring a credential or the network
 
 ### Verified by actually running it
 
@@ -112,15 +117,20 @@ commit history.
 
 Not bugs to be discovered later; they are listed because they are already known.
 
-- **Six of the eleven capabilities are simulated**, four do real work
-  (`files.read`, `files.write`, `files.delete`, `system.settings.read`), and
-  `process.execute` is unimplemented. Pinned by `capability-honesty.test.ts`
-  rather than by counting greps — counting greps is what got this wrong three
-  times, because the two sources disagreed.
+- **Six of the twelve capabilities are simulated**, five do real work
+  (`files.read`, `files.write`, `files.delete`, `system.settings.read`,
+  `audio.capture`), and `process.execute` is unimplemented. Pinned by
+  `capability-honesty.test.ts` rather than by counting greps — counting greps is
+  what got this wrong three times, because the two sources disagreed.
+
+  `audio.capture` is real in a different sense from the other four and the
+  difference is on its descriptor: the broker authorises it rather than
+  performing it, because the microphone belongs to the machine running the
+  browser. See [ADR 0012](docs/adr/0012-voice-as-input-transport.md).
 
 - ~~Two flags disagree about `system.settings.read`.~~ Fixed. `policy.ts` now
   says `realSideEffect: true`, matching the outcome, and
-  `capability-honesty.test.ts` executes all eleven capabilities to assert the
+  `capability-honesty.test.ts` executes all twelve capabilities to assert the
   approval-time claim and the post-execution claim agree. Verified to fail when
   the bug is reintroduced.
 - **A granted permission cannot be revoked.** See Milestone 2.

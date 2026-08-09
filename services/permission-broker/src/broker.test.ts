@@ -36,12 +36,21 @@ describe('default policy table', () => {
       'clipboard.write': 'ask',
       'notifications.send': 'ask',
       'system.settings.read': 'allow',
+      'audio.capture': 'ask',
     });
   });
 
   it('denies the two highest-risk capabilities by default', () => {
     expect(DEFAULT_POLICIES['process.execute']).toBe('deny');
     expect(DEFAULT_POLICIES['files.delete']).toBe('deny');
+  });
+
+  it('never allows the microphone by default', () => {
+    // Asserted separately from the table above so that relaxing it is a
+    // deliberate act with a failing test attached, not a one-word diff inside a
+    // twelve-line object. A microphone records people who never used this
+    // machine and were never asked.
+    expect(DEFAULT_POLICIES['audio.capture']).not.toBe('allow');
   });
 });
 

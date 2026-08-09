@@ -40,6 +40,7 @@ export const CAPABILITIES = [
   'clipboard.write',
   'notifications.send',
   'system.settings.read',
+  'audio.capture',
 ] as const;
 export type Capability = (typeof CAPABILITIES)[number];
 

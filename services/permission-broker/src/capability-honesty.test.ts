@@ -68,6 +68,7 @@ const PAYLOAD: Partial<Record<Capability, unknown>> = {
   'browser.open': { url: 'https://example.org/' },
   'clipboard.write': { content: 'hello' },
   'notifications.send': { message: 'hello' },
+  'audio.capture': { purpose: 'dictate an intention' },
 };
 
 describe('every capability describes itself the same way twice', () => {
@@ -121,7 +122,7 @@ describe('the capability arithmetic', () => {
    * in policy.ts and `simulated` in actions.ts give different totals when they
    * disagree.
    */
-  it('is four real, six simulated, one unimplemented', async () => {
+  it('is five real, six simulated, one unimplemented', async () => {
     let real = 0;
     let simulated = 0;
     let unimplemented = 0;
@@ -138,16 +139,23 @@ describe('the capability arithmetic', () => {
     }
 
     expect({ real, simulated, unimplemented, total: CAPABILITIES.length }).toEqual({
-      real: 4,
+      real: 5,
       simulated: 6,
       unimplemented: 1,
-      total: 11,
+      total: 12,
     });
   });
 
-  it('names the four that do something real', () => {
+  it('names the five that do something real', () => {
     const real = CAPABILITIES.filter((c) => CAPABILITY_DESCRIPTORS[c].realSideEffect);
     expect([...real].sort()).toEqual([
+      // Real in a different sense from the other four, and the difference is
+      // documented on its descriptor: the broker authorises this one rather than
+      // performing it, because the microphone is attached to the browser's
+      // machine. It is `realSideEffect: true` because a microphone genuinely
+      // opens — saying otherwise would tell the user nothing happened while
+      // their recording indicator is lit.
+      'audio.capture',
       'files.delete',
       'files.read',
       'files.write',
