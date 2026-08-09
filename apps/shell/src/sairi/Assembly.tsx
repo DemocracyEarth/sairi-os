@@ -84,7 +84,7 @@ export function Assembly({
       aria-live="polite"
       className="s-assembly"
       role="status"
-      style={{ '--accent': hue(context.hue) } as CSSProperties}
+      style={{ '--tone': hue(context.hue) } as CSSProperties}
     >
       <button className="s-assembly__skip" onClick={onSkip} type="button">
         Skip
@@ -119,7 +119,7 @@ export function Assembly({
                 <li
                   className={`s-assembly__agent${i < shown || reached('workspace') ? ' is-in' : ''}`}
                   key={a.id}
-                  style={{ '--accent': hue(a.hue) } as CSSProperties}
+                  style={{ '--tone': hue(a.hue) } as CSSProperties}
                 >
                   <StatusOrb hue={a.hue} pulse size={6} />
                   <span className="s-assembly__agentrole">{a.role}</span>

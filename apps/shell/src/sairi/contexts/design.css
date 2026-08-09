@@ -28,25 +28,25 @@
 .s-dsn-foot {
   margin: var(--s-4) 0 0;
   font-size: var(--t-micro);
-  letter-spacing: var(--track-micro);
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 .s-dsn-subhead {
   margin: var(--s-4) 0 var(--s-2);
   font-size: var(--t-micro);
   font-weight: 600;
-  letter-spacing: var(--track-micro);
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 .s-dsn-canvas :focus-visible,
 .s-dsn-insights :focus-visible,
 .s-dsn-concepts :focus-visible,
 .s-dsn-artifact :focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--signal);
   outline-offset: 2px;
   border-radius: var(--r-sm);
 }
@@ -69,15 +69,15 @@
 }
 
 .s-dsn-chip {
-  --accent: var(--frost-3);
+  --tone: var(--ink-3);
 
   padding: var(--s-1) var(--s-3);
   font: inherit;
   font-size: var(--t-micro);
   letter-spacing: 0.04em;
-  color: var(--frost-3);
+  color: var(--ink-3);
   background: transparent;
-  border: 1px solid var(--frost-5);
+  border: 1px solid var(--rule);
   border-radius: 999px;
   cursor: pointer;
   transition:
@@ -87,14 +87,14 @@
 }
 
 .s-dsn-chip:hover {
-  color: var(--frost);
+  color: var(--ink);
   transform: translateY(-1px);
 }
 
 .s-dsn-chip[aria-pressed='true'] {
-  color: var(--frost);
-  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--tone) 60%, transparent);
+  background: color-mix(in srgb, var(--tone) 12%, transparent);
 }
 
 .s-dsn-legend {
@@ -105,7 +105,7 @@
   padding: 0;
   list-style: none;
   font-size: var(--t-micro);
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 .s-dsn-legend li {
@@ -118,7 +118,7 @@
   width: 7px;
   height: 7px;
   border-radius: 2px;
-  background: var(--accent);
+  background: var(--tone);
   opacity: 0.8;
 }
 
@@ -140,10 +140,10 @@
   min-height: 500px;
   border-radius: var(--r-lg);
   background:
-    radial-gradient(90% 120% at 30% 0%, rgb(255 255 255 / 3.5%), transparent 60%),
-    radial-gradient(1px 1px at 12px 12px, var(--frost-6) 50%, transparent 50%) 0 0 / 26px 26px,
-    rgb(255 255 255 / 1.5%);
-  box-shadow: inset 0 0 0 1px var(--frost-6);
+    radial-gradient(90% 120% at 30% 0%, var(--rule-soft), transparent 60%),
+    radial-gradient(1px 1px at 12px 12px, var(--rule-soft) 50%, transparent 50%) 0 0 / 26px 26px,
+    var(--rule-soft);
+  box-shadow: inset 0 0 0 1px var(--rule-soft);
 }
 
 @container (max-width: 640px) {
@@ -154,11 +154,11 @@
 
 .s-dsn-hull {
   position: absolute;
-  border: 1px dashed color-mix(in srgb, var(--accent) 30%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--tone) 30%, transparent);
   border-radius: var(--r-xl);
   background: radial-gradient(
     80% 80% at 50% 50%,
-    color-mix(in srgb, var(--accent) 7%, transparent),
+    color-mix(in srgb, var(--tone) 7%, transparent),
     transparent 72%
   );
   transition: opacity var(--d) var(--ease-out);
@@ -171,10 +171,10 @@
   padding: 0 var(--s-2);
   font-size: var(--t-micro);
   font-weight: 600;
-  letter-spacing: var(--track-micro);
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  color: var(--accent);
-  background: var(--midnight);
+  color: var(--tone);
+  background: var(--paper-sunk);
   border-radius: var(--r-sm);
 }
 
@@ -183,7 +183,7 @@
   right: var(--s-3);
   bottom: var(--s-2);
   font-size: var(--t-micro);
-  color: var(--frost-5);
+  color: var(--rule);
 }
 
 .s-dsn-wires {
@@ -201,20 +201,20 @@
 }
 
 .s-dsn-wire--supports {
-  stroke: var(--mint);
+  stroke: var(--tone-settled);
   stroke-width: 1.2;
   opacity: 0.5;
 }
 
 .s-dsn-wire--tension {
-  stroke: var(--magenta);
+  stroke: var(--tone-conflict);
   stroke-width: 1.2;
   stroke-dasharray: 3 5;
   opacity: 0.55;
 }
 
 .s-dsn-wire--derives {
-  stroke: var(--blue);
+  stroke: var(--tone-structural);
   stroke-width: 1;
   stroke-dasharray: 1 4;
   opacity: 0.45;
@@ -223,13 +223,13 @@
 .s-dsn-note {
   position: absolute;
   padding: var(--s-2) var(--s-3);
-  border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
-  border-left: 2px solid color-mix(in srgb, var(--accent) 62%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tone) 26%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--tone) 62%, transparent);
   border-radius: var(--r-sm);
   background: linear-gradient(
     160deg,
-    rgb(255 255 255 / 6%),
-    color-mix(in srgb, var(--accent) 4%, rgb(255 255 255 / 2.5%))
+    var(--rule-soft),
+    color-mix(in srgb, var(--tone) 4%, var(--rule-soft))
   );
   box-shadow: var(--e-1);
   transform: rotate(var(--tilt));
@@ -251,28 +251,28 @@
 .s-dsn-note--decision {
   background: linear-gradient(
     160deg,
-    color-mix(in srgb, var(--amber) 18%, transparent),
-    rgb(255 255 255 / 4%)
+    color-mix(in srgb, var(--signal) 18%, transparent),
+    var(--rule-soft)
   );
   box-shadow:
     var(--e-2),
-    0 0 24px color-mix(in srgb, var(--amber) 22%, transparent);
+    0 0 24px color-mix(in srgb, var(--signal) 22%, transparent);
 }
 
 .s-dsn-note__kind {
   display: block;
   margin-bottom: var(--s-1);
   font-size: var(--t-micro);
-  letter-spacing: var(--track-micro);
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--accent) 78%, var(--frost-3));
+  color: color-mix(in srgb, var(--tone) 78%, var(--ink-3));
 }
 
 .s-dsn-note__text {
   margin: 0;
   font-size: var(--t-body);
   line-height: 1.4;
-  color: var(--frost-2);
+  color: var(--ink-2);
 }
 
 .s-dsn-note__meta {
@@ -280,7 +280,7 @@
   margin-top: var(--s-1);
   font-family: var(--mono);
   font-size: var(--t-micro);
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 .s-dsn-note[data-dim='true'],
@@ -308,15 +308,15 @@
   margin: var(--s-3) 0 0;
   font-size: var(--t-meta);
   line-height: 1.5;
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 .s-dsn-theme {
-  --accent: var(--blue);
+  --tone: var(--tone-structural);
 
   margin-top: var(--s-5);
   padding-left: var(--s-3);
-  border-left: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--tone) 40%, transparent);
 }
 
 .s-dsn-theme__head {
@@ -332,7 +332,7 @@
   font-size: var(--t-lead);
   font-weight: 600;
   letter-spacing: var(--track-title);
-  color: var(--frost);
+  color: var(--ink);
 }
 
 .s-dsn-theme__tags {
@@ -351,7 +351,7 @@
   flex: 1;
   height: 3px;
   border-radius: 2px;
-  background: var(--frost-6);
+  background: var(--rule-soft);
   overflow: hidden;
 }
 
@@ -359,34 +359,30 @@
   display: block;
   height: 100%;
   border-radius: 2px;
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--accent) 35%, transparent),
-    var(--accent)
-  );
+  background: linear-gradient(90deg, color-mix(in srgb, var(--tone) 35%, transparent), var(--tone));
 }
 
 .s-dsn-freq__count {
   font-family: var(--mono);
   font-size: var(--t-meta);
-  color: var(--frost-2);
+  color: var(--ink-2);
 }
 
 .s-dsn-freq__of {
-  color: var(--frost-5);
+  color: var(--rule);
 }
 
 .s-dsn-theme__reading {
   margin: var(--s-2) 0 var(--s-3);
   font-size: var(--t-body);
   line-height: 1.5;
-  color: var(--frost-3);
+  color: var(--ink-3);
 }
 
 .s-dsn-quote {
   margin: 0 0 var(--s-3);
   padding-left: var(--s-3);
-  border-left: 1px solid var(--frost-6);
+  border-left: 1px solid var(--rule-soft);
 }
 
 .s-dsn-quote__text {
@@ -394,7 +390,7 @@
   margin: 0;
   font-size: var(--t-body);
   line-height: 1.55;
-  color: var(--frost);
+  color: var(--ink);
 }
 
 /* Real quotation marks rather than a decorative glyph: the verbatim is the
@@ -413,17 +409,17 @@
   gap: var(--s-2);
   margin-top: var(--s-1);
   font-size: var(--t-micro);
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 .s-dsn-quote__who {
-  color: var(--frost-3);
+  color: var(--ink-3);
 }
 
 .s-dsn-quote__ref {
   font-family: var(--mono);
   letter-spacing: 0.02em;
-  color: var(--frost-5);
+  color: var(--rule);
 }
 
 .s-dsn-more {
@@ -432,7 +428,7 @@
 
 .s-dsn-more > summary {
   font-size: var(--t-meta);
-  color: var(--frost-3);
+  color: var(--ink-3);
   cursor: pointer;
   list-style: none;
   transition: color var(--d-fast) var(--ease-out);
@@ -444,7 +440,7 @@
 
 .s-dsn-more > summary::before {
   content: '+ ';
-  color: var(--accent);
+  color: var(--tone);
 }
 
 .s-dsn-more[open] > summary::before {
@@ -452,7 +448,7 @@
 }
 
 .s-dsn-more > summary:hover {
-  color: var(--frost);
+  color: var(--ink);
 }
 
 .s-dsn-more[open] > summary {
@@ -472,17 +468,17 @@
 }
 
 .s-dsn-spread__axis {
-  stroke: var(--frost-5);
+  stroke: var(--rule);
   stroke-width: 1;
 }
 
 .s-dsn-spread__tick {
-  stroke: var(--frost-3);
+  stroke: var(--ink-3);
   stroke-width: 1.5;
 }
 
 .s-dsn-spread__tick.is-leading {
-  stroke: var(--amber);
+  stroke: var(--signal);
   stroke-width: 2.5;
 }
 
@@ -490,9 +486,9 @@
   display: flex;
   justify-content: space-between;
   font-size: var(--t-micro);
-  letter-spacing: var(--track-micro);
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  color: var(--frost-5);
+  color: var(--rule);
 }
 
 .s-dsn-concept {
@@ -501,9 +497,9 @@
   gap: var(--s-3);
   margin-bottom: var(--s-3);
   padding: var(--s-3);
-  border: 1px dashed var(--frost-5);
+  border: 1px dashed var(--rule);
   border-radius: var(--r);
-  background: rgb(255 255 255 / 2%);
+  background: var(--rule-soft);
   transition:
     transform var(--d) var(--ease-out),
     box-shadow var(--d) var(--ease-out);
@@ -516,11 +512,11 @@
  */
 .s-dsn-concept.is-leading {
   border-style: solid;
-  border-color: color-mix(in srgb, var(--amber) 46%, transparent);
-  background: color-mix(in srgb, var(--amber) 7%, rgb(255 255 255 / 2%));
+  border-color: color-mix(in srgb, var(--signal) 46%, transparent);
+  background: color-mix(in srgb, var(--signal) 7%, var(--rule-soft));
   box-shadow:
     var(--e-2),
-    0 0 32px color-mix(in srgb, var(--amber) 14%, transparent);
+    0 0 32px color-mix(in srgb, var(--signal) 14%, transparent);
   transform: translateY(-2px);
 }
 
@@ -528,11 +524,11 @@
   font-family: var(--mono);
   font-size: var(--t-title);
   line-height: 1;
-  color: var(--frost-5);
+  color: var(--rule);
 }
 
 .s-dsn-concept.is-leading .s-dsn-concept__mark {
-  color: var(--amber);
+  color: var(--signal);
 }
 
 .s-dsn-concept__head {
@@ -545,9 +541,9 @@
 
 .s-dsn-concept__frame {
   font-size: var(--t-micro);
-  letter-spacing: var(--track-micro);
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 .s-dsn-concept__lead {
@@ -555,9 +551,9 @@
   align-items: center;
   gap: var(--s-1);
   font-size: var(--t-micro);
-  letter-spacing: var(--track-micro);
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  color: var(--amber);
+  color: var(--signal);
 }
 
 .s-dsn-concept__line {
@@ -566,18 +562,18 @@
   font-weight: 500;
   line-height: 1.35;
   letter-spacing: var(--track-title);
-  color: var(--frost-2);
+  color: var(--ink-2);
 }
 
 .s-dsn-concept.is-leading .s-dsn-concept__line {
-  color: var(--frost);
+  color: var(--ink);
 }
 
 .s-dsn-concept__evidence {
   margin: 0 0 var(--s-2);
   font-size: var(--t-body);
   line-height: 1.5;
-  color: var(--frost-3);
+  color: var(--ink-3);
 }
 
 .s-dsn-concept__risk {
@@ -586,13 +582,13 @@
   border-left: 2px solid color-mix(in srgb, var(--risk) 55%, transparent);
   font-size: var(--t-meta);
   line-height: 1.5;
-  color: var(--frost-3);
+  color: var(--ink-3);
 }
 
 .s-dsn-concept__risklabel {
   display: block;
   font-size: var(--t-micro);
-  letter-spacing: var(--track-micro);
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
   color: var(--risk);
 }
@@ -607,11 +603,11 @@
 .s-dsn-conf__num {
   font-family: var(--mono);
   font-size: var(--t-meta);
-  color: var(--frost-2);
+  color: var(--ink-2);
 }
 
 .s-dsn-concept.is-leading .s-dsn-conf__num {
-  color: var(--amber);
+  color: var(--signal);
 }
 
 .s-dsn-conf__rail {
@@ -620,7 +616,7 @@
   width: 5px;
   min-height: 54px;
   border-radius: 3px;
-  background: var(--frost-6);
+  background: var(--rule-soft);
   overflow: hidden;
 }
 
@@ -632,16 +628,16 @@
   border-radius: 3px;
   background: linear-gradient(
     180deg,
-    var(--accent),
-    color-mix(in srgb, var(--accent) 30%, transparent)
+    var(--tone),
+    color-mix(in srgb, var(--tone) 30%, transparent)
   );
 }
 
 .s-dsn-conf__cap {
   font-size: var(--t-micro);
-  letter-spacing: var(--track-micro);
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  color: var(--frost-5);
+  color: var(--rule);
 }
 
 /* =============================================================== artifact */
@@ -653,23 +649,23 @@
   gap: var(--s-2);
   margin-bottom: var(--s-3);
   font-size: var(--t-micro);
-  letter-spacing: var(--track-micro);
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 .s-dsn-stamp__kind {
-  color: var(--frost-2);
+  color: var(--ink-2);
 }
 
 .s-dsn-doc {
   padding: var(--s-4);
-  border-left: 2px solid var(--amber);
+  border-left: 2px solid var(--signal);
   border-radius: 0 var(--r) var(--r) 0;
   background: linear-gradient(
     100deg,
-    color-mix(in srgb, var(--amber) 8%, transparent),
-    rgb(255 255 255 / 3%)
+    color-mix(in srgb, var(--signal) 8%, transparent),
+    var(--rule-soft)
   );
 }
 
@@ -677,7 +673,7 @@
   margin: 0 0 var(--s-2);
   font-size: var(--t-meta);
   letter-spacing: 0.02em;
-  color: var(--amber);
+  color: var(--signal);
 }
 
 .s-dsn-doc__body {
@@ -685,7 +681,7 @@
   font-size: var(--t-lead);
   line-height: 1.5;
   letter-spacing: var(--track-title);
-  color: var(--frost);
+  color: var(--ink);
 }
 
 .s-dsn-doc__proof,
@@ -693,16 +689,16 @@
   margin: 0 0 var(--s-2);
   font-size: var(--t-meta);
   line-height: 1.5;
-  color: var(--frost-3);
+  color: var(--ink-3);
 }
 
 .s-dsn-changed {
   margin: var(--s-3) 0 0;
   padding-left: var(--s-3);
-  border-left: 1px dashed var(--frost-5);
+  border-left: 1px dashed var(--rule);
   font-size: var(--t-micro);
   line-height: 1.55;
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 .s-dsn-seq {
@@ -716,17 +712,17 @@
   grid-template-columns: 46px minmax(0, 1fr);
   gap: var(--s-2);
   padding: var(--s-2) 0 var(--s-2) var(--s-3);
-  border-left: 1px dashed var(--frost-5);
+  border-left: 1px dashed var(--rule);
 }
 
 .s-dsn-beat.is-locked {
-  border-left: 1px solid color-mix(in srgb, var(--mint) 55%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--tone-settled) 55%, transparent);
 }
 
 .s-dsn-beat__day {
   font-family: var(--mono);
   font-size: var(--t-micro);
-  color: var(--frost-3);
+  color: var(--ink-3);
 }
 
 .s-dsn-beat__body {
@@ -737,25 +733,25 @@
 
 .s-dsn-beat__name {
   font-size: var(--t-body);
-  color: var(--frost-2);
+  color: var(--ink-2);
 }
 
 .s-dsn-beat__detail {
   font-size: var(--t-micro);
   line-height: 1.5;
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 .s-dsn-beat__state {
   grid-column: 2;
   font-size: var(--t-micro);
-  letter-spacing: var(--track-micro);
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  color: var(--frost-5);
+  color: var(--rule);
 }
 
 .s-dsn-beat.is-locked .s-dsn-beat__state {
-  color: color-mix(in srgb, var(--mint) 70%, transparent);
+  color: color-mix(in srgb, var(--tone-settled) 70%, transparent);
 }
 
 .s-dsn-prov {
@@ -773,33 +769,33 @@
   align-items: center;
   padding: 2px var(--s-2);
   font-size: var(--t-micro);
-  color: var(--frost-3);
-  background: var(--frost-6);
+  color: var(--ink-3);
+  background: var(--rule-soft);
   border-radius: var(--r-sm);
 }
 
 .s-dsn-prov__step:not(:last-child)::after {
   content: '→';
   margin-left: var(--s-2);
-  color: var(--frost-5);
+  color: var(--rule);
 }
 
 .s-dsn-prov__step:last-child {
-  color: var(--amber);
-  background: color-mix(in srgb, var(--amber) 14%, transparent);
+  color: var(--signal);
+  background: color-mix(in srgb, var(--signal) 14%, transparent);
 }
 
 .s-dsn-decide {
   margin-top: var(--s-4);
   padding-top: var(--s-3);
-  border-top: 1px solid var(--frost-6);
+  border-top: 1px solid var(--rule-soft);
 }
 
 .s-dsn-decide__hint {
   margin: 0 0 var(--s-3);
   font-size: var(--t-meta);
   line-height: 1.5;
-  color: var(--frost-3);
+  color: var(--ink-3);
 }
 
 .s-dsn-decide__row {
@@ -815,12 +811,11 @@
   font: inherit;
   font-size: var(--t-meta);
   font-weight: 600;
-  color: var(--void);
-  background: var(--amber);
-  border: 1px solid var(--amber);
+  color: var(--paper);
+  background: var(--signal);
+  border: 1px solid var(--signal);
   border-radius: var(--r-sm);
   cursor: pointer;
-  box-shadow: 0 0 24px color-mix(in srgb, var(--amber) 30%, transparent);
   transition: transform var(--d-fast) var(--ease-spring);
 }
 
@@ -832,9 +827,9 @@
   padding: var(--s-2) var(--s-4);
   font: inherit;
   font-size: var(--t-meta);
-  color: var(--frost-2);
+  color: var(--ink-2);
   background: transparent;
-  border: 1px solid var(--frost-5);
+  border: 1px solid var(--rule);
   border-radius: var(--r-sm);
   cursor: pointer;
   transition:
@@ -843,8 +838,8 @@
 }
 
 .s-dsn-return:hover {
-  color: var(--frost);
-  border-color: var(--frost-4);
+  color: var(--ink);
+  border-color: var(--ink-4);
 }
 
 .s-dsn-decide__blocks,
@@ -854,12 +849,12 @@
   gap: var(--s-2);
   margin: var(--s-3) 0 0;
   font-size: var(--t-meta);
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 .s-dsn-decided {
   margin: 0;
-  color: var(--mint);
+  color: var(--tone-settled);
   animation: s-dsn-settle var(--d-slow) var(--ease-out);
 }
 

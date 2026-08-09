@@ -42,13 +42,13 @@
   gap: var(--s-2);
   font-family: var(--mono);
   font-size: var(--t-meta);
-  color: var(--frost-2);
+  color: var(--ink-2);
 }
 
 .s-inc-log__window {
   font-family: var(--mono);
   font-size: var(--t-micro);
-  color: var(--frost-4);
+  color: var(--ink-4);
   letter-spacing: var(--track-micro);
 }
 
@@ -60,13 +60,13 @@
 
 .s-inc-log__btn {
   padding: var(--s-1) var(--s-2);
-  border: 1px solid var(--frost-5);
+  border: 1px solid var(--rule);
   border-radius: var(--r-sm);
   background: transparent;
-  color: var(--frost-3);
+  color: var(--ink-3);
   font-family: var(--font);
   font-size: var(--t-micro);
-  letter-spacing: var(--track-micro);
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
   cursor: pointer;
   transition:
@@ -75,18 +75,18 @@
 }
 
 .s-inc-log__btn:hover {
-  color: var(--frost);
-  border-color: var(--frost-4);
+  color: var(--ink);
+  border-color: var(--ink-4);
 }
 
 .s-inc-log__btn[aria-pressed='true'] {
-  color: var(--coral);
-  border-color: color-mix(in oklab, var(--coral) 55%, transparent);
-  background: color-mix(in oklab, var(--coral) 12%, transparent);
+  color: var(--alert);
+  border-color: color-mix(in oklab, var(--alert) 55%, transparent);
+  background: color-mix(in oklab, var(--alert) 12%, transparent);
 }
 
 .s-inc-log__btn:focus-visible {
-  outline: 2px solid var(--cyan);
+  outline: 2px solid var(--tone-active);
   outline-offset: 2px;
 }
 
@@ -98,14 +98,14 @@
 .s-inc-log__scroll {
   max-block-size: 280px;
   overflow-y: auto;
-  border: 1px solid var(--frost-6);
+  border: 1px solid var(--rule-soft);
   border-radius: var(--r-sm);
   background: rgb(0 0 0 / 26%);
   scrollbar-width: thin;
 }
 
 .s-inc-log__scroll:focus-visible {
-  outline: 2px solid var(--cyan);
+  outline: 2px solid var(--tone-active);
   outline-offset: 2px;
 }
 
@@ -128,11 +128,11 @@
   font-family: var(--mono);
   font-size: var(--t-micro);
   line-height: 1.55;
-  color: var(--frost-3);
+  color: var(--ink-3);
 }
 
 .s-inc-log__t {
-  color: var(--frost-4);
+  color: var(--ink-4);
   font-variant-numeric: tabular-nums;
 }
 
@@ -143,11 +143,11 @@
 }
 
 .s-inc-log__svc {
-  color: var(--frost-2);
+  color: var(--ink-2);
 }
 
 .s-inc-log__region {
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 .s-inc-log__msg {
@@ -159,44 +159,44 @@
 .s-inc-log__frame {
   display: block;
   padding-inline-start: var(--s-4);
-  color: var(--frost-4);
+  color: var(--ink-4);
   overflow-wrap: anywhere;
 }
 
 .s-inc-log__line[data-level='debug'] .s-inc-log__lvl {
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 .s-inc-log__line[data-level='info'] .s-inc-log__lvl {
-  color: var(--blue);
+  color: var(--tone-structural);
 }
 .s-inc-log__line[data-level='warn'] .s-inc-log__lvl {
-  color: var(--amber);
+  color: var(--signal);
 }
 .s-inc-log__line[data-level='error'] .s-inc-log__lvl {
-  color: var(--coral);
+  color: var(--alert);
 }
 .s-inc-log__line[data-level='fatal'] .s-inc-log__lvl {
-  color: var(--magenta);
+  color: var(--ink-3);
 }
 
 /* Errors carry a left edge as well as a coloured level, so the shape of the
    failure is visible when the region is scrolled fast. */
 .s-inc-log__line[data-level='error'],
 .s-inc-log__line[data-level='fatal'] {
-  color: var(--frost-2);
-  background: color-mix(in oklab, var(--coral) 8%, transparent);
-  box-shadow: inset 2px 0 0 var(--coral);
+  color: var(--ink-2);
+  background: color-mix(in oklab, var(--alert) 8%, transparent);
+  box-shadow: inset 2px 0 0 var(--alert);
 }
 
 .s-inc-log__line[data-level='fatal'] {
-  background: color-mix(in oklab, var(--magenta) 12%, transparent);
-  box-shadow: inset 2px 0 0 var(--magenta);
+  background: color-mix(in oklab, var(--tone-conflict) 12%, transparent);
+  box-shadow: inset 2px 0 0 var(--tone-conflict);
 }
 
 .s-inc-log__foot {
   margin: 0;
   font-size: var(--t-micro);
-  color: var(--frost-4);
+  color: var(--ink-4);
   letter-spacing: var(--track-micro);
 }
 
@@ -225,21 +225,21 @@
   gap: var(--s-1) var(--s-3);
   align-items: center;
   padding: var(--s-2) var(--s-3);
-  border: 1px solid var(--frost-6);
+  border: 1px solid var(--rule-soft);
   border-radius: var(--r-sm);
-  background: rgb(255 255 255 / 2.5%);
+  background: var(--rule-soft);
 }
 
 /* State lives on the left edge rather than in the fill: five tinted cards read
    as decoration, five tinted edges read as a status column. */
 .s-inc-health__row[data-state='critical'] {
-  box-shadow: inset 2px 0 0 var(--coral);
+  box-shadow: inset 2px 0 0 var(--alert);
 }
 .s-inc-health__row[data-state='degraded'] {
-  box-shadow: inset 2px 0 0 var(--amber);
+  box-shadow: inset 2px 0 0 var(--signal);
 }
 .s-inc-health__row[data-state='healthy'] {
-  box-shadow: inset 2px 0 0 var(--mint);
+  box-shadow: inset 2px 0 0 var(--tone-settled);
 }
 
 .s-inc-health__id {
@@ -253,12 +253,12 @@
 .s-inc-health__name {
   font-family: var(--mono);
   font-size: var(--t-meta);
-  color: var(--frost);
+  color: var(--ink);
 }
 
 .s-inc-health__where {
   font-size: var(--t-micro);
-  color: var(--frost-4);
+  color: var(--ink-4);
   letter-spacing: var(--track-micro);
 }
 
@@ -271,26 +271,26 @@
 
 .s-inc-health__sparkline {
   fill: none;
-  stroke: var(--accent);
+  stroke: var(--tone);
   stroke-width: 1.4;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
 
 .s-inc-health__sparkarea {
-  fill: var(--accent);
+  fill: var(--tone);
   opacity: 0.14;
   stroke: none;
 }
 
 .s-inc-health__deploy line {
-  stroke: var(--frost-3);
+  stroke: var(--ink-3);
   stroke-width: 1;
   stroke-dasharray: 2 3;
 }
 
 .s-inc-health__deploy circle {
-  fill: var(--frost-2);
+  fill: var(--ink-2);
 }
 
 .s-inc-health__nums {
@@ -309,8 +309,8 @@
 
 .s-inc-health__nums dt {
   font-size: var(--t-micro);
-  color: var(--frost-4);
-  letter-spacing: var(--track-micro);
+  color: var(--ink-4);
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
 }
 
@@ -318,15 +318,15 @@
   margin: 0;
   font-family: var(--mono);
   font-size: var(--t-micro);
-  color: var(--frost-2);
+  color: var(--ink-2);
   font-variant-numeric: tabular-nums;
 }
 
 .s-inc-health__row[data-state='critical'] .s-inc-health__hot {
-  color: var(--coral);
+  color: var(--alert);
 }
 .s-inc-health__row[data-state='degraded'] .s-inc-health__hot {
-  color: var(--amber);
+  color: var(--signal);
 }
 
 .s-inc-health__sat {
@@ -339,7 +339,7 @@
 .s-inc-health__satlabel {
   font-family: var(--mono);
   font-size: var(--t-micro);
-  color: var(--frost-4);
+  color: var(--ink-4);
   inline-size: 7ch;
 }
 
@@ -347,7 +347,7 @@
   flex: 1;
   block-size: 3px;
   border-radius: 2px;
-  background: var(--frost-6);
+  background: var(--rule-soft);
   overflow: hidden;
 }
 
@@ -355,14 +355,14 @@
   display: block;
   block-size: 100%;
   border-radius: 2px;
-  background: var(--frost-3);
+  background: var(--ink-3);
 }
 
 .s-inc-health__row[data-state='critical'] .s-inc-health__satfill {
-  background: var(--coral);
+  background: var(--alert);
 }
 .s-inc-health__row[data-state='degraded'] .s-inc-health__satfill {
-  background: var(--amber);
+  background: var(--signal);
 }
 
 .s-inc-health__note {
@@ -370,7 +370,7 @@
   margin: 0;
   font-size: var(--t-micro);
   line-height: 1.5;
-  color: var(--frost-3);
+  color: var(--ink-3);
 }
 
 /* ======================================================================== *
@@ -390,7 +390,7 @@
   flex: 1 1 260px;
   font-size: var(--t-body);
   line-height: 1.5;
-  color: var(--frost-2);
+  color: var(--ink-2);
 }
 
 .s-inc-hyp__list {
@@ -432,10 +432,10 @@
 }
 
 .s-inc-hyp__card[data-state='confirmed'] {
-  border-color: color-mix(in oklab, var(--accent) 46%, transparent);
+  border-color: color-mix(in oklab, var(--tone) 46%, transparent);
   box-shadow:
     var(--e-2),
-    0 0 32px color-mix(in oklab, var(--accent) 16%, transparent);
+    0 0 32px color-mix(in oklab, var(--tone) 16%, transparent);
 }
 
 .s-inc-hyp__head {
@@ -454,7 +454,7 @@
 .s-inc-hyp__confnum {
   font-family: var(--mono);
   font-size: var(--t-micro);
-  color: var(--accent);
+  color: var(--tone);
   font-variant-numeric: tabular-nums;
 }
 
@@ -462,8 +462,8 @@
   inline-size: 56px;
   block-size: 3px;
   border-radius: 2px;
-  background: var(--frost-6);
-  background-image: linear-gradient(to right, var(--accent), var(--accent));
+  background: var(--rule-soft);
+  background-image: linear-gradient(to right, var(--tone), var(--tone));
   background-size: calc(var(--v) * 100%) 100%;
   background-repeat: no-repeat;
 }
@@ -472,12 +472,12 @@
   margin: var(--s-2) 0 0;
   font-size: var(--t-body);
   line-height: 1.55;
-  color: var(--frost);
+  color: var(--ink);
 }
 
 .s-inc-hyp__card[data-state='eliminated'] .s-inc-hyp__claim,
 .s-inc-hyp__card[data-state='untested'] .s-inc-hyp__claim {
-  color: var(--frost-2);
+  color: var(--ink-2);
 }
 
 .s-inc-hyp__card[data-state='confirmed'] .s-inc-hyp__claim {
@@ -496,9 +496,9 @@
   margin: 0 0 var(--s-1);
   font-size: var(--t-micro);
   font-weight: 600;
-  letter-spacing: var(--track-micro);
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 .s-inc-hyp__ev ul {
@@ -515,7 +515,7 @@
   padding-inline-start: var(--s-4);
   font-size: var(--t-meta);
   line-height: 1.5;
-  color: var(--frost-3);
+  color: var(--ink-3);
 }
 
 /* Evidence markers are content, not decoration, so they are drawn rather than
@@ -535,11 +535,11 @@
   inline-size: 7px;
   inset-block-start: 0.35em;
   border-radius: 50%;
-  background: var(--mint);
+  background: var(--tone-settled);
 }
 
 .s-inc-hyp__against li::before {
-  background: var(--coral);
+  background: var(--alert);
   block-size: 2px;
 }
 
@@ -549,7 +549,7 @@
   align-items: center;
   gap: var(--s-2);
   font-size: var(--t-micro);
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 .s-inc-hyp__draft {
@@ -557,13 +557,13 @@
   flex-direction: column;
   gap: var(--s-2);
   padding-block-start: var(--s-2);
-  border-block-start: 1px dashed var(--frost-6);
+  border-block-start: 1px dashed var(--rule-soft);
 }
 
 .s-inc-hyp__drafting {
   margin: 0;
   font-size: var(--t-micro);
-  color: var(--frost-4);
+  color: var(--ink-4);
   letter-spacing: var(--track-micro);
 }
 
@@ -580,7 +580,7 @@
 .s-inc-seq__budget {
   font-family: var(--mono);
   font-size: var(--t-micro);
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 .s-inc-seq__svg {
@@ -590,81 +590,81 @@
 }
 
 .s-inc-seq__lane {
-  fill: rgb(255 255 255 / 4%);
-  stroke: var(--frost-5);
+  fill: var(--rule-soft);
+  stroke: var(--rule);
   stroke-width: 1;
 }
 
 .s-inc-seq__lanename {
-  fill: var(--frost);
+  fill: var(--ink);
   font-family: var(--mono);
   font-size: 10.5px;
 }
 
 .s-inc-seq__lanesub {
-  fill: var(--frost-4);
+  fill: var(--ink-4);
   font-family: var(--font);
   font-size: 9px;
   letter-spacing: var(--track-micro);
 }
 
 .s-inc-seq__life {
-  stroke: var(--frost-6);
+  stroke: var(--rule-soft);
   stroke-width: 1;
   stroke-dasharray: 3 5;
 }
 
 .s-inc-seq__at {
-  fill: var(--frost-4);
+  fill: var(--ink-4);
   font-family: var(--mono);
   font-size: 9px;
 }
 
 .s-inc-seq__arrow {
   fill: none;
-  stroke: var(--frost-3);
+  stroke: var(--ink-3);
   stroke-width: 1.2;
 }
 
 .s-inc-seq__head {
-  fill: var(--frost-3);
+  fill: var(--ink-3);
 }
 
 .s-inc-seq__head--bad {
-  fill: var(--coral);
+  fill: var(--alert);
 }
 
 .s-inc-seq__label {
-  fill: var(--frost-2);
+  fill: var(--ink-2);
   font-family: var(--mono);
   font-size: 9px;
 }
 
 .s-inc-seq__step[data-kind='error'] .s-inc-seq__arrow {
-  stroke: var(--coral);
+  stroke: var(--alert);
   stroke-dasharray: 5 3;
 }
 
 .s-inc-seq__step[data-kind='error'] .s-inc-seq__label {
-  fill: var(--coral);
+  fill: var(--alert);
 }
 
 .s-inc-seq__step[data-bad='true'] .s-inc-seq__arrow {
-  stroke: var(--coral);
+  stroke: var(--alert);
   stroke-width: 1.8;
 }
 
 .s-inc-seq__step[data-kind='never'] .s-inc-seq__arrow {
-  stroke: var(--frost-5);
+  stroke: var(--rule);
   stroke-dasharray: 2 4;
 }
 
 .s-inc-seq__step[data-kind='never'] .s-inc-seq__label {
-  fill: var(--frost-4);
+  fill: var(--ink-4);
 }
 
 .s-inc-seq__cross {
-  fill: var(--frost-3);
+  fill: var(--ink-3);
   font-family: var(--font);
   font-size: 10px;
 }
@@ -672,8 +672,8 @@
 /* The band breathes rather than blinks: opacity only, so the compositor can
    run it, and the reduced-motion rule in tokens.css stops it dead. */
 .s-inc-seq__band {
-  fill: color-mix(in oklab, var(--coral) 14%, transparent);
-  stroke: color-mix(in oklab, var(--coral) 32%, transparent);
+  fill: color-mix(in oklab, var(--alert) 14%, transparent);
+  stroke: color-mix(in oklab, var(--alert) 32%, transparent);
   stroke-width: 1;
   animation: s-inc-band 3.2s var(--ease-in-out) infinite;
 }
@@ -692,7 +692,7 @@
   margin: 0;
   font-size: var(--t-meta);
   line-height: 1.55;
-  color: var(--frost-2);
+  color: var(--ink-2);
 }
 
 .s-inc-seq__legend {
@@ -709,7 +709,7 @@
   align-items: center;
   gap: var(--s-2);
   font-size: var(--t-micro);
-  color: var(--frost-4);
+  color: var(--ink-4);
   letter-spacing: var(--track-micro);
 }
 
@@ -718,16 +718,16 @@
   inline-size: var(--s-4);
   block-size: 2px;
   border-radius: 1px;
-  background: var(--frost-3);
+  background: var(--ink-3);
 }
 
 .s-inc-seq__legend li[data-swatch='bad']::before {
-  background: var(--coral);
+  background: var(--alert);
   block-size: 3px;
 }
 
 .s-inc-seq__legend li[data-swatch='never']::before {
-  background: repeating-linear-gradient(to right, var(--frost-4) 0 3px, transparent 3px 6px);
+  background: repeating-linear-gradient(to right, var(--ink-4) 0 3px, transparent 3px 6px);
 }
 
 /* --- narrow panels ------------------------------------------------------ *

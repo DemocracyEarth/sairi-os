@@ -180,7 +180,7 @@ function yen(n: number): string {
 }
 
 function accent(h: Spectral): CSSProperties {
-  return { '--accent': hue(h) } as CSSProperties;
+  return { '--tone': hue(h) } as CSSProperties;
 }
 
 /**
@@ -247,12 +247,12 @@ function MapLens(panel: Panel): JSX.Element {
 
           <defs>
             <linearGradient id="s-trv-land" x1="0" x2="1" y1="0" y2="1">
-              <stop offset="0%" stopColor="var(--cyan)" stopOpacity="0.14" />
-              <stop offset="100%" stopColor="var(--blue)" stopOpacity="0.05" />
+              <stop offset="0%" stopColor="var(--tone-active)" stopOpacity="0.14" />
+              <stop offset="100%" stopColor="var(--tone-structural)" stopOpacity="0.05" />
             </linearGradient>
             <radialGradient id="s-trv-node-glow">
-              <stop offset="0%" stopColor="var(--cyan)" stopOpacity="0.55" />
-              <stop offset="100%" stopColor="var(--cyan)" stopOpacity="0" />
+              <stop offset="0%" stopColor="var(--tone-active)" stopOpacity="0.55" />
+              <stop offset="100%" stopColor="var(--tone-active)" stopOpacity="0" />
             </radialGradient>
           </defs>
 

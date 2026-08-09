@@ -39,12 +39,15 @@ subsystems.
 - [x] The logo, drawn as geometry rather than text so it has no font dependency:
       menu bar, first-run setup, favicon, session icon, README
 - [x] **Sairi OS** — the context-native surface at `#/os`, and what the VM now
-      boots into. Dark, cinematic, agent-native, zero new dependencies: every
-      chart, map and diagram is hand-built SVG or CSS. Its organising idea is
-      _convergence_ — a panel's shape encodes how certain its contents are, so
-      the layout carries information rather than containing it. Four example
-      contexts (research, incident, travel, design) each produce a genuinely
-      different workspace.
+      boots into. Monochrome, editorial, agent-native, zero new dependencies:
+      every chart, map and diagram is hand-built SVG or CSS. Off-white paper,
+      a graphite ink ramp, and exactly one accent — Braun signal orange, which
+      appears only where the machine needs a human. Its organising idea is
+      _convergence_ — a panel's shape and ink weight encode how certain its
+      contents are, so the layout carries information rather than containing
+      it. Four example contexts (research, incident, travel, design) each
+      produce a genuinely different workspace. Light and dark are peers.
+      See [ADR 0014](docs/adr/0014-monochrome-editorial-language.md).
 - [x] **A setup wizard for the model connection.** Five steps: what Sairi needs,
       whether OpenClaw is actually installed on this machine, provider, model,
       key. The runtime check re-reads live state rather than trusting what was

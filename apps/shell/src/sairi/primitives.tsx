@@ -24,8 +24,32 @@ import {
  * operating system.
  */
 
+/**
+ * A tone, not a colour.
+ *
+ * The `Spectral` union survives because the domain genuinely has seven roles —
+ * an agent working, a relation, a contradiction, a settled result — and lenses
+ * still need to tell four series apart in a chart. What changed is what those
+ * roles look like: a monochrome VALUE ramp instead of a colour wheel, which is
+ * how printed instrumentation differentiated before colour was cheap, and which
+ * keeps working in greyscale and for anyone who cannot separate red from green.
+ *
+ * Two names are not tones at all. `amber` and `coral` were the two that always
+ * meant "a human is needed" and "something is wrong", so they resolve to the
+ * single accent — the only colour in the system.
+ */
+const TONE: Record<Spectral, string> = {
+  blue: 'var(--tone-structural)',
+  cyan: 'var(--tone-active)',
+  violet: 'var(--tone-relation)',
+  magenta: 'var(--tone-conflict)',
+  mint: 'var(--tone-settled)',
+  amber: 'var(--signal)',
+  coral: 'var(--alert)',
+};
+
 export function hue(h: Spectral): string {
-  return `var(--${h})`;
+  return TONE[h];
 }
 
 /* ------------------------------------------------------------------------ *
@@ -71,7 +95,7 @@ export function ContextSurface({
 }: ContextSurfaceProps): JSX.Element {
   const style = {
     '--certainty': CERTAINTY_VALUE[certainty],
-    '--accent': hue(accent),
+    '--tone': hue(accent),
     '--span': span,
     '--i': index,
   } as CSSProperties;
@@ -125,7 +149,7 @@ export function StatusOrb({
       aria-label={label}
       className={`s-orb${pulse ? ' s-orb--pulse' : ''}`}
       role={label ? 'img' : undefined}
-      style={{ '--accent': hue(h), '--orb': `${size}px` } as CSSProperties}
+      style={{ '--tone': hue(h), '--orb': `${size}px` } as CSSProperties}
     />
   );
 }
@@ -163,7 +187,7 @@ export function AgentPresence({
   return (
     <article
       className={`s-agent${compact ? ' s-agent--compact' : ''}${needsYou ? ' s-agent--attention' : ''}`}
-      style={{ '--accent': hue(agent.hue) } as CSSProperties}
+      style={{ '--tone': hue(agent.hue) } as CSSProperties}
     >
       <div className="s-agent__top">
         <span className="s-agent__ring" data-status={agent.status}>
@@ -368,7 +392,7 @@ export function ConvergenceMeter({
       aria-valuenow={pct}
       className="s-conv"
       role="meter"
-      style={{ '--accent': hue(accent), '--v': value } as CSSProperties}
+      style={{ '--tone': hue(accent), '--v': value } as CSSProperties}
     >
       <span className="s-conv__label">{label}</span>
       <span className="s-conv__rail">
@@ -388,7 +412,7 @@ export function GlowDivider({ accent = 'blue' }: { accent?: Spectral }): JSX.Ele
     <span
       aria-hidden="true"
       className="s-divider"
-      style={{ '--accent': hue(accent) } as CSSProperties}
+      style={{ '--tone': hue(accent) } as CSSProperties}
     />
   );
 }
@@ -407,7 +431,7 @@ export function Metric({
   return (
     <div
       className="s-metric"
-      style={accent ? ({ '--accent': hue(accent) } as CSSProperties) : undefined}
+      style={accent ? ({ '--tone': hue(accent) } as CSSProperties) : undefined}
     >
       <span className="s-metric__value">
         {value}
@@ -432,7 +456,7 @@ export function Tag({
   return (
     <span
       className={`s-tag${solid ? ' s-tag--solid' : ''}`}
-      style={{ '--accent': hue(accent) } as CSSProperties}
+      style={{ '--tone': hue(accent) } as CSSProperties}
     >
       {children}
     </span>

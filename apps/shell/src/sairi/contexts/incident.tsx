@@ -268,7 +268,7 @@ function Sparkline({ node }: { node: HealthNode }): JSX.Element {
       }`}
       className="s-inc-health__spark"
       role="img"
-      style={{ '--accent': hue(NODE_HUE[node.state]) } as CSSProperties}
+      style={{ '--tone': hue(NODE_HUE[node.state]) } as CSSProperties}
       viewBox={`0 0 ${w} ${h}`}
     >
       <path className="s-inc-health__sparkarea" d={`${line} L${w} ${h} L0 ${h} Z`} />
@@ -420,7 +420,7 @@ function HypothesisCard({ h }: { h: Hypothesis }): JSX.Element {
    */
   const style = {
     '--certainty': CERTAINTY_VALUE[certainty],
-    '--accent': hue(tone),
+    '--tone': hue(tone),
   } as CSSProperties;
 
   return (

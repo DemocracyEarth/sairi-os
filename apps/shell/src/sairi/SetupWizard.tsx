@@ -145,13 +145,7 @@ export function SetupWizard({
       aria-modal="true"
       aria-label="Connect Sairi to a model"
     >
-      <div
-        className="s-wiz__glow"
-        aria-hidden="true"
-        style={{ '--accent': hue(accent) } as CSSProperties}
-      />
-
-      <div className="s-wiz__panel" style={{ '--accent': hue(accent) } as CSSProperties}>
+      <div className="s-wiz__panel" style={{ '--tone': hue(accent) } as CSSProperties}>
         {/* The spine: where you are, and how much is left. */}
         <ol className="s-wiz__spine" aria-label="Setup progress">
           {ORDER.filter((s) => s !== 'connecting').map((s) => {
@@ -276,7 +270,7 @@ export function SetupWizard({
                       key={p.id}
                       onClick={() => setProviderId(p.id)}
                       role="radio"
-                      style={{ '--accent': hue(PROVIDER_HUE[p.id] ?? 'cyan') } as CSSProperties}
+                      style={{ '--tone': hue(PROVIDER_HUE[p.id] ?? 'cyan') } as CSSProperties}
                       type="button"
                     >
                       <span className="s-wiz__providername">{p.label}</span>

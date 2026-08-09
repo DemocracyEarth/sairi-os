@@ -42,7 +42,7 @@
   margin: 0;
   font-size: var(--t-meta);
   line-height: 1.45;
-  color: var(--frost-3);
+  color: var(--ink-3);
 }
 
 .s-res-src__question {
@@ -51,7 +51,7 @@
   font-size: var(--t-lead);
   line-height: 1.4;
   letter-spacing: var(--track-title);
-  color: var(--frost-2);
+  color: var(--ink-2);
 }
 
 .s-res-src__list {
@@ -69,7 +69,7 @@
   gap: var(--s-3);
   align-items: start;
   padding: var(--s-3) var(--s-2);
-  border-top: 1px solid var(--frost-6);
+  border-top: 1px solid var(--rule-soft);
   transition: background-color var(--d-fast) var(--ease-out);
 }
 
@@ -84,20 +84,20 @@
 }
 
 .s-res-src__row:hover {
-  background: var(--frost-6);
+  background: var(--rule-soft);
 }
 
 /* A contested source is not hidden and not softened — it is marked, because the
    fact that it is contested is itself a finding. */
 .s-res-src__row--contested {
-  box-shadow: inset 2px 0 0 var(--magenta);
+  box-shadow: inset 2px 0 0 var(--tone-conflict);
 }
 
 .s-res-src__rank {
   font-family: var(--mono);
   font-size: var(--t-micro);
   line-height: 1.6;
-  color: var(--frost-4);
+  color: var(--ink-4);
   font-variant-numeric: tabular-nums;
 }
 
@@ -108,16 +108,16 @@
 .s-res-src__title {
   margin: 0;
   font-size: var(--t-body);
-  font-weight: 550;
+  font-weight: var(--w-medium);
   line-height: 1.35;
-  color: var(--c-ink, var(--frost));
+  color: var(--c-ink, var(--ink));
 }
 
 .s-res-src__venue {
   margin: var(--s-1) 0 0;
   font-family: var(--mono);
   font-size: var(--t-micro);
-  color: var(--frost-3);
+  color: var(--ink-3);
 }
 
 .s-res-src__note {
@@ -125,7 +125,7 @@
   max-width: 62ch;
   font-size: var(--t-meta);
   line-height: 1.5;
-  color: var(--frost-3);
+  color: var(--ink-3);
 }
 
 .s-res-src__meta {
@@ -135,7 +135,7 @@
   gap: var(--s-2);
   margin-top: var(--s-2);
   font-size: var(--t-micro);
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 .s-res-src__date,
@@ -148,7 +148,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--s-1);
-  color: var(--frost-3);
+  color: var(--ink-3);
 }
 
 .s-res-src__pips {
@@ -161,11 +161,11 @@
   width: 3px;
   height: 7px;
   border-radius: 1px;
-  background: var(--frost-5);
+  background: var(--rule);
 }
 
 .s-res-src__pip.is-on {
-  background: var(--accent, var(--violet));
+  background: var(--accent, var(--tone-relation));
 }
 
 .s-res-src__cred {
@@ -180,7 +180,7 @@
   font-family: var(--mono);
   font-size: var(--t-body);
   font-variant-numeric: tabular-nums;
-  color: var(--frost-2);
+  color: var(--ink-2);
 }
 
 .s-res-src__credbar {
@@ -188,7 +188,7 @@
   width: 3rem;
   height: 3px;
   border-radius: 2px;
-  background: var(--frost-6);
+  background: var(--rule-soft);
   overflow: hidden;
 }
 
@@ -197,8 +197,7 @@
   height: 100%;
   width: calc(var(--v) * 100%);
   border-radius: 2px;
-  background: var(--accent);
-  box-shadow: 0 0 8px var(--accent);
+  background: var(--tone);
 }
 
 /* --- the split: claim against counter-claim ------------------------- */
@@ -221,9 +220,9 @@
   margin: 0 0 var(--s-2);
   font-size: var(--t-micro);
   font-weight: 600;
-  letter-spacing: var(--track-micro);
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  color: var(--frost-3);
+  color: var(--ink-3);
 }
 
 .s-res-split__spine {
@@ -232,9 +231,9 @@
   background: linear-gradient(
     to bottom,
     transparent,
-    var(--frost-5) 15%,
-    var(--magenta) 50%,
-    var(--frost-5) 85%,
+    var(--rule) 15%,
+    var(--tone-conflict) 50%,
+    var(--rule) 85%,
     transparent
   );
   opacity: 0.55;
@@ -252,9 +251,9 @@
   margin: 0 0 var(--s-1);
   font-size: var(--t-micro);
   font-weight: 600;
-  letter-spacing: var(--track-micro);
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  color: var(--magenta);
+  color: var(--ink-3);
 }
 
 .s-res-open__text {
@@ -262,12 +261,12 @@
   max-width: 72ch;
   font-size: var(--t-body);
   line-height: 1.55;
-  color: var(--frost-2);
+  color: var(--ink-2);
 }
 
 .s-res-open__pending {
   padding: var(--s-3);
-  border: 1px dashed var(--frost-5);
+  border: 1px dashed var(--rule);
   border-radius: var(--r);
 }
 
@@ -275,9 +274,9 @@
   display: block;
   margin-bottom: var(--s-2);
   font-size: var(--t-micro);
-  letter-spacing: var(--track-micro);
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  color: var(--amber);
+  color: var(--signal);
 }
 
 /* ------------------------------------------------------------------ *
@@ -304,12 +303,12 @@
 }
 
 .s-res-map__edge--supports {
-  stroke: var(--mint);
+  stroke: var(--tone-settled);
   opacity: 0.6;
 }
 
 .s-res-map__edge--extends {
-  stroke: var(--violet);
+  stroke: var(--tone-relation);
   stroke-dasharray: 1 4;
   stroke-linecap: round;
   opacity: 0.75;
@@ -319,7 +318,7 @@
    unresolved even when nobody is looking at the legend. Opacity only, so the
    compositor handles it and no layout is touched. */
 .s-res-map__edge--contradicts {
-  stroke: var(--magenta);
+  stroke: var(--tone-conflict);
   stroke-dasharray: 5 3;
   stroke-width: 1.6;
   opacity: 0.85;
@@ -337,15 +336,15 @@
 }
 
 .s-res-map__arrow--supports {
-  fill: var(--mint);
+  fill: var(--tone-settled);
 }
 
 .s-res-map__arrow--contradicts {
-  fill: var(--magenta);
+  fill: var(--tone-conflict);
 }
 
 .s-res-map__arrow--extends {
-  fill: var(--violet);
+  fill: var(--tone-relation);
 }
 
 .s-res-map__disc {
@@ -370,7 +369,7 @@
 .s-res-map__label {
   font-family: var(--font);
   font-size: 9.5px;
-  fill: var(--frost-2);
+  fill: var(--ink-2);
   letter-spacing: 0.01em;
 }
 
@@ -382,7 +381,7 @@
   padding: 0;
   list-style: none;
   font-size: var(--t-micro);
-  color: var(--frost-3);
+  color: var(--ink-3);
 }
 
 .s-res-map__legend li {
@@ -392,7 +391,7 @@
 }
 
 .s-res-map__legendnote {
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 .s-res-map__key {
@@ -402,15 +401,15 @@
 }
 
 .s-res-map__key--supports {
-  border-top: 2px solid var(--mint);
+  border-top: 2px solid var(--tone-settled);
 }
 
 .s-res-map__key--contradicts {
-  border-top: 2px dashed var(--magenta);
+  border-top: 2px dashed var(--tone-conflict);
 }
 
 .s-res-map__key--extends {
-  border-top: 2px dotted var(--violet);
+  border-top: 2px dotted var(--tone-relation);
 }
 
 .s-res-map__caption {
@@ -418,31 +417,31 @@
   max-width: 64ch;
   font-size: var(--t-meta);
   line-height: 1.5;
-  color: var(--frost-3);
+  color: var(--ink-3);
 }
 
 .s-res-map__alt {
   font-size: var(--t-meta);
-  color: var(--frost-3);
+  color: var(--ink-3);
 }
 
 .s-res-map__alt summary {
   cursor: pointer;
   padding: var(--s-1) var(--s-2);
   border-radius: var(--r-sm);
-  color: var(--frost-3);
+  color: var(--ink-3);
   font-size: var(--t-micro);
-  letter-spacing: var(--track-micro);
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
 }
 
 .s-res-map__alt summary:hover {
-  color: var(--frost);
-  background: var(--frost-6);
+  color: var(--ink);
+  background: var(--rule-soft);
 }
 
 .s-res-map__alt summary:focus-visible {
-  outline: 2px solid var(--violet);
+  outline: 2px solid var(--tone-relation);
   outline-offset: 2px;
 }
 
@@ -457,7 +456,7 @@
 
 .s-res-map__alt b {
   font-weight: 600;
-  color: var(--frost-2);
+  color: var(--ink-2);
 }
 
 /* ------------------------------------------------------------------ *
@@ -476,7 +475,7 @@
 }
 
 .s-res-cmp__wrap:focus-visible {
-  outline: 2px solid var(--violet);
+  outline: 2px solid var(--tone-relation);
   outline-offset: 2px;
 }
 
@@ -494,7 +493,7 @@
   padding: 0 var(--s-3) var(--s-3);
   text-align: left;
   vertical-align: bottom;
-  border-bottom: 1px solid var(--frost-5);
+  border-bottom: 1px solid var(--rule);
   box-shadow: inset 0 -1px 0 var(--accent, transparent);
 }
 
@@ -503,7 +502,7 @@
   font-size: var(--t-body);
   font-weight: 600;
   letter-spacing: var(--track-title);
-  color: var(--accent, var(--frost));
+  color: var(--accent, var(--ink));
 }
 
 .s-res-cmp__sub {
@@ -512,7 +511,7 @@
   font-family: var(--mono);
   font-size: var(--t-micro);
   font-weight: 400;
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 .s-res-cmp__verdict {
@@ -524,16 +523,16 @@
   padding: var(--s-3) var(--s-3) var(--s-3) var(--s-2);
   text-align: left;
   font-weight: 500;
-  color: var(--frost-3);
-  border-bottom: 1px solid var(--frost-6);
+  color: var(--ink-3);
+  border-bottom: 1px solid var(--rule-soft);
   vertical-align: top;
 }
 
 .s-res-cmp__cell {
   padding: var(--s-3);
   vertical-align: top;
-  border-bottom: 1px solid var(--frost-6);
-  color: var(--frost-2);
+  border-bottom: 1px solid var(--rule-soft);
+  color: var(--ink-2);
 }
 
 .s-res-cmp__val {
@@ -545,12 +544,12 @@
 }
 
 .s-res-cmp__cell--caveat .s-res-cmp__val {
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 .s-res-cmp__caveat {
   margin-left: var(--s-1);
-  color: var(--amber);
+  color: var(--signal);
   text-decoration: none;
   cursor: help;
 }
@@ -560,7 +559,7 @@
   width: 100%;
   height: 2px;
   margin-top: var(--s-2);
-  background: var(--frost-6);
+  background: var(--rule-soft);
   border-radius: 1px;
   overflow: hidden;
 }
@@ -569,10 +568,9 @@
   display: block;
   height: 100%;
   width: calc(var(--v) * 100%);
-  background: var(--accent);
+  background: var(--tone);
   /* Glow is proportional to the value, so a strong figure is literally the
      brightest thing in its row. */
-  box-shadow: 0 0 calc(var(--v) * 10px) var(--accent);
   transform-origin: left center;
 }
 
@@ -595,7 +593,7 @@
   max-width: 88ch;
   font-size: var(--t-micro);
   line-height: 1.55;
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 /* ------------------------------------------------------------------ *
@@ -621,7 +619,7 @@
   height: var(--s-4);
   font-family: var(--mono);
   font-size: var(--t-micro);
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 .s-res-tl__tick {
@@ -633,15 +631,15 @@
 
 .s-res-tl__tick--now {
   left: calc(var(--now) * 100%);
-  color: var(--cyan);
+  color: var(--tone-active);
   letter-spacing: var(--track-micro);
 }
 
 .s-res-tl__confhead {
   font-size: var(--t-micro);
-  letter-spacing: var(--track-micro);
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  color: var(--frost-4);
+  color: var(--ink-4);
   text-align: right;
 }
 
@@ -656,7 +654,7 @@
 
 .s-res-tl__row {
   padding: var(--s-2) 0;
-  border-top: 1px solid var(--frost-6);
+  border-top: 1px solid var(--rule-soft);
 }
 
 .s-res-tl__meta {
@@ -669,13 +667,13 @@
 .s-res-tl__label {
   font-size: var(--t-body);
   line-height: 1.3;
-  color: var(--frost-2);
+  color: var(--ink-2);
 }
 
 .s-res-tl__date {
   font-family: var(--mono);
   font-size: var(--t-micro);
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 /* Year gridlines live on the track itself, so they line up across every row
@@ -686,7 +684,7 @@
   height: var(--s-5);
   background-image: repeating-linear-gradient(
     to right,
-    var(--frost-6) 0 1px,
+    var(--rule-soft) 0 1px,
     transparent 1px calc(100% / 3.5)
   );
 }
@@ -700,7 +698,7 @@
   height: 6px;
   transform: translateY(-50%);
   border-radius: 3px;
-  background: var(--accent);
+  background: var(--tone);
   /* Confidence, not date: a wide bar can still be a weak one. */
   opacity: calc(0.14 + var(--k) * 0.5);
 }
@@ -714,8 +712,7 @@
   margin-left: -3.5px;
   transform: translateY(-50%);
   border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 calc(var(--k) * 12px) var(--accent);
+  background: var(--tone);
 }
 
 .s-res-tl__now {
@@ -724,18 +721,18 @@
   bottom: 0;
   left: calc(var(--now) * 100%);
   width: 1px;
-  background: var(--cyan);
+  background: var(--tone-active);
   opacity: 0.35;
 }
 
 /* A target is drawn like a provisional panel: dashed outline, no fill weight. */
 .s-res-tl__row--forecast .s-res-tl__band {
-  background: repeating-linear-gradient(90deg, var(--accent) 0 3px, transparent 3px 7px);
+  background: repeating-linear-gradient(90deg, var(--tone) 0 3px, transparent 3px 7px);
 }
 
 .s-res-tl__row--forecast .s-res-tl__label,
 .s-res-tl__row--forecast .s-res-tl__conf {
-  color: var(--frost-3);
+  color: var(--ink-3);
 }
 
 .s-res-tl__conf {
@@ -743,7 +740,7 @@
   font-size: var(--t-meta);
   font-variant-numeric: tabular-nums;
   text-align: right;
-  color: var(--frost-2);
+  color: var(--ink-2);
 }
 
 .s-res-tl__legend {
@@ -751,7 +748,7 @@
   max-width: 92ch;
   font-size: var(--t-micro);
   line-height: 1.55;
-  color: var(--frost-4);
+  color: var(--ink-4);
 }
 
 /* ------------------------------------------------------------------ *
