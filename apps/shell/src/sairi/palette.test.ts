@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 import { buildCommands, matchCommands, score, shouldAutoSelect, type Command } from './palette.js';
-import type { SairiContext } from './state.js';
 
 /**
  * The palette shares a field with the primary interaction, so the property that
@@ -113,8 +112,7 @@ describe('matchCommands — what must NOT be captured', () => {
 });
 
 describe('buildCommands', () => {
-  const context = (id: string, intention: string): SairiContext =>
-    ({ id, intention, kind: 'research' }) as SairiContext;
+  const context = (id: string, intention: string) => ({ id, intention, kind: 'research' });
 
   const base = {
     contexts: [context('a', 'First thing'), context('b', 'Second thing')],

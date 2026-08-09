@@ -81,7 +81,7 @@ export function Talk({ talk }: { talk: DictationControls }): JSX.Element | null 
   if (phase === 'authorising') {
     return (
       <p className="s-talk s-talk--note">
-        <StatusOrb hue="amber" pulse size={6} /> Asking permission…
+        <StatusOrb pulse size={6} /> Asking permission…
       </p>
     );
   }

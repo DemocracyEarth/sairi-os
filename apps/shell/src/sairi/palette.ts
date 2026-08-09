@@ -1,5 +1,3 @@
-import type { SairiContext } from './state.js';
-
 /**
  * The command palette, as a matching problem.
  *
@@ -170,8 +168,16 @@ export function shouldAutoSelect(query: string, matches: readonly Match[]): bool
  * argument made concrete: there is no menu of thirty destinations, there is a
  * field that knows what is currently true.
  */
+/** The slice of a context the palette needs. Kept structural so the palette
+ *  does not depend on the whole domain type. */
+export interface PaletteContext {
+  id: string;
+  intention: string;
+  kind: string;
+}
+
 export function buildCommands(input: {
-  contexts: readonly SairiContext[];
+  contexts: readonly PaletteContext[];
   activeId: string;
   onSwitch: (id: string) => void;
   onOpenSetup: () => void;
