@@ -50,41 +50,42 @@
    * like scratches and makes black type look like it is floating; a few
    * points of warmth gives the hairlines something to sit on. */
   --paper: #f7f6f3;
-  --paper-raised: #fffefc;
-  --paper-sunk: #eeece7;
+  --paper-raised: #ffffff;
+  --paper-sunk: #efeeea;
+  --paper-deep: #e6e5e0;
   /* Chrome is charcoal, not black: the frame around the work, and the one
      place the interface admits it is a machine. */
-  --charcoal: #26262a;
-  --charcoal-2: #34343a;
+  --charcoal: #2a2c30;
+  --charcoal-2: #3a3d42;
 
   /* --- ink ------------------------------------------------------------- *
    * Four steps, and they are steps rather than a gradient: a reader can tell
    * primary from secondary at a glance only if the gap is decisive. Graphite
    * rather than pure black, which on a bright field reads as a hole. */
-  --ink: #1a1a18;
-  --ink-2: #47453f;
-  --ink-3: #605d55;
-  --ink-4: #6f6c64;
+  --ink: #17181a;
+  --ink-2: #4b4e53;
+  --ink-3: #63666b;
+  --ink-4: #6e7176;
 
   /* Hairlines. `--rule` is meant to be seen; `--rule-soft` is meant to be
      felt. Nothing between them, because a third weight always ends up used
      to avoid a layout decision. */
-  --rule: rgb(26 26 24 / 16%);
-  --rule-soft: rgb(26 26 24 / 8%);
+  --rule: rgb(23 24 26 / 14%);
+  --rule-soft: rgb(23 24 26 / 8%);
 
   /* --- the accent ------------------------------------------------------ *
    * One colour in the entire system. Braun's signal orange, and it appears
    * ONLY where the machine needs a human: an approval waiting, an alert, the
    * live microphone. If it shows up anywhere decorative, delete it — its
    * whole value is that the eye has learned it always means something. */
-  --signal: #d4571f;
-  --signal-deep: #a83d12;
+  --signal: #d46c35;
+  --signal-deep: #a8491a;
   /* Braun's orange is 3.75:1 on paper — right for a mark, too light to read as
      small text. This is the same colour taken down until it passes, and it is
      what the accent must use whenever it is words rather than a shape. */
-  --signal-ink: #b84714;
-  --signal-wash: rgb(212 87 31 / 10%);
-  --signal-edge: rgb(212 87 31 / 42%);
+  --signal-ink: #b4511f;
+  --signal-wash: rgb(212 108 53 / 10%);
+  --signal-edge: rgb(212 108 53 / 42%);
 
   /*
    * `--accent` is a constant now, and that is the whole change.
@@ -164,9 +165,9 @@
    * Slightly rounded rectangles, and much less pill than contemporary SaaS.
    * 3px reads as "cut with care"; 14px reads as a toy. --r-pill exists for the
    * two places a capsule is genuinely right (a status chip, a toggle track). */
-  --r-sm: 2px;
-  --r: 3px;
-  --r-lg: 5px;
+  --r-sm: 3px;
+  --r: 4px;
+  --r-lg: 6px;
   --r-xl: 8px;
   --r-pill: 100px;
 
@@ -187,8 +188,12 @@
    * steps rather than a smooth ramp — display against body is a 2.5× jump.
    * System stack: nothing to download, no layout shift, and the CSP forbids a
    * foreign font host anyway. */
-  --font: ui-sans-serif, -apple-system, 'SF Pro Text', 'Segoe UI', Inter, system-ui, sans-serif;
-  --mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace;
+  --font: Inter, ui-sans-serif, -apple-system, 'Segoe UI', system-ui, sans-serif;
+  /* Display wants the tighter cut. Falls through to Inter, which every machine
+     that matters already has, rather than pulling a webfont: the CSP is
+     `font-src 'self'` and the guest installs both families from apt. */
+  --font-display: 'Inter Tight', Inter, ui-sans-serif, -apple-system, system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
   --t-display: 32px;
   --t-title: 19px;
@@ -199,8 +204,8 @@
 
   /* Tighter as it gets larger, which is what makes a heading look set rather
      than typed. The label tracking is wide because small caps need air. */
-  --track-display: -0.022em;
-  --track-title: -0.014em;
+  --track-display: -0.03em;
+  --track-title: -0.02em;
   --track-label: 0.08em;
   --track-micro: 0.05em;
 
@@ -214,10 +219,10 @@
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.34, 1.4, 0.5, 1);
-  --d-fast: 120ms;
-  --d: 200ms;
+  --d-fast: 140ms;
+  --d: 240ms;
   --d-slow: 380ms;
-  --d-cine: 700ms;
+  --d-cine: 720ms;
 
   --z-bg: 0;
   --z-surface: 10;
