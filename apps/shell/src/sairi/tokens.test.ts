@@ -194,6 +194,80 @@ describe('the two palettes stay peers', () => {
   });
 });
 
+describe('a filled accent control stays readable', () => {
+  /**
+   * `--signal` is a mark, not a ground for words. White on Braun orange is
+   * 3.50:1, and the primary button's label is 12px — so `--signal-fill` and
+   * `--on-signal` exist, and both must flip with the theme. Dark's fill is a
+   * LIGHT orange, where white was 2.09:1 and dark ink is 8.51:1.
+   */
+  it.each([
+    ['light', LIGHT],
+    ['dark', DARK],
+  ])('%s: the label clears AA on the fill', (name, P) => {
+    const ratio = contrast(P['on-signal'] as string, P['signal-fill'] as string);
+    expect(
+      ratio,
+      `${name}: --on-signal on --signal-fill is ${ratio.toFixed(2)}:1`,
+    ).toBeGreaterThanOrEqual(AA_BODY);
+  });
+
+  it('never puts a hard-coded white label on the raw accent again', () => {
+    // The regression, in both themes at once: `background: var(--signal)` with
+    // `color: #fff` reads as brand-correct and fails AA in light and badly in
+    // dark, where the accent is lighter than the ground.
+    const sairiCss = code(readFileSync(join(here, 'sairi.css'), 'utf8'));
+    for (const rule of sairiCss.split(/^\}/m)) {
+      if (!/background:\s*var\(--signal\)\s*;/.test(rule)) continue;
+      expect(rule, 'white label on the raw accent').not.toMatch(/color:\s*#fff/i);
+    }
+  });
+});
+
+describe('the sign-in page speaks the same language', () => {
+  /**
+   * The door is a string in a Node script, outside the Vite build, so its
+   * colours are literals. That copy is checked here rather than trusted — it
+   * had already drifted a whole palette, shipping dark navy and a violet button
+   * long after the shell became monochrome, and it is the first screen a remote
+   * operator sees.
+   */
+  const door = readFileSync(join(here, '..', '..', 'access.mjs'), 'utf8');
+
+  it('uses the light palette values, not a set of its own', () => {
+    for (const token of ['paper', 'ink', 'ink-3', 'ink-4', 'signal-fill', 'signal-ink'] as const) {
+      expect(door, `the door does not use --${token} (${LIGHT[token]})`).toContain(
+        LIGHT[token] as string,
+      );
+    }
+  });
+
+  it('uses the dark palette values for its dark counterpart', () => {
+    // A media query is correct on this page: there is no JavaScript to resolve
+    // a preference before paint. Same reason os/branding/palette.css keeps one.
+    expect(door).toMatch(/@media\s*\(prefers-color-scheme:\s*dark\)/);
+    for (const token of ['paper', 'paper-raised', 'ink', 'signal-fill', 'on-signal'] as const) {
+      expect(door, `the door's dark block does not use --${token} (${DARK[token]})`).toContain(
+        DARK[token] as string,
+      );
+    }
+  });
+
+  it('carries no trace of the palette it came from', () => {
+    // Dark navy ground, violet button, salmon error text.
+    for (const ghost of ['#070b1d', '#6d5efc', '#ff8a7a']) {
+      expect(door, `${ghost} is from the spectral palette`).not.toContain(ghost);
+    }
+  });
+
+  it('does not try to load a webfont it cannot reach', () => {
+    // The vendored faces sit at content-hashed /assets paths behind this very
+    // door. A @font-face here would 401, and widening PUBLIC_PATHS to serve
+    // typography would trade a real boundary for a heading.
+    expect(door).not.toMatch(/@font-face|\.woff2|fonts\.googleapis\.com/);
+  });
+});
+
 describe('the dark palette can be reached by both token systems', () => {
   it('is scoped from the root, not from the surface element', () => {
     // The bug this replaces: with the attribute on the `.sairi` div, the

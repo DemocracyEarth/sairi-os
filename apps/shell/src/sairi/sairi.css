@@ -254,15 +254,6 @@
   max-width: 62ch;
 }
 
-/* Twelve columns so a panel's certainty can drive its width directly. */
-.s-work__grid {
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: var(--s-4);
-  align-items: start;
-  padding-bottom: var(--s-6);
-}
-
 /* -------------------------------------------------------- ContextSurface */
 
 .s-surface {
@@ -547,84 +538,7 @@
   transition: left var(--d-cine) var(--ease-out);
 }
 
-/* ---------------------------------------------------------------- agents */
-
-.s-agent {
-  border: 1px solid var(--rule-soft);
-  border-radius: var(--r);
-  padding: var(--s-3);
-  background: var(--rule-soft);
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-2);
-}
-
-.s-agent--attention {
-  border-color: color-mix(in srgb, var(--signal) 45%, transparent);
-  background: color-mix(in srgb, var(--signal) 7%, transparent);
-}
-
-.s-agent__top {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--s-3);
-}
-
-.s-agent__ring {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 1px solid color-mix(in srgb, var(--tone) 40%, transparent);
-  flex-shrink: 0;
-}
-
-.s-agent__ring[data-status='working'] {
-  animation: s-ring 3s linear infinite;
-  background: conic-gradient(
-    from 0deg,
-    transparent 60%,
-    color-mix(in srgb, var(--tone) 45%, transparent)
-  );
-}
-
-@keyframes s-ring {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.s-agent__id {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-  flex: 1;
-}
-
-.s-agent__role {
-  font-size: var(--t-meta);
-  font-weight: var(--w-medium);
-  color: var(--ink);
-}
-
-.s-agent__task {
-  font-size: var(--t-micro);
-  color: var(--ink-3);
-}
-
-.s-agent__controls {
-  display: flex;
-  gap: 4px;
-  opacity: 0;
-  transition: opacity var(--d-fast) var(--ease-out);
-}
-
-.s-agent:hover .s-agent__controls,
-.s-agent:focus-within .s-agent__controls {
-  opacity: 1;
-}
+/* ------------------------------------------------------------ small button */
 
 .s-mini {
   font: inherit;
@@ -645,37 +559,6 @@
 .s-mini:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
-}
-
-.s-agent__track {
-  height: 2px;
-  border-radius: 2px;
-  background: var(--rule-soft);
-  overflow: hidden;
-}
-
-.s-agent__fill {
-  display: block;
-  height: 100%;
-  background: var(--tone);
-  transition: width var(--d-slow) var(--ease-out);
-}
-
-.s-agent__output {
-  margin: 0;
-  font-size: var(--t-micro);
-  color: var(--ink-3);
-  border-left: 1px solid color-mix(in srgb, var(--tone) 35%, transparent);
-  padding-left: var(--s-3);
-}
-
-.s-agent__flag {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0;
-  font-size: var(--t-micro);
-  color: var(--signal);
 }
 
 /* ------------------------------------------------------------ continuity
@@ -948,23 +831,6 @@
   font-weight: 500;
 }
 
-.s-intel__agents {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-3);
-}
-
-.s-proposal__detail {
-  margin: 0 0 var(--s-3);
-  font-size: var(--t-body);
-  color: var(--ink-2);
-}
-
-.s-proposal__actions {
-  display: flex;
-  gap: var(--s-2);
-}
-
 .s-btn {
   font: inherit;
   font-size: var(--t-meta);
@@ -989,14 +855,15 @@
 
 .s-btn--primary {
   border-color: transparent;
-  background: var(--signal);
-  color: #fff;
+  background: var(--signal-fill);
+  color: var(--on-signal);
   font-weight: var(--w-medium);
 }
 
+/* Toward the ink, which is darker in light and lighter in dark — so hover is
+   more prominent in both themes, and the label's contrast only improves. */
 .s-btn--primary:hover {
-  background: var(--signal-deep);
-  color: #fff;
+  background: color-mix(in srgb, var(--signal-fill) 88%, var(--ink));
 }
 
 .s-btn:active {
@@ -1304,8 +1171,8 @@
   padding: 7px 14px;
   border: 1px solid transparent;
   border-radius: var(--r);
-  background: var(--signal);
-  color: #fff;
+  background: var(--signal-fill);
+  color: var(--on-signal);
   cursor: pointer;
   transition:
     opacity var(--d-fast) var(--ease-out),
@@ -1361,182 +1228,6 @@
 .s-chip:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-}
-
-/* ------------------------------------------------------------- assembly */
-
-.s-assembly {
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-overlay);
-  display: grid;
-  place-items: center;
-  padding: var(--s-6);
-  background: var(--paper);
-  animation: s-fade var(--d) var(--ease-out);
-}
-
-@keyframes s-fade {
-  from {
-    opacity: 0;
-  }
-}
-
-.s-assembly__skip {
-  position: absolute;
-  top: var(--s-5);
-  right: var(--s-5);
-  font: inherit;
-  font-size: var(--t-micro);
-  color: var(--ink-4);
-  background: transparent;
-  border: 1px solid var(--rule-soft);
-  border-radius: var(--r-sm);
-  padding: 5px 12px;
-  cursor: pointer;
-}
-
-.s-assembly__skip:hover {
-  color: var(--ink);
-  border-color: var(--rule);
-}
-
-.s-assembly__stage {
-  width: min(720px, 100%);
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-5);
-}
-
-.s-assembly__intent {
-  margin: 0;
-  font-size: var(--t-display);
-  font-weight: 500;
-  letter-spacing: var(--track-display);
-  line-height: 1.2;
-  color: var(--ink);
-  opacity: 0;
-  transform: translate3d(0, 12px, 0);
-  transition: all var(--d-slow) var(--ease-out);
-}
-
-.s-assembly__quote {
-  color: var(--tone);
-}
-
-.s-assembly__row {
-  display: grid;
-  grid-template-columns: 116px 1fr;
-  gap: var(--s-4);
-  align-items: baseline;
-  opacity: 0;
-  transform: translate3d(0, 10px, 0);
-  transition: all var(--d-slow) var(--ease-out);
-}
-
-.s-assembly__intent.is-in,
-.s-assembly__row.is-in {
-  opacity: 1;
-  transform: none;
-}
-
-.s-assembly__step {
-  font-size: var(--t-micro);
-  letter-spacing: var(--track-label);
-  text-transform: uppercase;
-  color: var(--ink-4);
-  text-align: right;
-}
-
-.s-assembly__objective,
-.s-assembly__proposal {
-  margin: 0;
-  font-size: var(--t-lead);
-  color: var(--ink-2);
-}
-
-.s-assembly__proposal {
-  color: var(--tone);
-}
-
-.s-assembly__agents {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-2);
-}
-
-.s-assembly__agent {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: var(--t-meta);
-  color: var(--ink-2);
-  padding: 5px 11px;
-  border: 1px solid color-mix(in srgb, var(--tone) 30%, transparent);
-  border-radius: var(--r-sm);
-  opacity: 0;
-  transform: scale(0.9);
-  transition: all var(--d) var(--ease-spring);
-}
-
-.s-assembly__agent.is-in {
-  opacity: 1;
-  transform: none;
-}
-
-/* Marks an agent that has worked this kind of context before. Small, and
-   inside the pill rather than beside it: it qualifies the agent, it is not a
-   second thing in the list. */
-.s-assembly__again {
-  font-size: var(--t-micro);
-  letter-spacing: 0.04em;
-  color: var(--tone);
-  padding-left: 7px;
-  border-left: 1px solid color-mix(in srgb, var(--tone) 25%, transparent);
-}
-
-/* A wireframe of the workspace about to exist. The slots carry the same
-   certainty data as the real panels, so the shape you see forming IS the
-   shape you get. */
-.s-assembly__frame {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 6px;
-}
-
-.s-assembly__slot {
-  grid-column: span var(--span, 4);
-  height: 26px;
-  border-radius: 6px;
-  border: 1px solid var(--rule);
-  opacity: 0;
-  transform: scale(0.94);
-  transition: all var(--d) var(--ease-spring);
-  transition-delay: calc(var(--i) * 70ms);
-}
-
-.s-assembly__slot[data-certainty='provisional'] {
-  border-style: dashed;
-}
-
-.s-assembly__slot[data-certainty='resolved'] {
-  background: color-mix(in srgb, var(--tone) 16%, transparent);
-  border-color: color-mix(in srgb, var(--tone) 50%, transparent);
-}
-
-.s-assembly__slot.is-in {
-  opacity: 1;
-  transform: none;
-}
-
-.s-empty-os {
-  display: grid;
-  place-items: center;
-  height: 100dvh;
-  color: var(--ink-3);
 }
 
 /* ------------------------------------------------------------ responsive
@@ -1636,29 +1327,12 @@
 
   /* Every panel goes full width. Certainty still shows through edge, glow and
      elevation — the shape signal degrades gracefully to a colour signal. */
-  .s-work__grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .s-surface {
     grid-column: span 1 !important;
   }
 
   .s-command {
     padding: 0 var(--s-4) calc(56px + var(--s-3));
-  }
-
-  .s-assembly__row {
-    grid-template-columns: 1fr;
-    gap: var(--s-2);
-  }
-
-  .s-assembly__step {
-    text-align: left;
-  }
-
-  .s-assembly__intent {
-    font-size: 24px;
   }
 }
 
@@ -1748,12 +1422,6 @@
 
 .s-surface__body > * {
   min-width: 0;
-}
-
-/* The workspace scrolls under the floating command field, so the last row
-   needs clearance or it can never be read. */
-.s-work__grid {
-  padding-bottom: 140px;
 }
 
 /* Nav items are buttons whose name comes from nested spans. Giving the label

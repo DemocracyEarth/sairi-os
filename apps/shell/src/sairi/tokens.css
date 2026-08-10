@@ -140,6 +140,16 @@
      small text. This is the same colour taken down until it passes, and it is
      what the accent must use whenever it is words rather than a shape. */
   --signal-ink: #b4511f;
+  /* A FILLED accent control — a button whose ground is the accent and whose
+     label sits on it. Not `--signal`: white on Braun orange is 3.50:1, and a
+     12px button label at 3.50:1 is unreadable for exactly the people who need
+     it most. White on this is 5.78:1.
+
+     `--on-signal` is the label colour, and it has to flip with the theme. In
+     dark the fill is a LIGHT orange, so white on it is 2.09:1 — which is what
+     the primary button's hover state shipped — and dark ink on it is 8.51:1. */
+  --signal-fill: #a8491a;
+  --on-signal: #ffffff;
   --signal-wash: rgb(212 108 53 / 10%);
   --signal-edge: rgb(212 108 53 / 42%);
 
@@ -339,6 +349,9 @@
   --signal: #f0733a;
   --signal-deep: #ff9a63;
   --signal-ink: #f0733a;
+  /* The fill is lighter than the ground here, so the label is ink, not white. */
+  --signal-fill: #ff9a63;
+  --on-signal: #17181a;
   --signal-wash: rgb(240 115 58 / 14%);
   --signal-edge: rgb(240 115 58 / 45%);
 

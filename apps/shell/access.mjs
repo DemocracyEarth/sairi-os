@@ -312,24 +312,65 @@ function signInPage(res, status = 200) {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SairiOS — access</title>
 <style>
-:root{color-scheme:dark}
-body{margin:0;min-height:100dvh;display:grid;place-items:center;background:#070b1d;
- color:#fff;font:15px/1.5 Inter,system-ui,sans-serif}
-form{width:min(90vw,380px);padding:28px;border:1px solid #ffffff1f;border-radius:18px;
- background:#ffffff08}
-h1{margin:0 0 6px;font-size:19px}
-p{margin:0 0 18px;color:#ffffff8a;font-size:13px}
-input{width:100%;box-sizing:border-box;padding:11px 13px;border-radius:10px;
- border:1px solid #ffffff2b;background:#00000059;color:#fff;font:inherit}
-button{margin-top:12px;width:100%;padding:11px;border:0;border-radius:10px;
- background:#6d5efc;color:#fff;font:inherit;font-weight:600;cursor:pointer}
-#err{margin:12px 0 0;color:#ff8a7a;font-size:13px;min-height:1em}
+/* The door, in the same language as the room behind it.
+ *
+ * This page used to be dark navy with a violet button — the spectral palette
+ * the shell left behind — which made the first thing a remote operator saw the
+ * one screen that looked like a different product.
+ *
+ * Two constraints shape how far it can go, and both are deliberate:
+ *
+ *   No webfonts. The vendored faces live at content-hashed /assets paths behind
+ *   this very door, so an unauthenticated page cannot load them, and widening
+ *   PUBLIC_PATHS with a prefix rule to serve typography would trade a real
+ *   boundary for a nicer heading. A system stack it is.
+ *
+ *   No token import. This page is a string in a Node script, not part of the
+ *   Vite build, so the values are literals. tokens.test.ts asserts they still
+ *   match tokens.css — the copy is checked rather than trusted.
+ *
+ * A prefers-color-scheme block IS correct here, unlike in tokens.css: there is
+ * no JavaScript to resolve a preference before paint. Same reasoning as
+ * os/branding/palette.css, which keeps its media query for the same reason.
+ */
+:root{color-scheme:light}
+body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:24px;
+ background:#f7f6f3;color:#17181a;
+ font:15px/1.5 'Inter Tight',Inter,ui-sans-serif,-apple-system,system-ui,sans-serif}
+form{width:min(100%,380px);padding:28px;border:1px solid rgb(23 24 26 / 14%);
+ border-radius:6px;background:#ffffff}
+h1{margin:0 0 6px;font-size:19px;font-weight:600;letter-spacing:-0.02em}
+p{margin:0 0 18px;color:#63666b;font-size:13px}
+label{display:block;margin-bottom:6px;font-size:12px;letter-spacing:0.06em;
+ text-transform:uppercase;color:#6e7176}
+input{width:100%;box-sizing:border-box;padding:9px 11px;border-radius:4px;
+ border:1px solid rgb(23 24 26 / 14%);background:#f7f6f3;color:#17181a;font:inherit}
+input:focus-visible{outline:2px solid #17181a;outline-offset:1px;border-color:transparent}
+/* The accent, on the one control that is the machine waiting for a human.
+   #a8491a rather than Braun's #d46c35: white on the latter is 3.50:1. */
+button{margin-top:14px;width:100%;padding:10px;border:0;border-radius:4px;
+ background:#a8491a;color:#ffffff;font:inherit;font-weight:600;cursor:pointer}
+button:hover{background:#8f3d15}
+#err{margin:12px 0 0;color:#b4511f;font-size:13px;min-height:1em}
+@media (prefers-color-scheme:dark){
+ :root{color-scheme:dark}
+ body{background:#17181a;color:#edece8}
+ form{background:#202124;border-color:rgb(237 236 232 / 17%)}
+ p{color:#9a9890}
+ label{color:#84827b}
+ input{background:#101113;color:#edece8;border-color:rgb(237 236 232 / 17%)}
+ input:focus-visible{outline-color:#edece8}
+ /* The fill is lighter than the ground here, so the label is ink, not white. */
+ button{background:#ff9a63;color:#17181a}
+ button:hover{background:#ffb184}
+ #err{color:#f0733a}
+}
 </style></head><body><form>
 <h1>SairiOS</h1>
 <p>This machine is reachable over a network, so it asks for its access token.
 It is the value of SAIRIOS_ACCESS_TOKEN on the host running SairiOS. It is
 never logged or printed, so it has to come from wherever you stored it.</p>
-<label for="token" style="display:block;margin-bottom:6px;font-size:13px">Access token</label>
+<label for="token">Access token</label>
 <input id="token" name="token" type="password" autocomplete="off" autofocus spellcheck="false">
 <button type="submit">Unlock</button>
 <p id="err"></p>
