@@ -15,25 +15,38 @@
     "kept as captured rather than normalised, so the shapes stay honest. Tests",
     "assert on structure, not on these values."
   ],
-
   "protocol": 4,
   "capturedFrom": "openclaw 2026.7.1-2 (0790d9f)",
   "capturedOn": "2026-08-03",
-
   "envelope": {
     "$comment": "Three frame kinds. This is the part our placeholder got wrong: it switched on `type` expecting an event NAME there, but `type` is the category and `event` carries the name.",
-    "request": { "type": "req", "id": "1", "method": "connect", "params": {} },
-    "response": { "type": "res", "id": "1", "ok": true, "payload": {} },
-    "event": { "type": "event", "event": "connect.challenge", "payload": {} }
+    "request": {
+      "type": "req",
+      "id": "1",
+      "method": "connect",
+      "params": {}
+    },
+    "response": {
+      "type": "res",
+      "id": "1",
+      "ok": true,
+      "payload": {}
+    },
+    "event": {
+      "type": "event",
+      "event": "connect.challenge",
+      "payload": {}
+    }
   },
-
   "handshake": {
     "challenge": {
       "type": "event",
       "event": "connect.challenge",
-      "payload": { "nonce": "0437a0ec-5140-427f-b23e-1e0d64cf9bee", "ts": 1785722498495 }
+      "payload": {
+        "nonce": "0437a0ec-5140-427f-b23e-1e0d64cf9bee",
+        "ts": 1785722498495
+      }
     },
-
     "connect": {
       "$comment": [
         "client.id and client.mode are CLOSED ENUMS, enforced server-side.",
@@ -79,7 +92,6 @@
         "userAgent": "sairios-agent-bridge/0.1.0"
       }
     },
-
     "helloOk": {
       "type": "res",
       "id": "1",
@@ -87,8 +99,14 @@
       "payload": {
         "type": "hello-ok",
         "protocol": 4,
-        "server": { "version": "2026.7.1-2", "connId": "ce9e8014-27e0-4120-b2d7-6688c51afa61" },
-        "auth": { "role": "operator", "scopes": ["operator.read", "operator.write"] },
+        "server": {
+          "version": "2026.7.1-2",
+          "connId": "ce9e8014-27e0-4120-b2d7-6688c51afa61"
+        },
+        "auth": {
+          "role": "operator",
+          "scopes": ["operator.read", "operator.write"]
+        },
         "policy": {
           "maxPayload": 26214400,
           "maxBufferedBytes": 52428800,
@@ -96,7 +114,6 @@
         }
       }
     },
-
     "rejection": {
       "$comment": "What a bad connect actually returns. Worth keeping: it is the shape our error path has to read.",
       "type": "res",
@@ -108,7 +125,6 @@
       }
     }
   },
-
   "methodsRelevantToSairiOS": {
     "$comment": [
       "The gateway advertised 218 methods and 30 events. These are the ones a",
@@ -135,7 +151,6 @@
     ],
     "introspection": ["health", "models.list", "tools.catalog", "commands.list"]
   },
-
   "eventsRelevantToSairiOS": {
     "$comment": [
       "`exec.approval.requested` is the interesting one: OpenClaw has its own",
@@ -147,9 +162,8 @@
     "approvals": ["exec.approval.requested", "exec.approval.resolved"],
     "lifecycle": ["connect.challenge", "sessions.changed", "shutdown", "tick", "health"]
   },
-
   "responses": {
-    "$comment": "Real payloads, truncated where long. `models.list` is empty because no provider is configured — that emptiness is exactly the shape of the remaining gap.",
+    "$comment": "Real payloads, truncated where long. `models.list` is empty because no provider is configured \u2014 that emptiness is exactly the shape of the remaining gap.",
     "health": {
       "type": "res",
       "ok": true,
@@ -191,7 +205,107 @@
     "modelsList": {
       "type": "res",
       "ok": true,
-      "payload": { "models": [] }
+      "payload": {
+        "models": []
+      }
+    }
+  },
+  "deviceHandshake": {
+    "$comment": [
+      "REAL frames from the SairiOS VM's gateway on 2026-08-09, started the way",
+      "the guest actually starts it:",
+      "",
+      "    openclaw gateway --port 18789",
+      "",
+      "NOT --dev --auth none, which is how the 2026-08-03 capture above was made.",
+      "That difference hid two mandatory gates for months, and both of them",
+      "answer BEFORE any session method is reachable.",
+      "",
+      "Order matters: the gateway checks the device first, then the token. Fixing",
+      "only one of them just moves the error."
+    ],
+    "refusedWithoutDevice": {
+      "type": "res",
+      "ok": false,
+      "error": {
+        "code": "NOT_PAIRED",
+        "message": "device identity required",
+        "details": {
+          "code": "DEVICE_IDENTITY_REQUIRED"
+        }
+      }
+    },
+    "refusedWithoutToken": {
+      "$comment": "Signed device accepted; this is the NEXT gate, not a device failure.",
+      "type": "res",
+      "ok": false,
+      "error": {
+        "code": "INVALID_REQUEST",
+        "message": "unauthorized: gateway token missing (provide gateway auth token)",
+        "details": {
+          "code": "AUTH_TOKEN_MISSING",
+          "authReason": "token_missing",
+          "canRetryWithDeviceToken": false,
+          "recommendedNextStep": "update_auth_configuration"
+        }
+      }
+    },
+    "signedConnectAccepted": {
+      "$comment": "With both: device signature and gateway token.",
+      "type": "res",
+      "ok": true,
+      "payloadKeys": [
+        "type",
+        "protocol",
+        "server",
+        "features",
+        "snapshot",
+        "pluginSurfaceUrls",
+        "auth",
+        "policy"
+      ]
+    },
+    "signatureConstruction": {
+      "$comment": [
+        "Read from OpenClaw's own client bundle (dist/control-ui/assets/",
+        "gateway-*.js). protocol.md documents the device object's SHAPE but not",
+        "what goes into the signature.",
+        "",
+        "Ed25519 over the UTF-8 bytes, signature base64. An absent token is an",
+        "EMPTY FIELD, not an omitted one - the fields are positional."
+      ],
+      "canonical": "v2|deviceId|clientId|clientMode|role|scopes.join(\",\")|signedAtMs|token|nonce",
+      "keyFile": "~/.openclaw/identity/device.json",
+      "tokenPath": "gateway.auth.token in ~/.openclaw/openclaw.json"
+    },
+    "sessionsCreate": {
+      "$comment": [
+        "Accepts empty params. This was assumed to be the missing piece and was",
+        "the one thing that already worked - the blockers were the two gates",
+        "above. Note runStarted:false: creating a session does not start a turn."
+      ],
+      "request": {
+        "type": "req",
+        "id": "2",
+        "method": "sessions.create",
+        "params": {}
+      },
+      "response": {
+        "type": "res",
+        "id": "2",
+        "ok": true,
+        "payload": {
+          "ok": true,
+          "key": "agent:main:dashboard:69f29139-763d-4a90-a368-c93842e024f3",
+          "sessionId": "ab30ad08-45e9-4990-947b-9abf8fdad389",
+          "entry": {
+            "sessionId": "ab30ad08-45e9-4990-947b-9abf8fdad389",
+            "sessionFile": "/home/sairi/.openclaw/agents/main/sessions/ab30ad08-45e9-4990-947b-9abf8fdad389.jsonl",
+            "updatedAt": 1786314666178
+          },
+          "runStarted": false
+        }
+      }
     }
   }
 }

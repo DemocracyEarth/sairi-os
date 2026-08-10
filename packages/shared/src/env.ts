@@ -33,6 +33,10 @@ export interface SairiEnv {
   contextServiceUrl: string;
   permissionBrokerUrl: string;
   openclawGatewayUrl: string;
+  /** OpenClaw's device identity. Signing its challenge is mandatory off --dev. */
+  openclawDeviceFile: string;
+  /** OpenClaw's own config, which holds the gateway token it generated. */
+  openclawConfigFile: string;
   openclawGatewayToken: string | undefined;
   logLevel: string;
 }
@@ -120,6 +124,12 @@ export function readEnv(source: NodeJS.ProcessEnv = process.env): SairiEnv {
     sandboxDir: resolve(source['SAIRIOS_SANDBOX_DIR'] ?? `${dataDir}/sandbox`),
     storeDriver: driver === 'sqlite' || driver === 'json' ? driver : 'auto',
     openclawGatewayUrl: source['OPENCLAW_GATEWAY_URL'] ?? 'ws://127.0.0.1:18789',
+    // OpenClaw's standard locations. Overridable because the bridge and
+    // OpenClaw do not have to run as the same user.
+    openclawDeviceFile:
+      source['OPENCLAW_DEVICE_FILE'] || `${source['HOME'] ?? ''}/.openclaw/identity/device.json`,
+    openclawConfigFile:
+      source['OPENCLAW_CONFIG_FILE'] || `${source['HOME'] ?? ''}/.openclaw/openclaw.json`,
     openclawGatewayToken: source['OPENCLAW_GATEWAY_TOKEN'] || undefined,
     logLevel: source['SAIRIOS_LOG_LEVEL'] ?? 'info',
   };

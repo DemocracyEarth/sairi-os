@@ -23,6 +23,8 @@ const provider: AgentProvider =
     ? new OpenClawAgentProvider({
         gatewayUrl: env.openclawGatewayUrl,
         gatewayToken: env.openclawGatewayToken,
+        deviceIdentityFile: env.openclawDeviceFile,
+        openclawConfigFile: env.openclawConfigFile,
         versionFile: resolve(process.cwd(), 'openclaw/config/version.json'),
         transport: new WsGatewayTransport(),
       })
