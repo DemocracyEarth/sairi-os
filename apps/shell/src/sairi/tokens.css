@@ -40,8 +40,15 @@
  * The light theme is the design; the dark theme is a counterpart, not an
  * inversion. Paper does not become black — the ink and the ground trade roles
  * and every value is re-picked so that contrast ratios and the sense of weight
- * survive the trip. Both honour `prefers-color-scheme`, and `[data-theme]`
- * overrides it in both directions.
+ * survive the trip. `tokens.test.ts` checks that arithmetic rather than trusting
+ * it, in both directions.
+ *
+ * Which theme applies is resolved in JavaScript by `useTheme`, which writes
+ * `light` or `dark` onto `<html data-theme>`. The CSS therefore carries exactly
+ * two palettes and no `prefers-color-scheme` duplicate. The previous wording
+ * here claimed `[data-theme]` overrode the system preference "in both
+ * directions"; it did not — the attribute was only written after an explicit
+ * toggle, so there was no way to force light on a machine set to dark.
  */
 
 /* ---------------------------------------------------------------------------
@@ -102,7 +109,6 @@
   --paper: #f7f6f3;
   --paper-raised: #ffffff;
   --paper-sunk: #efeeea;
-  --paper-deep: #e6e5e0;
   /* Chrome is charcoal, not black: the frame around the work, and the one
      place the interface admits it is a machine. */
   --charcoal: #2a2c30;
@@ -302,44 +308,20 @@
  * Signal orange is lifted a little, because the same orange on charcoal reads
  * muddier than it does on paper.
  */
-@media (prefers-color-scheme: dark) {
-  .sairi:not([data-theme='light']) {
-    --paper: #17181a;
-    --paper-raised: #202124;
-    --paper-sunk: #101113;
-    --charcoal: #0c0d0e;
-    --charcoal-2: #1b1c1f;
-
-    --ink: #edece8;
-    --ink-2: #bab8b1;
-    --ink-3: #9a9890;
-    --ink-4: #84827b;
-
-    --rule: rgb(237 236 232 / 17%);
-    --rule-soft: rgb(237 236 232 / 9%);
-
-    --signal: #f0733a;
-    --signal-deep: #ff9a63;
-    --signal-ink: #f0733a;
-    --signal-wash: rgb(240 115 58 / 14%);
-    --signal-edge: rgb(240 115 58 / 45%);
-
-    --tone-structural: #d6d4ce;
-    --tone-active: #96938c;
-    --tone-relation: #b6b3ac;
-    --tone-conflict: #7e7b74;
-
-    --c-fill: color-mix(in srgb, var(--paper-raised) calc(var(--certainty) * 100%), transparent);
-    --e-1: 0 1px 0 rgb(0 0 0 / 30%);
-    --e-2: 0 1px 2px rgb(0 0 0 / 40%), 0 4px 10px rgb(0 0 0 / 30%);
-    --e-3: 0 2px 4px rgb(0 0 0 / 45%), 0 14px 34px rgb(0 0 0 / 40%);
-
-    color-scheme: dark;
-  }
-}
-
-/* An explicit choice beats the system preference, in both directions. */
-.sairi[data-theme='dark'] {
+/*
+ * The dark palette.
+ *
+ * Scoped from the ROOT, not from `.sairi`. `useTheme` writes the resolved theme
+ * onto `<html>`, which is the only element both this palette and the renderer's
+ * `--sairi-*` palette can see. When this block was `.sairi[data-theme='dark']`
+ * the attribute sat on the surface div, `:root[data-theme='dark']` never
+ * matched, and dark chrome wrapped light panels.
+ *
+ * There is no `prefers-color-scheme` counterpart here on purpose — the same
+ * reason `packages/ui-components/src/tokens.css` has none. A second copy of
+ * twenty-odd values drifts, and this one had already started to.
+ */
+:root[data-theme='dark'] .sairi {
   --paper: #17181a;
   --paper-raised: #202124;
   --paper-sunk: #101113;

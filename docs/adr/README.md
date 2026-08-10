@@ -92,21 +92,22 @@ Small corrections (a broken link, a typo, a wrong path) are fine.
 
 ## Index
 
-| ADR                                                | Title                                                             | Status   |
-| -------------------------------------------------- | ----------------------------------------------------------------- | -------- |
-| [0001](0001-linux-distribution-not-kernel-fork.md) | Build on a Linux distribution, not a kernel fork                  | Accepted |
-| [0002](0002-qemu-for-system-testing.md)            | QEMU for full-system testing, Docker for services                 | Accepted |
-| [0003](0003-declarative-adaptive-ui.md)            | Declarative adaptive UI, never generated code                     | Accepted |
-| [0004](0004-openclaw-behind-agent-bridge.md)       | OpenClaw as a pinned dependency behind the agent bridge           | Accepted |
-| [0005](0005-contexts-as-primary-abstraction.md)    | Contexts as the primary abstraction                               | Accepted |
-| [0006](0006-permission-broker.md)                  | A permission broker mediates every privileged action              | Accepted |
-| [0007](0007-cloud-sync-boundary.md)                | Define the cloud boundary now, ship local-only                    | Accepted |
-| [0008](0008-npm-workspaces-and-typescript.md)      | npm workspaces and TypeScript, Rust where it earns it             | Accepted |
-| [0009](0009-precompiled-schema-validator.md)       | Precompile the SairiUI validator instead of allowing eval         | Accepted |
-| [0010](0010-provider-credential-custody.md)        | SairiOS takes custody of a provider key, and what that costs      | Accepted |
-| [0011](0011-same-origin-service-proxy.md)          | Serve the services from the shell's origin under path prefixes    | Accepted |
-| [0012](0012-voice-as-input-transport.md)           | Voice is an input transport; the microphone belongs to the broker | Accepted |
-| [0013](0013-authenticated-front-door.md)           | One authenticated front door, and a refusal to listen without it  | Accepted |
-| [0014](0014-monochrome-editorial-language.md)      | A monochrome, editorial visual language with one accent           | Accepted |
-| [0015](0015-hosted-inference-gateway.md)           | A hosted inference gateway, so an instance holds no provider key  | Accepted |
-| [0016](0016-self-hosted-typefaces.md)              | The shell serves its own typefaces, for both surfaces at once     | Accepted |
+| ADR                                                  | Title                                                             | Status   |
+| ---------------------------------------------------- | ----------------------------------------------------------------- | -------- |
+| [0001](0001-linux-distribution-not-kernel-fork.md)   | Build on a Linux distribution, not a kernel fork                  | Accepted |
+| [0002](0002-qemu-for-system-testing.md)              | QEMU for full-system testing, Docker for services                 | Accepted |
+| [0003](0003-declarative-adaptive-ui.md)              | Declarative adaptive UI, never generated code                     | Accepted |
+| [0004](0004-openclaw-behind-agent-bridge.md)         | OpenClaw as a pinned dependency behind the agent bridge           | Accepted |
+| [0005](0005-contexts-as-primary-abstraction.md)      | Contexts as the primary abstraction                               | Accepted |
+| [0006](0006-permission-broker.md)                    | A permission broker mediates every privileged action              | Accepted |
+| [0007](0007-cloud-sync-boundary.md)                  | Define the cloud boundary now, ship local-only                    | Accepted |
+| [0008](0008-npm-workspaces-and-typescript.md)        | npm workspaces and TypeScript, Rust where it earns it             | Accepted |
+| [0009](0009-precompiled-schema-validator.md)         | Precompile the SairiUI validator instead of allowing eval         | Accepted |
+| [0010](0010-provider-credential-custody.md)          | SairiOS takes custody of a provider key, and what that costs      | Accepted |
+| [0011](0011-same-origin-service-proxy.md)            | Serve the services from the shell's origin under path prefixes    | Accepted |
+| [0012](0012-voice-as-input-transport.md)             | Voice is an input transport; the microphone belongs to the broker | Accepted |
+| [0013](0013-authenticated-front-door.md)             | One authenticated front door, and a refusal to listen without it  | Accepted |
+| [0014](0014-monochrome-editorial-language.md)        | A monochrome, editorial visual language with one accent           | Accepted |
+| [0015](0015-hosted-inference-gateway.md)             | A hosted inference gateway, so an instance holds no provider key  | Accepted |
+| [0016](0016-self-hosted-typefaces.md)                | The shell serves its own typefaces, for both surfaces at once     | Accepted |
+| [0017](0017-dark-is-a-peer-resolved-in-one-place.md) | Dark stays, as a peer, resolved in exactly one place              | Accepted |
