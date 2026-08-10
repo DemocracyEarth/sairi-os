@@ -1,5 +1,10 @@
 node_modules/
 dist/
+# Agent worktrees: full checkouts of this repository nested inside it. Without
+# this, every ignore rule below has to be matched twice — the patterns here are
+# root-relative, so a nested copy of an already-ignored generated file escapes
+# them and fails format-check for a file nobody edited.
+.claude/worktrees/
 coverage/
 var/
 vm/out/
