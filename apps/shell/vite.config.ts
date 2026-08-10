@@ -129,5 +129,19 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
     target: 'es2022',
+    /**
+     * Never inline an asset as a `data:` URI.
+     *
+     * Vite's default inlines anything under 4096 bytes. The policy above is
+     * `img-src 'self' data:` but `font-src 'self'` — no `data:` — and that
+     * asymmetry is deliberate. So an asset small enough to be inlined becomes a
+     * CSP violation, and the failure is silent: the font simply does not load
+     * and the page falls back to a system face that looks nearly right.
+     *
+     * The fonts are ~45 KB each, so nothing is inlined today. This closes the
+     * gap structurally rather than by luck, the way ADR 0009 closed the
+     * validator-versus-policy gap. Fix the bundler, never the policy.
+     */
+    assetsInlineLimit: 0,
   },
 });

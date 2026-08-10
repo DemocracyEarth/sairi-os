@@ -40,9 +40,66 @@
  * The light theme is the design; the dark theme is a counterpart, not an
  * inversion. Paper does not become black — the ink and the ground trade roles
  * and every value is re-picked so that contrast ratios and the sense of weight
- * survive the trip. Both honour `prefers-color-scheme`, and `[data-theme]`
- * overrides it in both directions.
+ * survive the trip. `tokens.test.ts` checks that arithmetic rather than trusting
+ * it, in both directions.
+ *
+ * Which theme applies is resolved in JavaScript by `useTheme`, which writes
+ * `light` or `dark` onto `<html data-theme>`. The CSS therefore carries exactly
+ * two palettes and no `prefers-color-scheme` duplicate. The previous wording
+ * here claimed `[data-theme]` overrode the system preference "in both
+ * directions"; it did not — the attribute was only written after an explicit
+ * toggle, so there was no way to force light on a machine set to dark.
  */
+
+/* ---------------------------------------------------------------------------
+ * The typefaces, served by the shell itself
+ * ---------------------------------------------------------------------------
+ * "Typography does the heavy lifting" is only true if the typography arrives.
+ * This layer previously named a system stack and relied on the rendering machine
+ * already having the families. That was wrong twice: no Debian suite packages
+ * Inter Tight at all, so the guest never had it; and an operator's own browser,
+ * reaching the shell over the tunnel, has none of the three.
+ *
+ * Serving them is the only mechanism that reaches BOTH surfaces — the guest's
+ * kiosk browser and a remote one — because family resolution happens wherever
+ * the text is laid out, and an HTTP response only names families. The CSP's
+ * `font-src 'self'` permits exactly this and no foreign host, which is the
+ * posture, not an obstacle.
+ *
+ * Latin roman only, one variable file per family. Provenance, digests, licences
+ * and what Inter Tight actually is: fonts/README.md and ADR 0016.
+ */
+@font-face {
+  font-family: 'Inter';
+  /* `format('woff2')`, not `format('woff2-variations')`. The `-variations`
+     token is legacy CSS Fonts 3 syntax, and a browser that does not recognise a
+     format string skips that source entirely — a silent fallback, which is the
+     failure mode this whole change exists to remove. The container format is all
+     the browser needs advertised; it reads the axes from the file's `fvar`. */
+  src: url('./fonts/inter-latin-wght-normal.woff2') format('woff2');
+  /* The real axis range, read from each file's `fvar` table. Declaring wider
+     than the axis makes the browser synthesise weights it could interpolate. */
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter Tight';
+  src: url('./fonts/inter-tight-latin-wght-normal.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('./fonts/jetbrains-mono-latin-wght-normal.woff2') format('woff2');
+  /* 800, not 900. This file's axis stops there. */
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
 
 .sairi {
   /* --- ground ---------------------------------------------------------- *
@@ -50,41 +107,41 @@
    * like scratches and makes black type look like it is floating; a few
    * points of warmth gives the hairlines something to sit on. */
   --paper: #f7f6f3;
-  --paper-raised: #fffefc;
-  --paper-sunk: #eeece7;
+  --paper-raised: #ffffff;
+  --paper-sunk: #efeeea;
   /* Chrome is charcoal, not black: the frame around the work, and the one
      place the interface admits it is a machine. */
-  --charcoal: #26262a;
-  --charcoal-2: #34343a;
+  --charcoal: #2a2c30;
+  --charcoal-2: #3a3d42;
 
   /* --- ink ------------------------------------------------------------- *
    * Four steps, and they are steps rather than a gradient: a reader can tell
    * primary from secondary at a glance only if the gap is decisive. Graphite
    * rather than pure black, which on a bright field reads as a hole. */
-  --ink: #1a1a18;
-  --ink-2: #47453f;
-  --ink-3: #605d55;
-  --ink-4: #6f6c64;
+  --ink: #17181a;
+  --ink-2: #4b4e53;
+  --ink-3: #63666b;
+  --ink-4: #6e7176;
 
   /* Hairlines. `--rule` is meant to be seen; `--rule-soft` is meant to be
      felt. Nothing between them, because a third weight always ends up used
      to avoid a layout decision. */
-  --rule: rgb(26 26 24 / 16%);
-  --rule-soft: rgb(26 26 24 / 8%);
+  --rule: rgb(23 24 26 / 14%);
+  --rule-soft: rgb(23 24 26 / 8%);
 
   /* --- the accent ------------------------------------------------------ *
    * One colour in the entire system. Braun's signal orange, and it appears
    * ONLY where the machine needs a human: an approval waiting, an alert, the
    * live microphone. If it shows up anywhere decorative, delete it — its
    * whole value is that the eye has learned it always means something. */
-  --signal: #d4571f;
-  --signal-deep: #a83d12;
+  --signal: #d46c35;
+  --signal-deep: #a8491a;
   /* Braun's orange is 3.75:1 on paper — right for a mark, too light to read as
      small text. This is the same colour taken down until it passes, and it is
      what the accent must use whenever it is words rather than a shape. */
-  --signal-ink: #b84714;
-  --signal-wash: rgb(212 87 31 / 10%);
-  --signal-edge: rgb(212 87 31 / 42%);
+  --signal-ink: #b4511f;
+  --signal-wash: rgb(212 108 53 / 10%);
+  --signal-edge: rgb(212 108 53 / 42%);
 
   /*
    * `--accent` is a constant now, and that is the whole change.
@@ -164,9 +221,9 @@
    * Slightly rounded rectangles, and much less pill than contemporary SaaS.
    * 3px reads as "cut with care"; 14px reads as a toy. --r-pill exists for the
    * two places a capsule is genuinely right (a status chip, a toggle track). */
-  --r-sm: 2px;
-  --r: 3px;
-  --r-lg: 5px;
+  --r-sm: 3px;
+  --r: 4px;
+  --r-lg: 6px;
   --r-xl: 8px;
   --r-pill: 100px;
 
@@ -185,10 +242,15 @@
   /* --- type ------------------------------------------------------------ *
    * Typography does the heavy lifting, so the scale has real contrast between
    * steps rather than a smooth ramp — display against body is a 2.5× jump.
-   * System stack: nothing to download, no layout shift, and the CSP forbids a
-   * foreign font host anyway. */
-  --font: ui-sans-serif, -apple-system, 'SF Pro Text', 'Segoe UI', Inter, system-ui, sans-serif;
-  --mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace;
+   * The families are served by the shell (see the @font-face block above); the
+   * system names after each are the fallback while the file is in flight. */
+  --font: Inter, ui-sans-serif, -apple-system, 'Segoe UI', system-ui, sans-serif;
+  /* Display gets the tighter cut. Inter Tight is Inter with the sidebearings
+     pulled in — about 8.8% narrower advances — which is what keeps 32px from
+     reading loose. At 13px the difference is invisible, which is why body stays
+     on Inter rather than setting everything tight. */
+  --font-display: 'Inter Tight', Inter, ui-sans-serif, -apple-system, system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
   --t-display: 32px;
   --t-title: 19px;
@@ -199,8 +261,8 @@
 
   /* Tighter as it gets larger, which is what makes a heading look set rather
      than typed. The label tracking is wide because small caps need air. */
-  --track-display: -0.022em;
-  --track-title: -0.014em;
+  --track-display: -0.03em;
+  --track-title: -0.02em;
   --track-label: 0.08em;
   --track-micro: 0.05em;
 
@@ -214,10 +276,10 @@
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.34, 1.4, 0.5, 1);
-  --d-fast: 120ms;
-  --d: 200ms;
+  --d-fast: 140ms;
+  --d: 240ms;
   --d-slow: 380ms;
-  --d-cine: 700ms;
+  --d-cine: 720ms;
 
   --z-bg: 0;
   --z-surface: 10;
@@ -246,44 +308,20 @@
  * Signal orange is lifted a little, because the same orange on charcoal reads
  * muddier than it does on paper.
  */
-@media (prefers-color-scheme: dark) {
-  .sairi:not([data-theme='light']) {
-    --paper: #17181a;
-    --paper-raised: #202124;
-    --paper-sunk: #101113;
-    --charcoal: #0c0d0e;
-    --charcoal-2: #1b1c1f;
-
-    --ink: #edece8;
-    --ink-2: #bab8b1;
-    --ink-3: #9a9890;
-    --ink-4: #84827b;
-
-    --rule: rgb(237 236 232 / 17%);
-    --rule-soft: rgb(237 236 232 / 9%);
-
-    --signal: #f0733a;
-    --signal-deep: #ff9a63;
-    --signal-ink: #f0733a;
-    --signal-wash: rgb(240 115 58 / 14%);
-    --signal-edge: rgb(240 115 58 / 45%);
-
-    --tone-structural: #d6d4ce;
-    --tone-active: #96938c;
-    --tone-relation: #b6b3ac;
-    --tone-conflict: #7e7b74;
-
-    --c-fill: color-mix(in srgb, var(--paper-raised) calc(var(--certainty) * 100%), transparent);
-    --e-1: 0 1px 0 rgb(0 0 0 / 30%);
-    --e-2: 0 1px 2px rgb(0 0 0 / 40%), 0 4px 10px rgb(0 0 0 / 30%);
-    --e-3: 0 2px 4px rgb(0 0 0 / 45%), 0 14px 34px rgb(0 0 0 / 40%);
-
-    color-scheme: dark;
-  }
-}
-
-/* An explicit choice beats the system preference, in both directions. */
-.sairi[data-theme='dark'] {
+/*
+ * The dark palette.
+ *
+ * Scoped from the ROOT, not from `.sairi`. `useTheme` writes the resolved theme
+ * onto `<html>`, which is the only element both this palette and the renderer's
+ * `--sairi-*` palette can see. When this block was `.sairi[data-theme='dark']`
+ * the attribute sat on the surface div, `:root[data-theme='dark']` never
+ * matched, and dark chrome wrapped light panels.
+ *
+ * There is no `prefers-color-scheme` counterpart here on purpose — the same
+ * reason `packages/ui-components/src/tokens.css` has none. A second copy of
+ * twenty-odd values drifts, and this one had already started to.
+ */
+:root[data-theme='dark'] .sairi {
   --paper: #17181a;
   --paper-raised: #202124;
   --paper-sunk: #101113;

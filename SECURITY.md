@@ -293,6 +293,48 @@ Every rule follows from that asymmetry:
 - The gateway transport refuses an unencrypted `ws://` connection to anything
   other than loopback.
 
+### System egress: the hosted provider
+
+Until `SAIRIOS_AGENT_PROVIDER=hosted` existed, SairiOS talked only to loopback,
+and the two statements "no agent egress" and "no egress" were the same
+statement. They are no longer, so the distinction is written down rather than
+left to be inferred from a provider file:
+
+- **No egress on an agent's behalf.** Unchanged, and not negotiable.
+  `network.fetch` stays simulated. An agent still cannot cause a request to a
+  destination it chose.
+- **Egress by the system, when an operator selects it.** The hosted provider
+  sends the intention and the context's id, type and name to a fixed endpoint
+  (`SAIRIOS_GATEWAY_URL`, default `https://gateway.sairi.computer`) and streams
+  the answer back. The destination is configuration, never model output.
+
+What that means in practice, and what it costs:
+
+- **The intention leaves the machine.** Whatever a user types or dictates into
+  a context is sent to the gateway. That is what selecting hosted inference
+  buys, and there is no version of it that keeps the text local.
+- **Context contents do not.** Files, run history, memory and prior documents
+  stay put. The request body is four fields; nothing walks the context.
+- **The instance holds no provider credential.** Only an instance token, which
+  identifies this instance and nothing else. Losing it costs this instance's
+  quota; a leaked provider key would cost the account. That asymmetry is the
+  reason the gateway exists ([ADR 0015](docs/adr/0015-hosted-inference-gateway.md),
+  and [ADR 0010](docs/adr/0010-provider-credential-custody.md) for why a key in
+  an image was never an option).
+- **The token never crosses plaintext.** `transportIsSafe` allows `https`
+  anywhere and `http` only on loopback, and refuses before the request is
+  built rather than after — a bearer token on plain `http` works, which is
+  exactly why nobody notices it is readable by everything on the path.
+- **The response is validated like any other.** SairiOS running the server does
+  not make it a trusted source. Documents are validated in the provider, again
+  in the bridge, again in the renderer. Invariant 4 has no first-party
+  exception, and a compromised gateway is the case this defends.
+- **It is opt-in and off by default.** Mock remains the default provider and
+  still needs no credential, no network and no external process.
+
+The endpoint is **SCAFFOLDING**: the client has never contacted a live gateway,
+because the gateway has not been built. Nothing has been verified end to end.
+
 ### Remote access, and the door in front of it
 
 Reaching SairiOS from another machine used to be described here as a precondition

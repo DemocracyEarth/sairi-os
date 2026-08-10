@@ -17,6 +17,10 @@ export default tseslint.config(
       '**/dist-types/**',
       '**/node_modules/**',
       '**/coverage/**',
+      // Agent worktrees are full checkouts of this repo nested inside it. The
+      // ignores below are root-relative, so a nested copy of a generated file
+      // is linted even though the original is not.
+      '.claude/worktrees/**',
       'var/**',
       'vm/out/**',
       'vm/.cache/**',

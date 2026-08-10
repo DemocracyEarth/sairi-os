@@ -3,6 +3,12 @@ import { validateSairiUI } from '@sairios/adaptive-ui-schema';
 import { isCapability } from '@sairios/context-schema';
 import { fail, newId, ok, type Result } from '@sairios/shared';
 import type { AgentEvent, AgentProvider, IntentionInput, ProviderStatus } from '../provider.js';
+import {
+  assertDevice,
+  readDeviceIdentity,
+  readGatewayToken,
+  type DeviceAssertion,
+} from './device-identity.js';
 
 /**
  * OpenClaw provider — SCAFFOLDING, NOT VERIFIED.
@@ -31,6 +37,21 @@ import type { AgentEvent, AgentProvider, IntentionInput, ProviderStatus } from '
 export interface OpenClawOptions {
   gatewayUrl: string;
   gatewayToken: string | undefined;
+  /**
+   * OpenClaw's device identity, `~/.openclaw/identity/device.json`.
+   *
+   * A gateway not started with `--dev --auth none` refuses `connect` outright
+   * with NOT_PAIRED unless the challenge nonce is signed with this key. See
+   * device-identity.ts.
+   */
+  deviceIdentityFile?: string;
+  /**
+   * OpenClaw's config, `~/.openclaw/openclaw.json`, where it keeps the gateway
+   * token it generated for itself. Consulted only when `gatewayToken` is unset:
+   * onboarding writes the provider key where the bridge can see it and leaves
+   * the gateway token here, so a fully configured machine still had none.
+   */
+  openclawConfigFile?: string;
   /** Path to openclaw/config/version.json for the pin check. */
   versionFile?: string;
   connectTimeoutMs?: number;
@@ -94,7 +115,15 @@ export const CLIENT_IDENTITY = {
 } as const;
 
 /** Builds the `connect` request sent in reply to `connect.challenge`. */
-export function encodeConnect(id: string, version: string, token?: string): string {
+export const GATEWAY_ROLE = 'operator';
+export const GATEWAY_SCOPES = ['operator.read', 'operator.write'] as const;
+
+export function encodeConnect(
+  id: string,
+  version: string,
+  token?: string,
+  device?: DeviceAssertion,
+): string {
   return JSON.stringify({
     type: 'req',
     id,
@@ -103,14 +132,16 @@ export function encodeConnect(id: string, version: string, token?: string): stri
       minProtocol: GATEWAY_PROTOCOL,
       maxProtocol: GATEWAY_PROTOCOL,
       client: { ...CLIENT_IDENTITY, version },
-      role: 'operator',
-      scopes: ['operator.read', 'operator.write'],
+      role: GATEWAY_ROLE,
+      scopes: [...GATEWAY_SCOPES],
       caps: [],
       commands: [],
       permissions: {},
       locale: 'en-US',
       userAgent: `sairios-agent-bridge/${version}`,
       ...(token ? { auth: { token } } : {}),
+      // Absent on a --dev gateway and mandatory on every other one.
+      ...(device ? { device } : {}),
     },
   });
 }
@@ -259,8 +290,16 @@ const codec = {
 
 export class OpenClawAgentProvider implements AgentProvider {
   readonly name = 'openclaw';
-  readonly #options: Required<Omit<OpenClawOptions, 'transport' | 'gatewayToken' | 'versionFile'>> &
-    Pick<OpenClawOptions, 'transport' | 'gatewayToken' | 'versionFile'>;
+  readonly #options: Required<
+    Omit<
+      OpenClawOptions,
+      'transport' | 'gatewayToken' | 'versionFile' | 'deviceIdentityFile' | 'openclawConfigFile'
+    >
+  > &
+    Pick<
+      OpenClawOptions,
+      'transport' | 'gatewayToken' | 'versionFile' | 'deviceIdentityFile' | 'openclawConfigFile'
+    >;
   readonly #sockets = new Map<string, GatewaySocket>();
 
   constructor(options: OpenClawOptions) {
@@ -269,6 +308,8 @@ export class OpenClawAgentProvider implements AgentProvider {
       gatewayToken: options.gatewayToken,
       connectTimeoutMs: options.connectTimeoutMs ?? 5000,
       ...(options.versionFile ? { versionFile: options.versionFile } : {}),
+      ...(options.deviceIdentityFile ? { deviceIdentityFile: options.deviceIdentityFile } : {}),
+      ...(options.openclawConfigFile ? { openclawConfigFile: options.openclawConfigFile } : {}),
       ...(options.transport ? { transport: options.transport } : {}),
     };
   }
@@ -297,10 +338,111 @@ export class OpenClawAgentProvider implements AgentProvider {
     };
   }
 
-  async createSession(_contextId: string): Promise<Result<string>> {
-    if (!this.#options.gatewayToken) {
-      return fail('provider_not_configured', 'OpenClaw gateway token is not set.');
+  /**
+   * The gateway auth token, from the option or from OpenClaw's own config.
+   *
+   * Falling back to the config is the fix for a machine that reports itself
+   * fully configured and cannot connect: `openclaw onboard` writes the PROVIDER
+   * credential where the bridge reads it and keeps the GATEWAY token in its own
+   * file, so `OPENCLAW_GATEWAY_TOKEN` was empty and the gateway answered
+   * AUTH_TOKEN_MISSING — which reads like a setup mistake and is a missing
+   * hand-off.
+   */
+  #token(): string | undefined {
+    if (this.#options.gatewayToken) return this.#options.gatewayToken;
+    const file = this.#options.openclawConfigFile;
+    return file ? readGatewayToken(file) : undefined;
+  }
+
+  /**
+   * connect.challenge -> signed connect -> hello-ok.
+   *
+   * Three failures are worth distinguishing, because each has a different fix
+   * and the gateway's own message does not say which:
+   *
+   *   NOT_PAIRED / DEVICE_IDENTITY_REQUIRED
+   *       no device identity was sent, or this device is not approved. Run
+   *       `openclaw devices approve`.
+   *   AUTH_TOKEN_MISSING
+   *       the device was accepted and there is no gateway token. It lives in
+   *       OpenClaw's own config; see #token.
+   *   anything else
+   *       reported verbatim rather than summarised, because a protocol this
+   *       under-documented is diagnosed from its exact wording.
+   */
+  async #handshake(socket: GatewaySocket): Promise<Result<true>> {
+    const token = this.#token();
+    for await (const raw of socket.messages()) {
+      let frame: Record<string, unknown>;
+      try {
+        frame = JSON.parse(raw) as Record<string, unknown>;
+      } catch {
+        continue;
+      }
+
+      if (isConnectChallenge(frame)) {
+        const payload = frame['payload'] as Record<string, unknown> | undefined;
+        const nonce = typeof payload?.['nonce'] === 'string' ? payload['nonce'] : '';
+        socket.send(encodeConnect('connect', '0.1.0', token, this.#device(nonce, token)));
+        continue;
+      }
+
+      if (frame['type'] === 'res') {
+        if (frame['ok'] === true) return ok(true);
+        const error = frame['error'] as Record<string, unknown> | undefined;
+        const code = String(error?.['code'] ?? 'unknown');
+        const message = String(error?.['message'] ?? 'the gateway refused the connection');
+        const details = error?.['details'] as Record<string, unknown> | undefined;
+        const detailCode = String(details?.['code'] ?? '');
+
+        if (detailCode === 'DEVICE_IDENTITY_REQUIRED') {
+          return fail(
+            'gateway_not_paired',
+            `${message}. SairiOS signs OpenClaw's device identity from ` +
+              `${this.#options.deviceIdentityFile ?? '(no path configured)'}; if that file is ` +
+              'unreadable or this device is not approved, run `openclaw devices approve`.',
+          );
+        }
+        if (detailCode === 'AUTH_TOKEN_MISSING') {
+          return fail(
+            'gateway_token_missing',
+            `${message}. The token lives at gateway.auth.token in ` +
+              `${this.#options.openclawConfigFile ?? '(no path configured)'}, or set ` +
+              'OPENCLAW_GATEWAY_TOKEN.',
+          );
+        }
+        return fail('gateway_refused', `${code}: ${message}`);
+      }
     }
+    return fail('gateway_closed', 'The gateway closed the connection during the handshake.');
+  }
+
+  /** Signs the challenge nonce, when there is an identity to sign it with. */
+  #device(nonce: string, token: string | undefined): DeviceAssertion | undefined {
+    const file = this.#options.deviceIdentityFile;
+    if (!file) return undefined;
+    const identity = readDeviceIdentity(file);
+    if (!identity) return undefined;
+    return assertDevice({
+      identity,
+      clientId: CLIENT_IDENTITY.id,
+      clientMode: CLIENT_IDENTITY.mode,
+      role: GATEWAY_ROLE,
+      scopes: GATEWAY_SCOPES,
+      token,
+      nonce,
+    });
+  }
+
+  /**
+   * Creates a session ON THE GATEWAY.
+   *
+   * This used to mint a local `ses_` id and return it without talking to
+   * anything, so every `sessions.send` that followed named a session the
+   * gateway had never heard of. `sessions.create` is a real advertised method,
+   * it accepts empty params, and it answers with the id to use.
+   */
+  async createSession(_contextId: string): Promise<Result<string>> {
     if (!this.#options.transport) {
       return fail(
         'transport_unavailable',
@@ -352,9 +494,10 @@ export class OpenClawAgentProvider implements AgentProvider {
 
     let socket: GatewaySocket;
     try {
+      const bearer = this.#token();
       socket = await this.#options.transport.connect(
         this.#options.gatewayUrl,
-        { authorization: `Bearer ${this.#options.gatewayToken}` },
+        bearer ? { authorization: `Bearer ${bearer}` } : {},
         this.#options.connectTimeoutMs,
       );
     } catch (cause) {
@@ -370,6 +513,19 @@ export class OpenClawAgentProvider implements AgentProvider {
     }
 
     this.#sockets.set(sessionId, socket);
+
+    // The handshake, which this provider never performed. It used to open a
+    // socket and immediately send the intention, so a gateway that expected
+    // `connect` first saw a stray frame. See #handshake.
+    const opened = await this.#handshake(socket);
+    if (!opened.ok) {
+      socket.close();
+      this.#sockets.delete(sessionId);
+      yield { type: 'error', message: opened.error.message, recoverable: false };
+      yield { type: 'done' };
+      return;
+    }
+
     yield { type: 'session', sessionId };
     yield { type: 'status', status: 'thinking' };
 

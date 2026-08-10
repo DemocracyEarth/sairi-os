@@ -8,7 +8,7 @@ import {
   type FormEvent,
   type JSX,
 } from 'react';
-import { SairiUIRenderer, type SairiUIHost } from '@sairios/ui-components';
+import { SairiUIRenderer, useTheme, type SairiUIHost } from '@sairios/ui-components';
 import { AmbientBackground } from './AmbientBackground.js';
 import { CommandList } from './CommandList.js';
 import { Glyph } from './Glyph.js';
@@ -73,9 +73,21 @@ export function SairiOS(): JSX.Element {
   const [intelOpen, setIntelOpen] = useState(false);
   const [setup, setSetup] = useState<SetupStatusRecord | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
-  /* Explicit appearance beats the system preference, in both directions;
-     `undefined` means "whatever the machine says". */
-  const [theme, setTheme] = useState<'light' | 'dark' | undefined>();
+  /**
+   * Appearance comes from the shared hook, not a private copy.
+   *
+   * This surface used to hold its own `'light' | 'dark' | undefined` state and
+   * read `matchMedia` directly, which broke in a way nobody could see: the
+   * attribute landed on THIS div, while the SairiUI components rendered inside
+   * it read `--sairi-*` tokens whose dark palette is scoped to
+   * `:root[data-theme='dark']`. So dark chrome wrapped light panels — white
+   * cards on a near-black field — and only for a viewer whose system was dark.
+   *
+   * `useTheme` writes the resolved theme onto `<html>`, which both palettes can
+   * see. It also persists the choice and keeps "auto" live, neither of which the
+   * private copy did.
+   */
+  const { resolved: theme, setPreference } = useTheme();
   /* -1 is the resting state: a command is visible but not under the Enter key
      until the user arrows to it. See shouldAutoSelect. */
   const [selected, setSelected] = useState(-1);
@@ -142,10 +154,6 @@ export function SairiOS(): JSX.Element {
     });
   }, []);
 
-  const systemDark =
-    typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches;
-  const effectiveTheme = theme ?? (systemDark ? 'dark' : 'light');
-
   const { contexts, activeId, select } = sairi;
   const commands = useMemo(
     () =>
@@ -154,10 +162,12 @@ export function SairiOS(): JSX.Element {
         activeId,
         onSwitch: select,
         onOpenSetup: () => setWizardOpen(true),
-        onToggleTheme: () => setTheme(effectiveTheme === 'dark' ? 'light' : 'dark'),
-        theme: effectiveTheme,
+        /* Toggling turns "auto" into a decision, which is the point: someone who
+           reaches for this wants a specific appearance, not a rule. */
+        onToggleTheme: () => setPreference(theme === 'dark' ? 'light' : 'dark'),
+        theme,
       }),
-    [contexts, activeId, select, effectiveTheme],
+    [contexts, activeId, select, theme, setPreference],
   );
 
   const matches = useMemo(() => matchCommands(intent, commands), [intent, commands]);
@@ -228,7 +238,10 @@ export function SairiOS(): JSX.Element {
   const pending = Object.values(permissionRecords).filter((r) => r.status === 'pending').length;
 
   return (
-    <div className="sairi s-os" {...(theme ? { 'data-theme': theme } : {})}>
+    // No `data-theme` on this div. `useTheme` puts it on <html>, where the
+    // shell's tokens and the renderer's `--sairi-*` tokens can both see it;
+    // scoping it here is precisely the bug described above.
+    <div className="sairi s-os">
       <AmbientBackground />
 
       {/* ---------------------------------------------------------------- *

@@ -9,6 +9,7 @@ import {
 import { AgentBridge } from './bridge.js';
 import { HttpBrokerClient, HttpContextClient } from './clients.js';
 import { MockAgentProvider } from './providers/mock.js';
+import { HostedAgentProvider } from './providers/hosted.js';
 import { OpenClawAgentProvider } from './providers/openclaw.js';
 import { WsGatewayTransport } from './providers/ws-transport.js';
 import { createAgentBridgeServer } from './server.js';
@@ -19,14 +20,21 @@ const env = readEnv();
 const log = createLogger('agent-bridge');
 
 const provider: AgentProvider =
-  env.agentProvider === 'openclaw'
-    ? new OpenClawAgentProvider({
-        gatewayUrl: env.openclawGatewayUrl,
-        gatewayToken: env.openclawGatewayToken,
-        versionFile: resolve(process.cwd(), 'openclaw/config/version.json'),
-        transport: new WsGatewayTransport(),
+  env.agentProvider === 'hosted'
+    ? new HostedAgentProvider({
+        gatewayUrl: env.hostedGatewayUrl,
+        instanceToken: env.instanceToken,
       })
-    : new MockAgentProvider({ stepDelayMs: 220 });
+    : env.agentProvider === 'openclaw'
+      ? new OpenClawAgentProvider({
+          gatewayUrl: env.openclawGatewayUrl,
+          gatewayToken: env.openclawGatewayToken,
+          deviceIdentityFile: env.openclawDeviceFile,
+          openclawConfigFile: env.openclawConfigFile,
+          versionFile: resolve(process.cwd(), 'openclaw/config/version.json'),
+          transport: new WsGatewayTransport(),
+        })
+      : new MockAgentProvider({ stepDelayMs: 220 });
 
 const bridge = new AgentBridge({
   provider,

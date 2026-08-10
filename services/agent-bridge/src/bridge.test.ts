@@ -310,10 +310,17 @@ describe('openclaw provider', () => {
       }),
       JSON.stringify({ type: 'event', event: 'shutdown', payload: {} }),
     ];
+    // The handshake now comes first. A real gateway opens with
+    // `connect.challenge` and answers the signed `connect` with hello-ok; a
+    // fake that skips it is not a fake of this protocol. See device-identity.ts.
+    const handshake = [
+      JSON.stringify({ type: 'event', event: 'connect.challenge', payload: { nonce: 'n' } }),
+      JSON.stringify({ type: 'res', id: 'connect', ok: true, payload: { type: 'hello-ok' } }),
+    ];
     const socket: GatewaySocket = {
       send: () => {},
       async *messages(): AsyncIterable<string> {
-        for (const frame of frames) yield frame;
+        for (const frame of [...handshake, ...frames]) yield frame;
       },
       close: () => {},
     };
@@ -327,6 +334,48 @@ describe('openclaw provider', () => {
     const events: AgentEvent[] = [];
     for await (const event of provider.run(session.value, input('x'))) events.push(event);
     expect(events.map((e) => e.type)).toEqual(['session', 'status', 'message', 'ui', 'done']);
+  });
+
+  it('reports an unpaired device as a pairing problem, not a generic failure', async () => {
+    // The gateway says "device identity required" and nothing about what to do.
+    // These two errors have completely different fixes, so the provider has to
+    // tell them apart rather than surface the raw message.
+    const refuse = (details: Record<string, string>) => ({
+      send: () => {},
+      async *messages(): AsyncIterable<string> {
+        yield JSON.stringify({
+          type: 'event',
+          event: 'connect.challenge',
+          payload: { nonce: 'n' },
+        });
+        yield JSON.stringify({
+          type: 'res',
+          id: 'connect',
+          ok: false,
+          error: { code: 'NOT_PAIRED', message: 'device identity required', details },
+        });
+      },
+      close: () => {},
+    });
+
+    for (const [details, expected] of [
+      [{ code: 'DEVICE_IDENTITY_REQUIRED' }, 'openclaw devices approve'],
+      [{ code: 'AUTH_TOKEN_MISSING' }, 'gateway.auth.token'],
+    ] as const) {
+      const provider = new OpenClawAgentProvider({
+        gatewayUrl: 'ws://127.0.0.1:18789',
+        gatewayToken: 'token',
+        transport: { connect: async () => refuse(details) as unknown as GatewaySocket },
+      });
+      const session = await provider.createSession(CONTEXT);
+      if (!session.ok) throw new Error('expected a session');
+      const events: AgentEvent[] = [];
+      for await (const e of provider.run(session.value, input('x'))) events.push(e);
+      const error = events.find((e) => e.type === 'error');
+      expect(error && 'message' in error ? error.message : '').toContain(expected);
+      // Never a fabricated document when the handshake failed.
+      expect(events.some((e) => e.type === 'ui')).toBe(false);
+    }
   });
 });
 
