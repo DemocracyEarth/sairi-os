@@ -239,6 +239,7 @@
 
 .s-work__title h1 {
   margin: var(--s-2) 0 var(--s-2);
+  font-family: var(--font-display);
   font-size: var(--t-display);
   font-weight: 600;
   letter-spacing: var(--track-display);

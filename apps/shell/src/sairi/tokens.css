@@ -44,6 +44,56 @@
  * overrides it in both directions.
  */
 
+/* ---------------------------------------------------------------------------
+ * The typefaces, served by the shell itself
+ * ---------------------------------------------------------------------------
+ * "Typography does the heavy lifting" is only true if the typography arrives.
+ * This layer previously named a system stack and relied on the rendering machine
+ * already having the families. That was wrong twice: no Debian suite packages
+ * Inter Tight at all, so the guest never had it; and an operator's own browser,
+ * reaching the shell over the tunnel, has none of the three.
+ *
+ * Serving them is the only mechanism that reaches BOTH surfaces — the guest's
+ * kiosk browser and a remote one — because family resolution happens wherever
+ * the text is laid out, and an HTTP response only names families. The CSP's
+ * `font-src 'self'` permits exactly this and no foreign host, which is the
+ * posture, not an obstacle.
+ *
+ * Latin roman only, one variable file per family. Provenance, digests, licences
+ * and what Inter Tight actually is: fonts/README.md and ADR 0016.
+ */
+@font-face {
+  font-family: 'Inter';
+  /* `format('woff2')`, not `format('woff2-variations')`. The `-variations`
+     token is legacy CSS Fonts 3 syntax, and a browser that does not recognise a
+     format string skips that source entirely — a silent fallback, which is the
+     failure mode this whole change exists to remove. The container format is all
+     the browser needs advertised; it reads the axes from the file's `fvar`. */
+  src: url('./fonts/inter-latin-wght-normal.woff2') format('woff2');
+  /* The real axis range, read from each file's `fvar` table. Declaring wider
+     than the axis makes the browser synthesise weights it could interpolate. */
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter Tight';
+  src: url('./fonts/inter-tight-latin-wght-normal.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('./fonts/jetbrains-mono-latin-wght-normal.woff2') format('woff2');
+  /* 800, not 900. This file's axis stops there. */
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
 .sairi {
   /* --- ground ---------------------------------------------------------- *
    * Warm off-white rather than #fff. A pure white field makes 1px rules look
@@ -186,12 +236,13 @@
   /* --- type ------------------------------------------------------------ *
    * Typography does the heavy lifting, so the scale has real contrast between
    * steps rather than a smooth ramp — display against body is a 2.5× jump.
-   * System stack: nothing to download, no layout shift, and the CSP forbids a
-   * foreign font host anyway. */
+   * The families are served by the shell (see the @font-face block above); the
+   * system names after each are the fallback while the file is in flight. */
   --font: Inter, ui-sans-serif, -apple-system, 'Segoe UI', system-ui, sans-serif;
-  /* Display wants the tighter cut. Falls through to Inter, which every machine
-     that matters already has, rather than pulling a webfont: the CSP is
-     `font-src 'self'` and the guest installs both families from apt. */
+  /* Display gets the tighter cut. Inter Tight is Inter with the sidebearings
+     pulled in — about 8.8% narrower advances — which is what keeps 32px from
+     reading loose. At 13px the difference is invisible, which is why body stays
+     on Inter rather than setting everything tight. */
   --font-display: 'Inter Tight', Inter, ui-sans-serif, -apple-system, system-ui, sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
