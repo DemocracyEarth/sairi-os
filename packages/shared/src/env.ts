@@ -9,7 +9,7 @@ import { resolve } from 'node:path';
  *     (`mock` mode) — never a startup failure.
  */
 
-export type AgentProviderName = 'mock' | 'openclaw';
+export type AgentProviderName = 'mock' | 'openclaw' | 'hosted';
 export type StoreDriver = 'sqlite' | 'json' | 'auto';
 
 export interface SairiEnv {
@@ -38,6 +38,14 @@ export interface SairiEnv {
   /** OpenClaw's own config, which holds the gateway token it generated. */
   openclawConfigFile: string;
   openclawGatewayToken: string | undefined;
+  /** Base URL of the hosted SairiOS gateway. Must be https off loopback. */
+  hostedGatewayUrl: string;
+  /**
+   * Identifies this instance to the hosted gateway. NOT a provider credential:
+   * losing it costs this instance's quota, not the account. That asymmetry is
+   * why the gateway exists at all — see providers/hosted.ts.
+   */
+  instanceToken: string | undefined;
   logLevel: string;
 }
 
@@ -98,7 +106,7 @@ export function readEnv(source: NodeJS.ProcessEnv = process.env): SairiEnv {
   const brokerPort = num(source['SAIRIOS_PERMISSION_BROKER_PORT'], 7803);
 
   return {
-    agentProvider: provider === 'openclaw' ? 'openclaw' : 'mock',
+    agentProvider: provider === 'openclaw' || provider === 'hosted' ? provider : 'mock',
     // `||`, not `??`. `SAIRIOS_BIND_HOST=` with no value yields '', and
     // `listen(port, '')` binds EVERY interface — so the nullish form turned a
     // blank line in a `.env` into an exposed service. The comment below already
@@ -131,6 +139,8 @@ export function readEnv(source: NodeJS.ProcessEnv = process.env): SairiEnv {
     openclawConfigFile:
       source['OPENCLAW_CONFIG_FILE'] || `${source['HOME'] ?? ''}/.openclaw/openclaw.json`,
     openclawGatewayToken: source['OPENCLAW_GATEWAY_TOKEN'] || undefined,
+    hostedGatewayUrl: source['SAIRIOS_GATEWAY_URL'] || 'https://gateway.sairi.computer',
+    instanceToken: source['SAIRIOS_INSTANCE_TOKEN'] || undefined,
     logLevel: source['SAIRIOS_LOG_LEVEL'] ?? 'info',
   };
 }
@@ -149,7 +159,16 @@ export interface StartupCheck {
 export function startupChecks(env: SairiEnv): StartupCheck[] {
   const checks: StartupCheck[] = [];
 
-  if (env.agentProvider === 'mock') {
+  if (env.agentProvider === 'hosted') {
+    checks.push({
+      name: 'agent-provider',
+      status: env.instanceToken ? 'ok' : 'warn',
+      detail: env.instanceToken
+        ? `hosted inference at ${env.hostedGatewayUrl}; this instance holds no provider credential`
+        : 'hosted provider selected but SAIRIOS_INSTANCE_TOKEN is empty. This instance cannot ' +
+          'identify itself, so no turn can run.',
+    });
+  } else if (env.agentProvider === 'mock') {
     checks.push({
       name: 'agent-provider',
       status: 'ok',

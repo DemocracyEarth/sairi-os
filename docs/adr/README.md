@@ -108,3 +108,4 @@ Small corrections (a broken link, a typo, a wrong path) are fine.
 | [0012](0012-voice-as-input-transport.md)           | Voice is an input transport; the microphone belongs to the broker | Accepted |
 | [0013](0013-authenticated-front-door.md)           | One authenticated front door, and a refusal to listen without it  | Accepted |
 | [0014](0014-monochrome-editorial-language.md)      | A monochrome, editorial visual language with one accent           | Accepted |
+| [0015](0015-hosted-inference-gateway.md)           | A hosted inference gateway, so an instance holds no provider key  | Accepted |
