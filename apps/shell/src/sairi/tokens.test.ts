@@ -334,12 +334,50 @@ describe('pulling focus stays readable and stays cheap', () => {
     expect(sairiCss).not.toMatch(/-webkit-backdrop-filter/);
   });
 
-  it('answers prefers-reduced-transparency, not just reduced-motion', () => {
+  it('tracks focus on the form, never on the input alone', () => {
+    // The bug this replaces: the command list and the microphone are SIBLINGS of
+    // the field inside the form, so an input-level onBlur dropped the veil the
+    // moment anyone clicked a command — killing the effect during the exact
+    // interaction it exists to support.
+    expect(surfaceCode).toMatch(/onBlur=\{\(e\)/);
+    expect(surfaceCode).toMatch(/currentTarget\.contains\(e\.relatedTarget/);
+    // The handler must not sit on the input.
+    const input = surfaceCode.slice(surfaceCode.indexOf('s-command__input'));
+    expect(input.slice(0, input.indexOf('/>'))).not.toMatch(/onBlur|onFocus/);
+  });
+
+  it('never veils a claim on the user attention', () => {
+    // --signal computes to 1.86:1 light and 2.34:1 dark behind the veil, under
+    // the 3:1 a non-text mark needs. A pending permission request must not be
+    // dimmed by the effect meant to direct attention.
+    expect(surfaceCode).toMatch(/const claiming =/);
+    expect(surfaceCode).toMatch(/pending > 0/);
+    expect(surfaceCode).toMatch(/focused && !claiming/);
+  });
+
+  it('does not transition the blur radius', () => {
+    // Cost is flat in radius on a software rasteriser — 4px costs what 20px
+    // costs — so animating it spends a convolution per frame and buys nothing.
+    const supports = sairiCss.slice(sairiCss.indexOf('@supports (backdrop-filter'));
+    expect(supports).not.toMatch(/transition:[^;]*backdrop-filter/);
+  });
+
+  it('answers a transparency query the guest actually knows', () => {
     // The gap this closes: all four reduced-motion blocks clamp durations only,
     // so a veil and a blur would have snapped fully on for someone who asked for
     // less of exactly this.
     const veilRules = sairiCss.slice(sairiCss.indexOf('.s-veil'));
     expect(veilRules).toMatch(/@media \(prefers-reduced-transparency: reduce\)/);
+    // The correct query is absent from the guest's WebKit, so on its own it is
+    // dead code on the only machine this ships to. prefers-contrast is present.
+    expect(veilRules).toMatch(/\(prefers-contrast: more\)/);
+  });
+
+  it('never scales a text-bearing element', () => {
+    // A fractional scale resamples glyphs. On a software rasteriser the bar
+    // reads as having gone slightly out of focus at the moment it took focus.
+    const field = sairiCss.slice(sairiCss.indexOf('.s-os.is-focused .s-command__field'));
+    expect(field.slice(0, field.indexOf('}'))).not.toMatch(/scale\(/);
   });
 
   it('animates nothing that costs a layout, save one recorded exception', () => {

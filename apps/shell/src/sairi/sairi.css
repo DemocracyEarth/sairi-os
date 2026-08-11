@@ -943,17 +943,19 @@
  */
 @supports (backdrop-filter: blur(2px)) {
   .s-veil {
-    backdrop-filter: blur(0px);
-    transition:
-      opacity var(--d) var(--ease-out),
-      backdrop-filter var(--d) var(--ease-out);
+    /* The RADIUS never animates, and that is a measurement rather than a
+       preference: blur cost on a software rasteriser is flat in radius — 4px
+       costs what 20px costs — so a transition buys nothing and spends a full
+       convolution per frame for the whole duration. Only the opacity travels;
+       the blur is simply present or absent, and the fade hides the switch. */
+    backdrop-filter: blur(10px);
+    transition: opacity var(--d) var(--ease-out);
   }
 
   /* Blur carries the recession here, so the veil carries less of it — which
      leaves more contrast behind on the engines that can afford both. */
   .s-os.is-focused .s-veil {
     opacity: calc(var(--veil) * 0.5);
-    backdrop-filter: blur(10px);
   }
 }
 
@@ -964,7 +966,15 @@
  * clamps durations, so it would have let both snap fully on. Without the veil the
  * bar still gains weight and lift below, which is the part that carries meaning.
  */
-@media (prefers-reduced-transparency: reduce) {
+/*
+ * `prefers-reduced-transparency` is the correct query and it is ABSENT from the
+ * guest's engine — verified, the string does not appear in its WebKit at all — so
+ * on the one machine SairiOS runs on, that block alone would be dead code.
+ * `prefers-contrast` IS present there, and someone asking for more contrast is
+ * not asking for a contrast-destroying veil. Both are honoured, so the escape
+ * hatch works on the guest and on a modern browser.
+ */
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
   .s-veil {
     display: none;
   }
@@ -977,9 +987,12 @@
 }
 
 .s-os.is-focused .s-command__field {
-  /* Rises and gains a hair of scale. The veil makes the field recede; without
-     this the bar merely survives the recession instead of owning it. */
-  transform: translate3d(0, -3px, 0) scale(1.006);
+  /* Rises by a WHOLE pixel and nothing else. A fractional scale on an element
+     full of text means resampled glyphs, and on a software rasteriser that reads
+     as a bar that went slightly out of focus at the moment it took focus — the
+     opposite of the intent. The elevation below does the work the scale was
+     reaching for. */
+  transform: translate3d(0, -3px, 0);
   border-color: var(--ink-3);
   box-shadow: var(--e-lift);
 }

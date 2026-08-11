@@ -30,10 +30,42 @@ only for direct children of `.s-os`, so wrapping the three regions in one
 blurrable container destroys the grid. Blurring them individually means three
 software convolution passes of roughly a viewport each, per frame, on an ARM VM.
 
-The frame cost was **not measured**. An attempt to benchmark it in a nested
-`weston` failed because the headless backend never presents, so
-`requestAnimationFrame` never fired at all. That absence is recorded here rather
-than papered over: the guest is excluded by construction, not by benchmark.
+And it was **measured**, in the end. A first attempt failed —
+`requestAnimationFrame` fired zero times in 10 seconds, because weston's headless
+backend never presents — so the cost was obtained instead by timing SVG
+`feGaussianBlur` rasterisations on an otherwise idle guest, cross-checked against
+`/proc` CPU accounting to within 3%:
+
+| what                              | per rasterisation | against a 16.67 ms frame |
+| --------------------------------- | ----------------- | ------------------------ |
+| near-full-viewport blur           | 37.4–41.0 ms      | **2.2–2.5×**             |
+| ~16% of the viewport, blurred     | 22.3–24.6 ms      | **1.15–1.5×**            |
+| the same content unfiltered       | 3.4–3.8 ms        | 23%                      |
+| translucent full-screen scrim     | 1.88 ms           | 11%                      |
+| **opaque** full-screen fill       | 0.062 ms          | 0.4%                     |
+| panel opacity+transform crossfade | 0.064 ms          | 0.4%                     |
+
+Three things in that table decided the design:
+
+**A full-screen blur cannot hold 60fps on the guest** — it is 2.2–2.5× the entire
+budget for the blur pass alone, before style, layout, text paint or the
+compositor's own pixman pass. The implied ceiling is roughly 24–27fps.
+
+**Blur cost is flat in radius.** 4px costs what 20px costs, across a 5× range, in
+two independent cache-free runs — the signature of a fixed-pass box-blur whose
+cost tracks buffer size. So "use a subtler blur" is not a mitigation, and
+animating the radius spends a full convolution per frame to buy nothing. The
+radius is therefore snapped, never transitioned; only opacity travels.
+
+**And the veil itself is affordable but not free.** A translucent scrim is 1.88 ms
+against 0.062 ms for an opaque fill — a 30× gap, because translucency forces a
+read-modify-write over every pixel. 11% of a frame for a state that changes twice
+per interaction is a fair price; it would not be if it ran every frame.
+
+The blur was confirmed to be actually rendering rather than silently dropped:
+pixel readback showed the test pattern flattening as radius rose. A measurement
+built on Canvas 2D `ctx.filter` would have reported a fabricated near-zero — that
+property does not exist in this engine and accepts the assignment anyway.
 
 ## Decision
 
@@ -73,18 +105,22 @@ machine that cannot afford it.
 
 It is a capability proxy for performance, and it should be read as one. If a
 future engine supports the unprefixed property but paints it slowly, this gate
-will let it through.
+will let it through. The measurements above say what it is standing in for.
 
 Where the blur applies, the veil carries **less** opacity — the blur does the
 receding — which leaves more contrast behind on the engines that can afford both.
 
 **The bar rises.** Recession alone made the field retreat without making the bar
-the protagonist, which is what was actually asked for. On focus it lifts 3px,
-gains a hair of scale, takes `--ink-3` on its hairline, and steps up to a new
-`--e-lift` elevation. Transform, border-colour and box-shadow only.
+the protagonist, which is what was actually asked for. On focus it lifts a whole
+3px, takes `--ink-3` on its hairline, and steps up to a new `--e-lift` elevation.
+Transform, border-colour and box-shadow only — and a WHOLE-pixel translate with no
+scale, because a fractional scale resamples the glyphs inside it and makes the bar
+look slightly out of focus at the instant it takes focus.
 
-**`prefers-reduced-transparency` removes the veil entirely.** This is the query
-that actually governs a veil and a blur. All four `prefers-reduced-motion` blocks
+**`prefers-reduced-transparency` removes the veil entirely, and so does
+`prefers-contrast: more`.** The first is the query that actually governs a veil and
+a blur; the second is there because the first is absent from the guest's engine, so
+alone it would be dead code on the only machine this ships to. All four `prefers-reduced-motion` blocks
 in the tree clamp `animation-duration`, `animation-iteration-count` and
 `transition-duration` and nothing else — so under reduced motion a veil would have
 snapped fully on rather than being suppressed. Without the veil the bar still
@@ -100,6 +136,9 @@ lifts and gains weight, which is the part that carries the meaning.
 - The recession is arithmetic, and a regression in either theme fails the build
   with the ratio in the message.
 - `prefers-reduced-transparency` now exists in this codebase, where it did not.
+- The veil yields to a claim on the user's attention: `--signal` computes to 1.86:1
+  behind it, so a pending permission request would have been dimmed by the effect
+  meant to direct attention. `claiming` prevents that.
 
 **Negative — accepted**
 
@@ -113,6 +152,12 @@ lifts and gains weight, which is the part that carries the meaning.
 - **Background text is deliberately unreadable while focused.** Justified above,
   but it is a real departure and it is written down rather than assumed.
 - **The gate is a proxy.** See above.
+- **`prefers-reduced-transparency` does not exist in the guest's engine.** The
+  string is absent from its WebKit entirely, so that query alone would be dead
+  code on the one machine this ships to. `prefers-contrast: more` rides the same
+  block, since someone asking for more contrast is not asking for a
+  contrast-destroying veil — but it is a proxy for a different intent, and the
+  correct query only starts working there when the engine is updated.
 
 ## Also fixed, because a motion pass is the right time
 
@@ -145,7 +190,27 @@ transitions a layout property except the one recorded exception. The
 layout-transition assertion was checked by breaking it on purpose.
 
 Captured on the guest console with the focus state forced on: the field recedes
-and the bar lifts with a visible shadow. Not verified: the blur path, which by
-construction cannot appear on the guest and needs a modern browser to see; the
-transition itself, since a screenshot has no time axis; and the frame cost, which
-remains unmeasured.
+and the bar lifts with a visible shadow. The frame costs in the table above were
+measured on the guest, twice, cache-free, with CPU cross-checks.
+
+Not verified: the blur path, which by construction cannot appear on the guest and
+needs a modern browser to see; the transition itself, since a screenshot has no
+time axis; and the compositor's own pixman pass and scanout, which sit outside
+what a page can time — so the paint figures are a floor for the real cost, not the
+whole of it.
+
+## Corrected after the fact
+
+The first version of this ADR, and the commit that landed it, said the frame cost
+"was not measured" and that the guest was "excluded by construction, not by
+benchmark". That was true when written and is no longer. The numbers arrived
+afterwards and vindicated the decision rather than changing it; the claim is
+corrected here rather than left standing.
+
+The same review found four defects in the first implementation, all now fixed:
+focus was tracked on the input while the command list and microphone are its
+siblings, so clicking either dropped the veil mid-interaction; the bar carried a
+fractional `scale(1.006)`, which resamples glyphs on a software rasteriser; the
+blur radius was transitioned; and the veil dimmed `--signal` to 1.86:1, meaning a
+pending permission request could be hidden by the effect meant to direct
+attention. The last of those is why `claiming` exists.

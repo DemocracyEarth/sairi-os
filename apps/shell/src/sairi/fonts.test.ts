@@ -142,20 +142,6 @@ describe('the display token is actually used', () => {
     expect(consumers.length).toBeGreaterThan(0);
   });
 
-  /**
-   * Dead CSS from a component deleted earlier: it sets the display size but
-   * renders nowhere, so requiring the display family of it would be noise. The
-   * exclusion is named rather than silent, and the test below asserts the rule
-   * still exists — so whoever removes the dead CSS gets a failure telling them
-   * to remove this exclusion with it, instead of leaving a carve-out for a
-   * selector that no longer exists.
-   */
-  const DEAD_RULE = '.s-assembly__intent';
-
-  it('has exactly one exclusion, and it is still real', () => {
-    expect(sairi).toContain(DEAD_RULE);
-  });
-
   it('is consumed by every rule that sets the display size', () => {
     // A heading at --t-display in the body family is the exact bug that hid
     // here before: right size, wrong cut, invisible unless you know.
@@ -166,7 +152,7 @@ describe('the display token is actually used', () => {
       for (const block of css.split(/^\}/m)) {
         const setsDisplaySize =
           block.includes('var(--t-display)') || block.includes('var(--track-display)');
-        if (!setsDisplaySize || block.includes(DEAD_RULE)) continue;
+        if (!setsDisplaySize) continue;
         expect(block, `${name}: display-sized rule without var(--font-display)`).toContain(
           'var(--font-display)',
         );
