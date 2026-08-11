@@ -88,6 +88,19 @@ export function SairiOS(): JSX.Element {
    * private copy did.
    */
   const { resolved: theme, setPreference } = useTheme();
+  /**
+   * Whether the intention field has the floor.
+   *
+   * Drives the veil and the bar's promotion. Kept as state rather than read from
+   * `:focus-within` in CSS because the veil is a sibling of the three regions,
+   * not a descendant of the bar — there is no selector from the focused input up
+   * to a layer above the workspace.
+   *
+   * It follows the DOM's own focus events, so the three programmatic moves come
+   * along for free: ⌘K focuses, a landed transcript refocuses, and `submit`
+   * blurs. Nothing has to remember to set this.
+   */
+  const [focused, setFocused] = useState(false);
   /* -1 is the resting state: a command is visible but not under the Enter key
      until the user arrows to it. See shouldAutoSelect. */
   const [selected, setSelected] = useState(-1);
@@ -241,8 +254,13 @@ export function SairiOS(): JSX.Element {
     // No `data-theme` on this div. `useTheme` puts it on <html>, where the
     // shell's tokens and the renderer's `--sairi-*` tokens can both see it;
     // scoping it here is precisely the bug described above.
-    <div className="sairi s-os">
+    <div className={`sairi s-os${focused ? ' is-focused' : ''}`}>
       <AmbientBackground />
+
+      {/* The veil. Absolute, so it is out of grid flow — the same escape
+          `.s-ambient` uses, and the reason it can sit above all three regions
+          without being one of them. */}
+      <div aria-hidden="true" className="s-veil" />
 
       {/* ---------------------------------------------------------------- *
        * Navigation
@@ -398,7 +416,9 @@ export function SairiOS(): JSX.Element {
             aria-expanded={matches.length > 0}
             aria-label="What do you want to accomplish, or a command"
             className="s-command__input"
+            onBlur={() => setFocused(false)}
             onChange={(e) => setIntent(e.target.value)}
+            onFocus={() => setFocused(true)}
             onKeyDown={(e) => {
               if (matches.length === 0) return;
               if (e.key === 'ArrowDown') {

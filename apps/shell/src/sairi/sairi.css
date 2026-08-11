@@ -521,10 +521,15 @@
 .s-conv__fill {
   position: absolute;
   inset: 0 auto 0 0;
-  width: calc(var(--v) * 100%);
+  /* `scaleX` rather than `width`, and `translateX` rather than `left` below.
+     Both used to transition a LAYOUT property for 720ms on every convergence
+     change, which is rule 1 at the top of this file being broken on screen. */
+  width: 100%;
+  transform: scaleX(var(--v));
+  transform-origin: left center;
   border-radius: 2px;
   background: linear-gradient(90deg, color-mix(in srgb, var(--tone) 30%, transparent), var(--tone));
-  transition: width var(--d-cine) var(--ease-out);
+  transition: transform var(--d-cine) var(--ease-out);
 }
 
 /* The meridian: where this context currently sits between question and answer. */
@@ -535,6 +540,12 @@
   left: calc(var(--v) * 100%);
   width: 1px;
   background: var(--tone);
+  /* STILL transitions a layout property, and knowingly. A 1px rule cannot be
+     moved by a transform without a width reference: percentage translateX is
+     relative to the element's own 1px, and container-query units are unverified
+     on the guest's engine. The fill above — the expensive half, a full-width
+     repaint — is now transform-only; this is one hairline. Left as an honest
+     exception rather than shipping an unverified trick. */
   transition: left var(--d-cine) var(--ease-out);
 }
 
@@ -871,6 +882,107 @@
 }
 
 /* ------------------------------------------------------------- command */
+
+/* ------------------------------------------------------------------------ *
+ * Pulling focus
+ *
+ * When the intention field takes focus, the field behind it recedes and the bar
+ * becomes the protagonist. The brief asks for attention to land on the one thing
+ * that matters; this is that, drawn the way the rest of the language is drawn.
+ *
+ * ADR 0014 banned blur outright, and rule 2 above still holds for STRUCTURE —
+ * no frosted panels, nothing permanently glassy. This is a transient, deliberate
+ * pull of focus, closer to a lens than to a material, and it is recorded as a
+ * narrow exception in ADR 0018 rather than a quiet reversal.
+ *
+ * Three things make it cheap enough to run on a software-rendered guest:
+ *
+ *   1. ONE element. The veil cannot wrap the three regions — `grid-area` only
+ *      resolves for direct children of `.s-os`, so a wrapper would destroy the
+ *      layout, and filtering each region separately means three software
+ *      convolution passes. Absolute positioning takes this out of grid flow the
+ *      same way `.s-ambient` already does.
+ *   2. Only opacity and transform animate. Nothing here triggers layout.
+ *   3. The blur is opt-in per engine. See the @supports below.
+ * ------------------------------------------------------------------------ */
+
+.s-veil {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-veil);
+  background: var(--paper);
+  opacity: 0;
+  /* The interface stays usable while veiled: a click lands on what it looks
+     like it lands on, and taking focus away dismisses the veil anyway. */
+  pointer-events: none;
+  transition: opacity var(--d) var(--ease-out);
+}
+
+.s-os.is-focused .s-veil {
+  opacity: var(--veil);
+}
+
+/*
+ * The blur, only where it is affordable.
+ *
+ * `backdrop-filter` UNPREFIXED is the gate, and that is not an accident: the
+ * guest's engine (WPE WebKit 2.38, Safari 16-era) drops the unprefixed property
+ * at parse time and understands only `-webkit-backdrop-filter`, while every
+ * engine new enough to composite this cheaply supports the unprefixed form. So
+ * the query that asks "do you understand modern backdrop-filter" also answers
+ * "are you new enough to paint it" — no UA sniffing, no version list.
+ *
+ * The `-webkit-` prefix is deliberately NOT included. Adding it would switch the
+ * blur back on for exactly the engine that cannot afford it, on a machine with no
+ * GPU and compositing disabled by the session.
+ *
+ * This is a capability proxy for performance, not a measurement. The frame cost
+ * on the guest was never measured — weston's headless backend never presents, so
+ * requestAnimationFrame never fires there — which is why the guest is excluded by
+ * construction rather than by benchmark.
+ */
+@supports (backdrop-filter: blur(2px)) {
+  .s-veil {
+    backdrop-filter: blur(0px);
+    transition:
+      opacity var(--d) var(--ease-out),
+      backdrop-filter var(--d) var(--ease-out);
+  }
+
+  /* Blur carries the recession here, so the veil carries less of it — which
+     leaves more contrast behind on the engines that can afford both. */
+  .s-os.is-focused .s-veil {
+    opacity: calc(var(--veil) * 0.5);
+    backdrop-filter: blur(10px);
+  }
+}
+
+/*
+ * Someone who asks for less transparency gets none.
+ *
+ * This is the query that actually governs a veil and a blur; reduced-motion only
+ * clamps durations, so it would have let both snap fully on. Without the veil the
+ * bar still gains weight and lift below, which is the part that carries meaning.
+ */
+@media (prefers-reduced-transparency: reduce) {
+  .s-veil {
+    display: none;
+  }
+}
+
+/* The bar becomes the protagonist: it lifts, and its hairline gains weight the
+   way a resolved surface does. Transform and border only. */
+.s-command__field {
+  transform: translate3d(0, 0, 0);
+}
+
+.s-os.is-focused .s-command__field {
+  /* Rises and gains a hair of scale. The veil makes the field recede; without
+     this the bar merely survives the recession instead of owning it. */
+  transform: translate3d(0, -3px, 0) scale(1.006);
+  border-color: var(--ink-3);
+  box-shadow: var(--e-lift);
+}
 
 .s-command {
   grid-area: command;
