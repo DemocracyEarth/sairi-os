@@ -69,7 +69,23 @@ const PAYLOAD: Partial<Record<Capability, unknown>> = {
   'clipboard.write': { content: 'hello' },
   'notifications.send': { message: 'hello' },
   'audio.capture': { purpose: 'dictate an intention' },
+  /*
+   * Points at the file `files.write` seeds above, with the true digest of its
+   * contents — so this exercises the whole path rather than bouncing off
+   * `invalid_payload` or `not_found`, either of which would look like a refusal
+   * and prove nothing.
+   */
+  'agent.relay': {
+    from: 'mock.analyst',
+    to: 'mock.editor',
+    path: 'note.txt',
+    sha256: '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824',
+    bytes: 5,
+  },
 };
+
+/** Capabilities that need an artifact on disk before they can do anything. */
+const SEEDS_A_FILE = new Set<Capability>(['files.read', 'files.delete', 'agent.relay']);
 
 describe('every capability describes itself the same way twice', () => {
   it('has a descriptor for each declared capability, and no extras', () => {
@@ -84,9 +100,9 @@ describe('every capability describes itself the same way twice', () => {
     it(`${capability}: the approval prompt and the outcome agree`, async () => {
       const ctx = await makeContext();
 
-      // Read and delete need something to act on, or they fail for lack of a
-      // file and the disagreement would be invisible.
-      if (capability === 'files.read' || capability === 'files.delete') {
+      // Read, delete and relay need something to act on, or they fail for lack
+      // of a file and the disagreement would be invisible.
+      if (SEEDS_A_FILE.has(capability)) {
         await executeAction('files.write', PAYLOAD['files.write'], ctx);
       }
 
@@ -122,14 +138,14 @@ describe('the capability arithmetic', () => {
    * in policy.ts and `simulated` in actions.ts give different totals when they
    * disagree.
    */
-  it('is five real, six simulated, one unimplemented', async () => {
+  it('is six real, six simulated, one unimplemented', async () => {
     let real = 0;
     let simulated = 0;
     let unimplemented = 0;
 
     for (const capability of CAPABILITIES) {
       const ctx = await makeContext();
-      if (capability === 'files.read' || capability === 'files.delete') {
+      if (SEEDS_A_FILE.has(capability)) {
         await executeAction('files.write', PAYLOAD['files.write'], ctx);
       }
       const result = await executeAction(capability, PAYLOAD[capability] ?? {}, ctx);
@@ -139,16 +155,21 @@ describe('the capability arithmetic', () => {
     }
 
     expect({ real, simulated, unimplemented, total: CAPABILITIES.length }).toEqual({
-      real: 5,
+      real: 6,
       simulated: 6,
       unimplemented: 1,
-      total: 12,
+      total: 13,
     });
   });
 
-  it('names the five that do something real', () => {
+  it('names the six that do something real', () => {
     const real = CAPABILITIES.filter((c) => CAPABILITY_DESCRIPTORS[c].realSideEffect);
     expect([...real].sort()).toEqual([
+      // Real in the same split as audio.capture: the broker authorises the hop
+      // and verifies the artifact, but does not deliver it — this package has no
+      // HTTP client and no handle to an agent. Delivery is the receiving agent's
+      // own files.read, which the user approves separately.
+      'agent.relay',
       // Real in a different sense from the other four, and the difference is
       // documented on its descriptor: the broker authorises this one rather than
       // performing it, because the microphone is attached to the browser's

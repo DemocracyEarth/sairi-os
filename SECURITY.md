@@ -125,9 +125,45 @@ Properties that hold by construction:
 - **There is no unrestricted shell.** `process.execute` is denied by default
   _and_ unimplemented: it returns `not_implemented` even if execution is reached.
 
+#### Agent-to-agent handover
+
+`agent.relay` hands an artifact from one agent to another, and it is the one
+capability whose danger is not what it touches but what it enables: piping one
+agent's output into another's input is how a single prompt injection becomes a
+chain of them.
+
+Four properties, none of which is a matter of prompting:
+
+- **No text crosses.** A relay carries a reference — sandbox-relative path,
+  SHA-256, byte length — and never content. The receiving agent must spend its
+  own `files.read`, so the artifact crosses under Boundary 3 and produces a
+  second, separately audited decision. There is deliberately no instruction
+  channel to defend, because SairiOS does not build the receiving agent's prompt
+  and therefore could not enforce one.
+- **The digest is checked at execution.** The artifact that crosses is the
+  artifact that was approved; one swapped between approval and execution fails.
+- **A relayed context stops honouring remembered grants.** Policy keys on
+  (capability, context) and a grant carries no agent, so without this a
+  permission approved to serve one agent is inherited by whichever agent was
+  relayed in. After a hop, everything asks again.
+- **One hop.** A context that received a relay cannot originate one. A depth
+  budget would bound nothing — depth three with a fan-out of five is 155 hops —
+  and any counter carried in the payload is a counter the proposer controls, so
+  the rule is structural and the state is broker-owned.
+
+`agent.relay` is also in the bridge's `NEVER_RELAY` list: a relayed approval is
+performed in OpenClaw's process, which would skip every control above while the
+audit trail said the user approved a relay.
+
+It is **denied by default**, and not because the machinery is unfinished. A hop
+is not recoverable, and the approval surface renders capability, risk and reason
+but not the artifact, the digest or the destination. Approving what you cannot
+see is theatre. The default becomes `ask` when `agent.relay` has an approval view
+that shows what actually crosses.
+
 Default policies:
 
-**Five of the twelve capabilities do something real. Six are simulated. One is
+**Six of the thirteen capabilities do something real. Six are simulated. One is
 unimplemented.** Every row below says which, because describing only a
 capability's _scope_ is what let a wrong count into three documents.
 
@@ -138,6 +174,7 @@ capability's _scope_ is what let a wrong count into three documents.
 | `files.delete`         | **deny** | **real**      | deletes a real file, sandbox only, non-recursive            |
 | `system.settings.read` | allow    | **real**      | returns live SairiOS settings. No env, no host, no secrets  |
 | `audio.capture`        | ask      | **real**      | authorises one dictation; the browser captures, not SairiOS |
+| `agent.relay`          | **deny** | **real**      | verifies an artifact and records a hop; delivers nothing    |
 | `process.list`         | allow    | simulated     | SairiOS services only — host processes are never enumerated |
 | `network.fetch`        | ask      | simulated     | no socket is opened                                         |
 | `browser.open`         | ask      | simulated     | nothing is launched                                         |
@@ -314,7 +351,12 @@ What that means in practice, and what it costs:
   a context is sent to the gateway. That is what selecting hosted inference
   buys, and there is no version of it that keeps the text local.
 - **Context contents do not.** Files, run history, memory and prior documents
-  stay put. The request body is four fields; nothing walks the context.
+  stay put. The request body is four fields; nothing walks the context. This
+  describes the hosted PROVIDER path only. `agent.relay` is a separate,
+  denied-by-default capability by which a user can deliberately hand one
+  artifact to another agent — see "Agent-to-agent handover" above. Even then the
+  relay itself moves nothing; the receiving agent reads the file under its own
+  grant.
 - **The instance holds no provider credential.** Only an instance token, which
   identifies this instance and nothing else. Losing it costs this instance's
   quota; a leaked provider key would cost the account. That asymmetry is the

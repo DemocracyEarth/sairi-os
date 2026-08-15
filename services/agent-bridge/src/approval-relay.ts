@@ -54,7 +54,20 @@ export interface RelayOutcome {
  * project: unrestricted execution is not a feature SairiOS offers, and an
  * approval prompt is not a substitute for not having built it.
  */
-const NEVER_RELAY: readonly Capability[] = ['process.execute'];
+const NEVER_RELAY: readonly Capability[] = [
+  'process.execute',
+  /*
+   * `agent.relay` is here because relaying THE RELAY inverts the whole design.
+   * A relayed approval is one OpenClaw raises and then performs in its own
+   * process; SairiOS records the decision and never touches the artifact. So an
+   * approved agent.relay would produce a hop that skipped the broker's digest
+   * check, its sandbox resolution, its taint and its one-hop rule — every
+   * control that makes the capability safe — while the audit trail said the
+   * user approved a relay. The one capability that must never be performed by
+   * anyone but the broker is the one that hands work to another agent.
+   */
+  'agent.relay',
+];
 
 /**
  * Decides whether a relayed approval may skip the user.

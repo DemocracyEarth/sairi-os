@@ -55,6 +55,25 @@ function capabilityEnum(node: unknown): string[] | undefined {
   return undefined;
 }
 
+/**
+ * Capabilities a MODEL may not name, and why.
+ *
+ * The SairiUI schema is the boundary between model output and the screen, so its
+ * enum answers a different question from the context schema's: not "does this
+ * capability exist" but "may an agent-authored document mention it". Those
+ * differ, and the difference has to be deliberate and written down — the last
+ * time these enums disagreed it was an accident that rejected whole documents
+ * for a year.
+ *
+ * `agent.relay` is excluded. It hands work to another agent, its default policy
+ * is `deny`, and it has no approval view worth reading yet. A document naming it
+ * could only ask the user to approve a hop whose details the approval surface
+ * cannot show. It goes in when that view exists.
+ */
+const NOT_MODEL_NAMEABLE: Record<string, readonly string[]> = {
+  'packages/adaptive-ui-schema/src/schema/sairi-ui.schema.json': ['agent.relay'],
+};
+
 const SCHEMAS = {
   'the SairiUI protocol': 'packages/adaptive-ui-schema/src/schema/sairi-ui.schema.json',
   'the context schema': 'packages/context-schema/src/schema/context.schema.json',
@@ -67,9 +86,25 @@ describe('every schema knows every capability', () => {
       expect(listed, `${path} has no capability enum — did it move?`).toBeDefined();
       // Sorted: the schemas may order them for reading, and order is not the
       // thing that matters. Membership is.
-      expect([...(listed as string[])].sort()).toEqual([...CAPABILITIES].sort());
+      const excluded = NOT_MODEL_NAMEABLE[path] ?? [];
+      const expected = CAPABILITIES.filter((c) => !excluded.includes(c));
+      expect([...(listed as string[])].sort()).toEqual([...expected].sort());
     });
   }
+
+  it('keeps every exclusion real, so the carve-outs cannot outlive their reason', () => {
+    // An exception list naming a capability that no longer exists is a silent
+    // hole: the enum would then be free to drop a real capability under cover of
+    // a stale carve-out.
+    for (const [path, excluded] of Object.entries(NOT_MODEL_NAMEABLE)) {
+      for (const capability of excluded) {
+        expect(
+          CAPABILITIES as readonly string[],
+          `${path} excludes "${capability}", which is not a capability`,
+        ).toContain(capability);
+      }
+    }
+  });
 
   it('finds the enum by content, so renaming the $def cannot silence this', () => {
     // The locator above matches on a member rather than on a key name. If it

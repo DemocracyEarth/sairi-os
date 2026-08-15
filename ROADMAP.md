@@ -24,7 +24,7 @@ subsystems.
 - [x] Crystallization with allow-list sanitization and a user-visible preview
 - [x] SairiUI declarative protocol: JSON Schema, sixteen-component audited catalog
 - [x] Whole-document validation with a safe error state
-- [x] Permission broker: observation / proposal / execution, twelve capabilities,
+- [x] Permission broker: observation / proposal / execution, thirteen capabilities,
       four grant scopes, policy re-check at execution, append-only audit log
 - [x] Sandbox path containment, symlink-aware
 - [x] Context service with SQLite (`node:sqlite`) and JSON stores
@@ -120,7 +120,7 @@ commit history.
 
 Not bugs to be discovered later; they are listed because they are already known.
 
-- **Six of the twelve capabilities are simulated**, five do real work
+- **Six of the thirteen capabilities are simulated**, six do real work
   (`files.read`, `files.write`, `files.delete`, `system.settings.read`,
   `audio.capture`), and `process.execute` is unimplemented. Pinned by
   `capability-honesty.test.ts` rather than by counting greps — counting greps is
@@ -133,7 +133,7 @@ Not bugs to be discovered later; they are listed because they are already known.
 
 - ~~Two flags disagree about `system.settings.read`.~~ Fixed. `policy.ts` now
   says `realSideEffect: true`, matching the outcome, and
-  `capability-honesty.test.ts` executes all twelve capabilities to assert the
+  `capability-honesty.test.ts` executes all thirteen capabilities to assert the
   approval-time claim and the post-execution claim agree. Verified to fail when
   the bug is reintroduced.
 - ~~A granted permission cannot be revoked.~~ Fixed: `POST /policies/revoke`
