@@ -8,7 +8,7 @@
 # This image runs one background service for development. It is not SairiOS.
 #
 # The broker is the only component allowed to execute a capability, and it
-# separates observation, proposal and execution across the 11 capabilities
+# separates observation, proposal and execution across the 13 capabilities
 # (files.read files.write files.delete process.list process.execute
 # network.fetch browser.open clipboard.read clipboard.write
 # notifications.send system.settings.read). There is no unrestricted shell

@@ -4,6 +4,7 @@ import type { Capability } from '@sairios/context-schema';
 import { fail, newId, ok, systemClock, type Clock, type Result } from '@sairios/shared';
 import { type SairiEnv } from '@sairios/shared/node';
 import { executeAction, type ActionOutcome } from './actions.js';
+import { RelayLedger } from './relay.js';
 import { NO_REQUEST, type AuditRecord, type AuditSink } from './audit.js';
 import {
   CAPABILITY_DESCRIPTORS,
@@ -89,6 +90,11 @@ export class PermissionBroker {
   readonly #policyFile: string | undefined;
   readonly #requests = new Map<string, PermissionRequest>();
   #remembered: RememberedDecision[] = [];
+  /**
+   * Which contexts have received a relay. Broker-owned, never read from a
+   * payload — a counter the proposer writes is a counter the attacker sets.
+   */
+  readonly #relays = new RelayLedger();
 
   constructor(options: BrokerOptions) {
     this.#env = options.env;
@@ -121,7 +127,30 @@ export class PermissionBroker {
   }
 
   effectivePolicy(capability: Capability, contextId: string) {
-    return resolvePolicy(capability, contextId, this.policySnapshot());
+    const resolved = resolvePolicy(capability, contextId, this.policySnapshot());
+    /*
+     * THE TAINT. After a relay, remembered grants stop resolving in that
+     * context and everything falls back to asking.
+     *
+     * `resolvePolicy` keys on (capability, contextId) and `PermissionGrant`
+     * carries no agent, so a grant the human approved to serve one agent's
+     * stated purpose is inherited verbatim by whichever agent was relayed in —
+     * a different principal, working from a task the human never read. Without
+     * this, a relay launders permission and the audit trail still shows a
+     * capability the user did approve.
+     *
+     * A remembered DENY is left alone: denial is sticky by design everywhere
+     * else in this file, and re-asking a question the user already answered
+     * with "no" would be the one downgrade that annoys rather than protects.
+     */
+    if (
+      this.#relays.tainted(contextId) &&
+      resolved.decision === 'allow' &&
+      resolved.source !== 'default'
+    ) {
+      return { decision: 'ask' as const, source: resolved.source };
+    }
+    return resolved;
   }
 
   // --- phase 2: proposal ---------------------------------------------------
@@ -144,6 +173,17 @@ export class PermissionBroker {
       return fail('invalid_context_id', 'A valid context id is required to attribute this action.');
     }
     const capability = input.capability;
+    /*
+     * ONE HOP, checked before policy so no amount of remembered permission gets
+     * past it. A depth counter would bound nothing — depth three with a fan-out
+     * of five is a hundred and fifty-five relays, all "within budget" — and
+     * cycle detection over agent ids is defeated by naming a new id for the same
+     * endpoint. A structural rule needs no arithmetic and trusts no counter.
+     */
+    if (capability === 'agent.relay') {
+      const refusal = this.#relays.refuse(input.contextId);
+      if (refusal) return fail('relay_chain_refused', refusal);
+    }
     const descriptor = CAPABILITY_DESCRIPTORS[capability];
     const resolved = this.effectivePolicy(capability, input.contextId);
 
@@ -316,6 +356,13 @@ export class PermissionBroker {
     });
 
     request.executedAt = this.#clock.isoNow();
+
+    // Recorded only on a hop that really ran. A proposal, a denial or a failed
+    // execution must not taint a context — that would let anyone degrade a
+    // context's permissions by proposing relays that never happen.
+    if (outcome.ok && request.capability === 'agent.relay') {
+      this.#relays.record(request.contextId);
+    }
 
     if (!outcome.ok) {
       request.status = 'failed';

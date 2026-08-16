@@ -194,6 +194,241 @@ describe('the two palettes stay peers', () => {
   });
 });
 
+describe('a filled accent control stays readable', () => {
+  /**
+   * `--signal` is a mark, not a ground for words. White on Braun orange is
+   * 3.50:1, and the primary button's label is 12px — so `--signal-fill` and
+   * `--on-signal` exist, and both must flip with the theme. Dark's fill is a
+   * LIGHT orange, where white was 2.09:1 and dark ink is 8.51:1.
+   */
+  it.each([
+    ['light', LIGHT],
+    ['dark', DARK],
+  ])('%s: the label clears AA on the fill', (name, P) => {
+    const ratio = contrast(P['on-signal'] as string, P['signal-fill'] as string);
+    expect(
+      ratio,
+      `${name}: --on-signal on --signal-fill is ${ratio.toFixed(2)}:1`,
+    ).toBeGreaterThanOrEqual(AA_BODY);
+  });
+
+  it('never puts a hard-coded white label on the raw accent again', () => {
+    // The regression, in both themes at once: `background: var(--signal)` with
+    // `color: #fff` reads as brand-correct and fails AA in light and badly in
+    // dark, where the accent is lighter than the ground.
+    const sairiCss = code(readFileSync(join(here, 'sairi.css'), 'utf8'));
+    for (const rule of sairiCss.split(/^\}/m)) {
+      if (!/background:\s*var\(--signal\)\s*;/.test(rule)) continue;
+      expect(rule, 'white label on the raw accent').not.toMatch(/color:\s*#fff/i);
+    }
+  });
+});
+
+describe('the sign-in page speaks the same language', () => {
+  /**
+   * The door is a string in a Node script, outside the Vite build, so its
+   * colours are literals. That copy is checked here rather than trusted — it
+   * had already drifted a whole palette, shipping dark navy and a violet button
+   * long after the shell became monochrome, and it is the first screen a remote
+   * operator sees.
+   */
+  const door = readFileSync(join(here, '..', '..', 'access.mjs'), 'utf8');
+
+  it('uses the light palette values, not a set of its own', () => {
+    for (const token of ['paper', 'ink', 'ink-3', 'ink-4', 'signal-fill', 'signal-ink'] as const) {
+      expect(door, `the door does not use --${token} (${LIGHT[token]})`).toContain(
+        LIGHT[token] as string,
+      );
+    }
+  });
+
+  it('uses the dark palette values for its dark counterpart', () => {
+    // A media query is correct on this page: there is no JavaScript to resolve
+    // a preference before paint. Same reason os/branding/palette.css keeps one.
+    expect(door).toMatch(/@media\s*\(prefers-color-scheme:\s*dark\)/);
+    for (const token of ['paper', 'paper-raised', 'ink', 'signal-fill', 'on-signal'] as const) {
+      expect(door, `the door's dark block does not use --${token} (${DARK[token]})`).toContain(
+        DARK[token] as string,
+      );
+    }
+  });
+
+  it('carries no trace of the palette it came from', () => {
+    // Dark navy ground, violet button, salmon error text.
+    for (const ghost of ['#070b1d', '#6d5efc', '#ff8a7a']) {
+      expect(door, `${ghost} is from the spectral palette`).not.toContain(ghost);
+    }
+  });
+
+  it('does not try to load a webfont it cannot reach', () => {
+    // The vendored faces sit at content-hashed /assets paths behind this very
+    // door. A @font-face here would 401, and widening PUBLIC_PATHS to serve
+    // typography would trade a real boundary for a heading.
+    expect(door).not.toMatch(/@font-face|\.woff2|fonts\.googleapis\.com/);
+  });
+});
+
+describe('pulling focus stays readable and stays cheap', () => {
+  const sairiCss = code(readFileSync(join(here, 'sairi.css'), 'utf8'));
+
+  /** A paper-coloured veil at `alpha` over `ink`. The ground is unchanged. */
+  function veiled(P: Record<string, string>, ink: string, alpha: number): string {
+    const [v, u] = [P['paper'] as string, ink].map((h) =>
+      [0, 2, 4].map((i) => Number.parseInt(h.replace('#', '').slice(i, i + 2), 16)),
+    ) as [number[], number[]];
+    const mix = v.map((c, i) => Math.round(alpha * c + (1 - alpha) * (u[i] as number)));
+    return `#${mix.map((c) => c.toString(16).padStart(2, '0')).join('')}`;
+  }
+
+  const veil = (P: Record<string, string>, block: string): number => {
+    const found = /--veil:\s*([0-9.]+)/.exec(block);
+    expect(found, 'no --veil token').not.toBeNull();
+    return Number.parseFloat((found as RegExpExecArray)[1] as string);
+  };
+
+  it.each([
+    ['light', LIGHT, LIGHT_SELECTOR],
+    ['dark', DARK, DARK_SELECTOR],
+  ])('%s: keeps the strongest ink legible under the veil', (name, P, selector) => {
+    // The veil is paper-coloured, so the ground does not move and only the ink
+    // recedes. A heading must survive it — you should never lose your place
+    // while stating an intention — even though fainter steps deliberately do not.
+    const alpha = veil(P, block(selector));
+    const ratio = contrast(veiled(P, P['ink'] as string, alpha), P['paper'] as string);
+    expect(ratio, `${name}: --ink under the veil is ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(
+      AA_LARGE,
+    );
+  });
+
+  it.each([
+    ['light', LIGHT, LIGHT_SELECTOR],
+    ['dark', DARK, DARK_SELECTOR],
+  ])('%s: actually recedes, rather than being a veil in name only', (name, P, selector) => {
+    // The opposite failure: an alpha so timid the effect is invisible, which
+    // fails the request as surely as an unreadable one fails the users.
+    const alpha = veil(P, block(selector));
+    const before = contrast(P['ink-3'] as string, P['paper'] as string);
+    const after = contrast(veiled(P, P['ink-3'] as string, alpha), P['paper'] as string);
+    expect(after, `${name}: body ink barely moved`).toBeLessThan(before * 0.6);
+  });
+
+  it('sits above the regions and below everything still being read', () => {
+    // The bar, the command list and the microphone pip all live at --z-command
+    // or higher, which is what keeps them lit over the veil with no exceptions.
+    const z = (name: string): number => {
+      const found = new RegExp(`--z-${name}:\\s*(\\d+)`).exec(tokens);
+      expect(found, `no --z-${name} token`).not.toBeNull();
+      return Number.parseInt((found as RegExpExecArray)[1] as string, 10);
+    };
+    expect(z('veil')).toBeGreaterThan(z('intel'));
+    expect(z('veil')).toBeLessThan(z('command'));
+  });
+
+  it('gates the blur on the UNPREFIXED property, and never adds the prefix', () => {
+    // The gate is the whole progressive-enhancement mechanism: the guest's engine
+    // drops unprefixed `backdrop-filter` at parse time and understands only
+    // `-webkit-`, so asking for the modern spelling excludes exactly the machine
+    // that cannot afford to paint it. Adding the prefix would switch it back on
+    // there — no GPU, compositing disabled by the session.
+    expect(sairiCss).toMatch(/@supports \(backdrop-filter: blur\(/);
+    expect(sairiCss).not.toMatch(/-webkit-backdrop-filter/);
+  });
+
+  it('tracks focus on the form, never on the input alone', () => {
+    // The bug this replaces: the command list and the microphone are SIBLINGS of
+    // the field inside the form, so an input-level onBlur dropped the veil the
+    // moment anyone clicked a command — killing the effect during the exact
+    // interaction it exists to support.
+    expect(surfaceCode).toMatch(/onBlur=\{\(e\)/);
+    expect(surfaceCode).toMatch(/currentTarget\.contains\(e\.relatedTarget/);
+    // The handler must not sit on the input.
+    const input = surfaceCode.slice(surfaceCode.indexOf('s-command__input'));
+    expect(input.slice(0, input.indexOf('/>'))).not.toMatch(/onBlur|onFocus/);
+  });
+
+  it('never veils a claim on the user attention', () => {
+    // --signal computes to 1.86:1 light and 2.34:1 dark behind the veil, under
+    // the 3:1 a non-text mark needs. A pending permission request must not be
+    // dimmed by the effect meant to direct attention.
+    expect(surfaceCode).toMatch(/const claiming =/);
+    expect(surfaceCode).toMatch(/pending > 0/);
+    expect(surfaceCode).toMatch(/focused && !claiming/);
+  });
+
+  it('does not transition the blur radius', () => {
+    // Cost is flat in radius on a software rasteriser — 4px costs what 20px
+    // costs — so animating it spends a convolution per frame and buys nothing.
+    const supports = sairiCss.slice(sairiCss.indexOf('@supports (backdrop-filter'));
+    expect(supports).not.toMatch(/transition:[^;]*backdrop-filter/);
+  });
+
+  it('answers a transparency query the guest actually knows', () => {
+    // The gap this closes: all four reduced-motion blocks clamp durations only,
+    // so a veil and a blur would have snapped fully on for someone who asked for
+    // less of exactly this.
+    const veilRules = sairiCss.slice(sairiCss.indexOf('.s-veil'));
+    expect(veilRules).toMatch(/@media \(prefers-reduced-transparency: reduce\)/);
+    // The correct query is absent from the guest's WebKit, so on its own it is
+    // dead code on the only machine this ships to. prefers-contrast is present.
+    expect(veilRules).toMatch(/\(prefers-contrast: more\)/);
+  });
+
+  it('never scales a text-bearing element', () => {
+    // A fractional scale resamples glyphs. On a software rasteriser the bar
+    // reads as having gone slightly out of focus at the moment it took focus.
+    const field = sairiCss.slice(sairiCss.indexOf('.s-os.is-focused .s-command__field'));
+    expect(field.slice(0, field.indexOf('}'))).not.toMatch(/scale\(/);
+  });
+
+  it('animates nothing that costs a layout, save one recorded exception', () => {
+    /*
+     * Rule 1 at the top of sairi.css. The convergence meter's FILL broke it for
+     * 720ms on every convergence change until this pass — a full-width repaint,
+     * now `scaleX`.
+     *
+     * `left` and `right` are in the list deliberately. An earlier version of this
+     * test omitted them and therefore passed while the meridian still transitioned
+     * `left` — a test that looked strict and checked nothing. The meridian is the
+     * one allowed offender, named so that it cannot be joined by others silently,
+     * and it is asserted to still exist so the carve-out cannot outlive it.
+     */
+    const LAYOUT = [
+      'width',
+      'height',
+      'top',
+      'bottom',
+      'left',
+      'right',
+      'margin',
+      'padding',
+      'inset',
+    ];
+    const ALLOWED = '.s-conv__meridian';
+    const offenders: string[] = [];
+    let sawAllowed = false;
+
+    for (const rule of sairiCss.split(/^\}/m)) {
+      const transition = /transition:\s*([^;]+);/.exec(rule);
+      if (!transition) continue;
+      const properties = LAYOUT.filter((property) =>
+        new RegExp(`(^|[\\s,])${property}\\s`).test(transition[1] as string),
+      );
+      if (properties.length === 0) continue;
+      if (rule.includes(ALLOWED)) {
+        sawAllowed = true;
+        continue;
+      }
+      offenders.push(`${properties.join('+')} in ${rule.trim().split('\n')[0]}`);
+    }
+
+    expect(offenders).toEqual([]);
+    expect(
+      sawAllowed,
+      `${ALLOWED} no longer transitions a layout property — drop the carve-out`,
+    ).toBe(true);
+  });
+});
+
 describe('the dark palette can be reached by both token systems', () => {
   it('is scoped from the root, not from the surface element', () => {
     // The bug this replaces: with the attribute on the `.sairi` div, the

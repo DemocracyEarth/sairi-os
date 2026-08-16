@@ -3,6 +3,7 @@ import { dirname } from 'node:path';
 import type { Capability } from '@sairios/context-schema';
 import { fail, ok, toSairiError, type Result } from '@sairios/shared';
 import { type SairiEnv } from '@sairios/shared/node';
+import { buildRelayEnvelope, digestOf } from './relay.js';
 import type { Sandbox } from './sandbox.js';
 
 /**
@@ -73,6 +74,73 @@ async function runAction(
   ctx: ActionContext,
 ): Promise<Result<ActionOutcome>> {
   switch (capability) {
+    case 'agent.relay': {
+      /*
+       * The whole hop, and note what is absent: nothing is sent anywhere.
+       *
+       * This authorises and records a handover. Delivery is the receiving
+       * agent's own `files.read`, which is a separate proposal the user also
+       * sees — so the artifact crosses under path containment and a second
+       * audited decision rather than through a channel invented here.
+       *
+       * The broker could not deliver it in any case: this package depends on
+       * exactly `@sairios/context-schema` and `@sairios/shared`, has no HTTP
+       * client, and `ActionContext` carries no handle to an agent. That is the
+       * same split `audio.capture` uses — the broker authorises, something else
+       * performs — and it is recorded in SECURITY.md rather than left implicit.
+       */
+      const envelope = buildRelayEnvelope(payload);
+      if (!envelope.ok) return envelope;
+
+      const resolved = await ctx.sandbox.resolvePath(ctx.contextId, envelope.value.path);
+      if (!resolved.ok) return resolved;
+      if (!(await ctx.sandbox.isFile(resolved.value))) {
+        return fail('not_found', `No artifact at "${envelope.value.path}" in this sandbox.`);
+      }
+
+      const content = await readFile(resolved.value);
+      if (content.byteLength > MAX_READ_BYTES) {
+        return fail('too_large', `Artifact exceeds the ${MAX_READ_BYTES} byte limit.`);
+      }
+
+      /*
+       * The digest is the point of the reference. Without it the approval names
+       * a path, and a path can hold different bytes a moment later — the user
+       * would be approving a filename rather than a file. With it, the artifact
+       * that crosses is exactly the artifact that was described.
+       */
+      const actual = digestOf(content);
+      if (actual !== envelope.value.sha256) {
+        return fail(
+          'digest_mismatch',
+          'The artifact does not match the digest that was approved. It changed, or the ' +
+            'digest was wrong when the relay was proposed.',
+        );
+      }
+      if (content.byteLength !== envelope.value.bytes) {
+        return fail(
+          'size_mismatch',
+          `The artifact is ${content.byteLength} bytes; the relay declared ${envelope.value.bytes}.`,
+        );
+      }
+
+      return ok({
+        capability,
+        simulated: false,
+        summary: `Handed ${envelope.value.path} from ${envelope.value.from} to ${envelope.value.to}`,
+        detail: {
+          from: envelope.value.from,
+          to: envelope.value.to,
+          path: envelope.value.path,
+          sha256: actual,
+          bytes: content.byteLength,
+          /* Said plainly, because the audit trail is read by people. */
+          delivered: false,
+          note: 'The receiving agent must read this file under its own files.read grant.',
+        },
+      });
+    }
+
     case 'files.read': {
       const rel = readString(payload, 'path');
       if (!rel.ok) return rel;

@@ -137,7 +137,7 @@ fresh clone must set up, build, test and run offline with no API key. This is ho
 contributors get started, how CI runs, and how anyone reproduces a bug without paying for
 tokens. If a change makes the app require a credential to boot, the change is wrong.
 
-**(d) Privileged actions keep going through the permission broker.** All 11 capabilities
+**(d) Privileged actions keep going through the permission broker.** All 13 capabilities
 (`files.read`, `files.write`, `files.delete`, `process.list`, `process.execute`,
 `network.fetch`, `browser.open`, `clipboard.read`, `clipboard.write`, `notifications.send`,
 `system.settings.read`) are mediated by the broker, with `allow`, `ask` or `deny` policies and

@@ -26,6 +26,19 @@ export const DEFAULT_POLICIES: Readonly<Record<Capability, PolicyDecision>> = {
   // were never asked. 'ask' rather than 'deny' only because push-to-talk makes
   // the grant legible: one key press, one utterance, one audit entry.
   'audio.capture': 'ask',
+  /**
+   * 'deny', and not because the machinery is unfinished — it is implemented and
+   * tested. A relay is not recoverable: once another agent holds the artifact,
+   * no later decision takes it back. Approving that meaningfully means seeing
+   * WHICH agent, WHICH artifact and WHICH digest, and the approval surface
+   * renders only capability, risk and reason today. An approval that cannot
+   * show what crosses is theatre, and a default of 'ask' would be asking the
+   * user to perform it.
+   *
+   * This becomes 'ask' in the commit that gives agent.relay its own approval
+   * view. One line, deliberately not taken early.
+   */
+  'agent.relay': 'deny',
 };
 
 export type RiskLevel = 'low' | 'medium' | 'high';
@@ -178,6 +191,23 @@ export const CAPABILITY_DESCRIPTORS: Readonly<Record<Capability, CapabilityDescr
     // the outcome is fabricated. Marking it simulated would tell the user that
     // nothing happened while their microphone indicator is lit, which is the
     // worse of the two lies available here.
+    realSideEffect: true,
+  },
+  'agent.relay': {
+    capability: 'agent.relay',
+    summary: 'Hand a file from this context to another agent, so it can carry on the work.',
+    risk: 'high',
+    v0Behaviour:
+      "Verifies that the named artifact exists in this context's sandbox and that its contents " +
+      'match the digest and byte length that were approved, then records the hop. No text is ' +
+      'carried: the receiving agent must spend its own files.read grant to open the file, which ' +
+      'is a second decision you also see. Afterwards this context stops honouring remembered ' +
+      'grants — every later action asks again — and cannot start another relay.',
+    // Real. It reads the artifact off disk to hash it, and it changes how this
+    // context is governed from then on. Nothing about the outcome is fabricated.
+    // What it does NOT do is invoke the receiving agent; delivery is that
+    // agent's own files.read, which is the point of the design rather than an
+    // omission, and the summary above says so in the words the user reads.
     realSideEffect: true,
   },
 };

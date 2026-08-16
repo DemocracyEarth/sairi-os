@@ -88,6 +88,19 @@ export function SairiOS(): JSX.Element {
    * private copy did.
    */
   const { resolved: theme, setPreference } = useTheme();
+  /**
+   * Whether the intention field has the floor.
+   *
+   * Drives the veil and the bar's promotion. Kept as state rather than read from
+   * `:focus-within` in CSS because the veil is a sibling of the three regions,
+   * not a descendant of the bar — there is no selector from the focused input up
+   * to a layer above the workspace.
+   *
+   * It follows the DOM's own focus events, so the three programmatic moves come
+   * along for free: ⌘K focuses, a landed transcript refocuses, and `submit`
+   * blurs. Nothing has to remember to set this.
+   */
+  const [focused, setFocused] = useState(false);
   /* -1 is the resting state: a command is visible but not under the Enter key
      until the user arrows to it. See shouldAutoSelect. */
   const [selected, setSelected] = useState(-1);
@@ -237,12 +250,29 @@ export function SairiOS(): JSX.Element {
 
   const pending = Object.values(permissionRecords).filter((r) => r.status === 'pending').length;
 
+  /**
+   * The veil never covers a claim on the user's attention.
+   *
+   * `--signal` is the one colour in the system and it means the machine needs a
+   * human. Behind the veil it computes to 1.86:1 in light and 2.34:1 in dark —
+   * under the 3:1 a non-text mark needs — so a pending permission request would
+   * have been dimmed by the very effect meant to direct attention. Composing the
+   * next intention is not more important than an approval that is waiting.
+   */
+  const claiming = pending > 0 || contexts.some((c) => c.status === 'waiting');
+  const veiled = focused && !claiming;
+
   return (
     // No `data-theme` on this div. `useTheme` puts it on <html>, where the
     // shell's tokens and the renderer's `--sairi-*` tokens can both see it;
     // scoping it here is precisely the bug described above.
-    <div className="sairi s-os">
+    <div className={`sairi s-os${veiled ? ' is-focused' : ''}`}>
       <AmbientBackground />
+
+      {/* The veil. Absolute, so it is out of grid flow — the same escape
+          `.s-ambient` uses, and the reason it can sit above all three regions
+          without being one of them. */}
+      <div aria-hidden="true" className="s-veil" />
 
       {/* ---------------------------------------------------------------- *
        * Navigation
@@ -380,7 +410,21 @@ export function SairiOS(): JSX.Element {
       {/* ---------------------------------------------------------------- *
        * The universal intent field, which is also the palette
        * ---------------------------------------------------------------- */}
-      <form className="s-command" onSubmit={submit} role="search">
+      {/* Focus is tracked on the FORM, not the input. `Talk` and `CommandList`
+          are siblings of the field, so an input-level onBlur fired the moment
+          anyone clicked a command or the microphone — dropping the veil in the
+          middle of the interaction it exists to support. The guard ignores focus
+          moving WITHIN the form and only lets go when it leaves entirely. */}
+      <form
+        className="s-command"
+        onBlur={(e) => {
+          if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+          setFocused(false);
+        }}
+        onFocus={() => setFocused(true)}
+        onSubmit={submit}
+        role="search"
+      >
         <Talk talk={talk} />
         <CommandList
           listId="sairi-palette"

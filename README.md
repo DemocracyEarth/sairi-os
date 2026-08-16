@@ -213,7 +213,7 @@ Worked examples, including two that are invalid on purpose, are in
 The broker separates **observation**, **proposal** and **execution**. The agent
 can observe and propose. Only a user decision executes.
 
-Five of the twelve do something real, six are simulated, one is unimplemented:
+Six of the thirteen do something real, six are simulated, one is unimplemented:
 
 | Capability             | Default  | Real?         | What v0 actually does                       |
 | ---------------------- | -------- | ------------- | ------------------------------------------- |

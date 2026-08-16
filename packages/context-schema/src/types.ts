@@ -41,6 +41,17 @@ export const CAPABILITIES = [
   'notifications.send',
   'system.settings.read',
   'audio.capture',
+  /**
+   * Hand an artifact in this context's sandbox to another agent.
+   *
+   * A relay carries a REFERENCE — path, digest, byte length — and never text,
+   * because SairiOS does not build the receiving agent's prompt and therefore
+   * cannot enforce that text arrives as data rather than instruction. The
+   * receiving agent spends its own `files.read` to open it, so the hop lands
+   * inside path containment and produces a second, separately audited decision.
+   * See services/permission-broker/src/relay.ts.
+   */
+  'agent.relay',
 ] as const;
 export type Capability = (typeof CAPABILITIES)[number];
 

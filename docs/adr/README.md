@@ -111,3 +111,4 @@ Small corrections (a broken link, a typo, a wrong path) are fine.
 | [0015](0015-hosted-inference-gateway.md)             | A hosted inference gateway, so an instance holds no provider key  | Accepted |
 | [0016](0016-self-hosted-typefaces.md)                | The shell serves its own typefaces, for both surfaces at once     | Accepted |
 | [0017](0017-dark-is-a-peer-resolved-in-one-place.md) | Dark stays, as a peer, resolved in exactly one place              | Accepted |
+| [0018](0018-pulling-focus.md)                        | Pulling focus, and a narrow exception to the blur ban             | Accepted |

@@ -140,6 +140,16 @@
      small text. This is the same colour taken down until it passes, and it is
      what the accent must use whenever it is words rather than a shape. */
   --signal-ink: #b4511f;
+  /* A FILLED accent control — a button whose ground is the accent and whose
+     label sits on it. Not `--signal`: white on Braun orange is 3.50:1, and a
+     12px button label at 3.50:1 is unreadable for exactly the people who need
+     it most. White on this is 5.78:1.
+
+     `--on-signal` is the label colour, and it has to flip with the theme. In
+     dark the fill is a LIGHT orange, so white on it is 2.09:1 — which is what
+     the primary button's hover state shipped — and dark ink on it is 8.51:1. */
+  --signal-fill: #a8491a;
+  --on-signal: #ffffff;
   --signal-wash: rgb(212 108 53 / 10%);
   --signal-edge: rgb(212 108 53 / 42%);
 
@@ -209,6 +219,9 @@
   --e-1: 0 1px 0 rgb(26 26 24 / 5%);
   --e-2: 0 1px 2px rgb(26 26 24 / 7%), 0 4px 10px rgb(26 26 24 / 5%);
   --e-3: 0 2px 4px rgb(26 26 24 / 9%), 0 14px 34px rgb(26 26 24 / 8%);
+  /* One step above --e-3, for the single element that has the floor. The veil
+     alone made the field recede without making the bar rise; this is the rise. */
+  --e-lift: 0 3px 6px rgb(26 26 24 / 12%), 0 20px 52px rgb(26 26 24 / 16%);
 
   /* No blur. The tokens survive so the handful of old call sites resolve to a
      no-op instead of breaking, but glassmorphism is gone from the language:
@@ -273,6 +286,16 @@
   /* --- motion ---------------------------------------------------------- *
    * Motion explains causality: a panel emerges from whatever summoned it, an
    * object shrinks into its destination. Nothing moves to be pretty. */
+  /* How far the field recedes when the intention input takes over.
+   *
+   * The veil is PAPER-COLOURED, so the ground does not change at all — only the
+   * ink recedes toward it. That makes the recession arithmetic exact, and
+   * tokens.test.ts pins it: at this value the strongest ink still clears 3:1, so
+   * a heading stays legible and you never lose your place, while body and label
+   * steps drop away. Fainter steps are deliberately below a reading floor; the
+   * state is transient, user-initiated, and dismissed by Escape or a click. */
+  --veil: 0.45;
+
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.34, 1.4, 0.5, 1);
@@ -285,6 +308,11 @@
   --z-surface: 10;
   --z-nav: 20;
   --z-intel: 30;
+  /* Above the three regions, below the command bar. That ordering is the whole
+     trick: the bar, the command list and the microphone pip all live at
+     --z-command or above, so they stay fully lit over the veil with no
+     special-casing, and nothing the user still needs to read is behind it. */
+  --z-veil: 35;
   --z-command: 40;
   --z-overlay: 50;
 
@@ -339,6 +367,9 @@
   --signal: #f0733a;
   --signal-deep: #ff9a63;
   --signal-ink: #f0733a;
+  /* The fill is lighter than the ground here, so the label is ink, not white. */
+  --signal-fill: #ff9a63;
+  --on-signal: #17181a;
   --signal-wash: rgb(240 115 58 / 14%);
   --signal-edge: rgb(240 115 58 / 45%);
 
@@ -347,9 +378,13 @@
   --tone-relation: #b6b3ac;
   --tone-conflict: #7e7b74;
 
+  /* A touch deeper: the same alpha recedes less against a dark ground. */
+  --veil: 0.52;
+
   --e-1: 0 1px 0 rgb(0 0 0 / 30%);
   --e-2: 0 1px 2px rgb(0 0 0 / 40%), 0 4px 10px rgb(0 0 0 / 30%);
   --e-3: 0 2px 4px rgb(0 0 0 / 45%), 0 14px 34px rgb(0 0 0 / 40%);
+  --e-lift: 0 3px 6px rgb(0 0 0 / 55%), 0 20px 52px rgb(0 0 0 / 50%);
 
   color-scheme: dark;
 }
