@@ -12,6 +12,7 @@ import { SairiUIRenderer, useTheme, type SairiUIHost } from '@sairios/ui-compone
 import { AmbientBackground } from './AmbientBackground.js';
 import { CommandList } from './CommandList.js';
 import { Glyph } from './Glyph.js';
+import { HandoverApproval } from './Handover.js';
 import { SetupWizard } from './SetupWizard.js';
 import { ConvergenceMeter, ContextSurface, RunPresence, StatusOrb } from './primitives.js';
 import { buildCommands, matchCommands, shouldAutoSelect } from './palette.js';
@@ -259,6 +260,11 @@ export function SairiOS(): JSX.Element {
    * have been dimmed by the very effect meant to direct attention. Composing the
    * next intention is not more important than an approval that is waiting.
    */
+  /* Handovers waiting on a decision, which get their own panel. */
+  const handovers = Object.values(permissionRecords).filter(
+    (r) => r.capability === 'agent.relay' && r.status === 'pending',
+  );
+
   const claiming = pending > 0 || contexts.some((c) => c.status === 'waiting');
   const veiled = focused && !claiming;
 
@@ -402,6 +408,21 @@ export function SairiOS(): JSX.Element {
         )}
 
         <div className="s-intel__body">
+          {/* A handover is asked for HERE rather than inside the document,
+              because the document is model-authored and this is the one
+              approval whose details have to be trustworthy to be worth
+              reading. See Handover.tsx. */}
+          {handovers.map((record) => (
+            <HandoverApproval
+              busy={run.status === 'thinking' || run.status === 'streaming'}
+              key={record.id}
+              onDecide={(decision) =>
+                void decide(record.id, decision, { scope: 'once', remember: false })
+              }
+              record={record}
+            />
+          ))}
+
           <h2 className="s-intel__heading">Run</h2>
           <RunPresence run={run} />
         </div>

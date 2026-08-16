@@ -1621,3 +1621,99 @@
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
+
+/* ------------------------------------------------------------------------ *
+ * The handover approval
+ *
+ * The one approval that shows its payload, because a relay cannot be taken back
+ * and "may an agent hand something over" is not a question anyone can answer
+ * without knowing what and to whom. See Handover.tsx.
+ * ------------------------------------------------------------------------ */
+
+.s-hand {
+  margin: 0 0 var(--s-5);
+  padding: var(--s-4);
+  border: 1px solid var(--signal-edge);
+  border-radius: var(--r-lg);
+  background: var(--signal-wash);
+}
+
+.s-hand__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-bottom: var(--s-3);
+}
+
+.s-hand__eyebrow {
+  font-size: var(--t-micro);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--signal-ink);
+}
+
+.s-hand__route {
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  color: var(--ink-2);
+}
+
+.s-hand__reason {
+  margin: 0 0 var(--s-3);
+  font-size: var(--t-body);
+  color: var(--ink);
+}
+
+.s-hand__facts {
+  margin: 0 0 var(--s-3);
+  display: grid;
+  gap: var(--s-2);
+}
+
+.s-hand__facts > div {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  gap: var(--s-3);
+  align-items: baseline;
+}
+
+.s-hand__facts dt {
+  font-size: var(--t-micro);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+
+.s-hand__facts dd {
+  margin: 0;
+  font-size: var(--t-meta);
+  color: var(--ink);
+}
+
+.s-hand__path {
+  font-family: var(--mono);
+}
+
+/* The digest wraps rather than truncating. It is long and unlovely, and it is
+   the only field here a person can actually verify. */
+.s-hand__digest {
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  line-height: 1.4;
+  word-break: break-all;
+  color: var(--ink-2);
+}
+
+.s-hand__note {
+  margin: 0 0 var(--s-4);
+  font-size: var(--t-micro);
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+
+.s-hand__actions {
+  display: flex;
+  gap: var(--s-2);
+}

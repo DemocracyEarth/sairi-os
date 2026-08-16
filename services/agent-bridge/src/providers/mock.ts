@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { SairiUIDocument } from '@sairios/adaptive-ui-schema';
 import { ok, seededId, type Result } from '@sairios/shared';
 import type { AgentEvent, AgentProvider, IntentionInput, ProviderStatus } from '../provider.js';
@@ -301,23 +302,51 @@ function buildDocument(input: IntentionInput, plan: Plan): SairiUIDocument {
   }
 }
 
+/**
+ * Which mock agent this instance is.
+ *
+ * The relay needs two agents that are actually distinguishable, and the only
+ * way to have that with no credentials, no network and no external process
+ * (invariant 6) is for the mock to be able to be more than one thing.
+ *
+ * `analyst` writes a brief and offers to hand it on. `editor` takes a brief it
+ * has been handed and reads it. Between them they are the smallest complete
+ * demonstration of the loop this product exists to automate.
+ */
+export type MockAgentRole = 'generalist' | 'analyst' | 'editor';
+
 export interface MockProviderOptions {
   /** Milliseconds between streamed events. Zero in tests. */
   stepDelayMs?: number;
+  /**
+   * The agent this instance stands for. Defaults to the original single-agent
+   * behaviour, so every existing caller and test is unaffected.
+   */
+  role?: MockAgentRole;
 }
 
+/** The artifact the analyst writes and the editor is handed. */
+const BRIEF_PATH = 'brief.md';
+const BRIEF_BODY = 'Three vendors quoted. The median is the number that matters.\n';
+
 export class MockAgentProvider implements AgentProvider {
-  readonly name = 'mock';
+  readonly name: string;
+  readonly #role: MockAgentRole;
   readonly #sessions = new Set<string>();
   readonly #delay: number;
 
   constructor(options: MockProviderOptions = {}) {
     this.#delay = options.stepDelayMs ?? 0;
+    this.#role = options.role ?? 'generalist';
+    // `mock` for the original, `mock.analyst` / `mock.editor` for the pair —
+    // and those two strings are exactly the broker's relay roster, so a hop
+    // between them resolves rather than being rejected as an unknown agent.
+    this.name = this.#role === 'generalist' ? 'mock' : `mock.${this.#role}`;
   }
 
   async status(): Promise<ProviderStatus> {
     return {
-      provider: 'mock',
+      provider: this.name,
       configured: true,
       offline: true,
       detail: 'Deterministic offline provider. No API key, no network, no external process.',
@@ -325,7 +354,9 @@ export class MockAgentProvider implements AgentProvider {
   }
 
   async createSession(contextId: string): Promise<Result<string>> {
-    const sessionId = seededId('ses', `mock:${contextId}`);
+    // The ROLE is in the seed. Without it two agents working the same context
+    // mint the same session id, and the second one silently joins the first.
+    const sessionId = seededId('ses', `${this.name}:${contextId}`);
     this.#sessions.add(sessionId);
     return ok(sessionId);
   }
@@ -334,6 +365,51 @@ export class MockAgentProvider implements AgentProvider {
     yield { type: 'session', sessionId };
     yield { type: 'status', status: 'thinking' };
     await this.#pause();
+
+    /*
+     * The two relay agents run a fixed script rather than reading the
+     * intention, because what is being demonstrated is the HOP, not the
+     * planner. Each asks for exactly the capabilities its half of the loop
+     * needs, and nothing else.
+     */
+    if (this.#role === 'analyst') {
+      yield { type: 'status', status: 'waiting-permission' };
+      yield {
+        type: 'permission-request',
+        capability: 'files.write',
+        reason: 'Write the brief this context asked for.',
+        payload: { path: BRIEF_PATH, content: BRIEF_BODY },
+      };
+      await this.#pause();
+      yield {
+        type: 'permission-request',
+        capability: 'agent.relay',
+        reason: 'Hand the finished brief to the editor.',
+        payload: {
+          from: 'mock.analyst',
+          to: 'mock.editor',
+          path: BRIEF_PATH,
+          sha256: createHash('sha256').update(BRIEF_BODY, 'utf8').digest('hex'),
+          bytes: Buffer.byteLength(BRIEF_BODY, 'utf8'),
+        },
+      };
+      await this.#pause();
+      yield { type: 'done' };
+      return;
+    }
+
+    if (this.#role === 'editor') {
+      yield { type: 'status', status: 'waiting-permission' };
+      yield {
+        type: 'permission-request',
+        capability: 'files.read',
+        reason: 'Read the brief that was handed over.',
+        payload: { path: BRIEF_PATH },
+      };
+      await this.#pause();
+      yield { type: 'done' };
+      return;
+    }
 
     const plan = planFor(input.intention);
     yield {

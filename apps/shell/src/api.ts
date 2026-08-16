@@ -119,6 +119,14 @@ export interface PermissionRequestRecord {
   status: string;
   createdAt: string;
   policySource: string;
+  /**
+   * What the agent proposed to do, verbatim. The broker has always sent it; the
+   * shell simply never declared it, so no approval surface could show more than
+   * a capability name. `agent.relay` needs it — an approval that cannot say
+   * which artifact crosses is not an approval — and it is `unknown` because it
+   * came from a model and must be read field by field, never cast.
+   */
+  payload?: unknown;
   outcome?: { summary: string; simulated: boolean; detail?: unknown };
   error?: { code: string; message: string };
 }

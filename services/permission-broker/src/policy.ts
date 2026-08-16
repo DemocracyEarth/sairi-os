@@ -27,18 +27,24 @@ export const DEFAULT_POLICIES: Readonly<Record<Capability, PolicyDecision>> = {
   // the grant legible: one key press, one utterance, one audit entry.
   'audio.capture': 'ask',
   /**
-   * 'deny', and not because the machinery is unfinished — it is implemented and
-   * tested. A relay is not recoverable: once another agent holds the artifact,
-   * no later decision takes it back. Approving that meaningfully means seeing
-   * WHICH agent, WHICH artifact and WHICH digest, and the approval surface
-   * renders only capability, risk and reason today. An approval that cannot
-   * show what crosses is theatre, and a default of 'ask' would be asking the
-   * user to perform it.
+   * 'ask', now that there is something worth being asked.
    *
-   * This becomes 'ask' in the commit that gives agent.relay its own approval
-   * view. One line, deliberately not taken early.
+   * This shipped as 'deny' deliberately: a relay is not recoverable — once
+   * another agent holds the artifact, no later decision takes it back — and the
+   * approval surface rendered only capability, risk and reason. An approval that
+   * cannot show WHAT crosses and TO WHOM is theatre.
+   *
+   * `Handover.tsx` renders the envelope: destination, artifact, size and the
+   * full digest. The digest is the part that makes the approval mean something,
+   * because the broker re-checks it at execution — so what crosses is exactly
+   * what was described, and an artifact swapped in afterwards fails rather than
+   * riding an approval the user already gave.
+   *
+   * Never 'allow'. Every other reason aside, a remembered allow would be
+   * inherited by whichever agent was relayed in, which is the confused deputy
+   * the taint exists to prevent.
    */
-  'agent.relay': 'deny',
+  'agent.relay': 'ask',
 };
 
 export type RiskLevel = 'low' | 'medium' | 'high';

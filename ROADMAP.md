@@ -76,19 +76,21 @@ credentials.
       digest is checked at execution; a relayed context stops honouring
       remembered grants; one hop, structurally. Denied by default.
       ([SECURITY.md](SECURITY.md), "Agent-to-agent handover")
-- [ ] **An approval view for `agent.relay`**, showing the destination, the
-      artifact, its digest and its size. This is what flips the default from
-      `deny` to `ask`; until it exists, approving a relay means approving what
-      you cannot see. It is also the natural first home for the mascot, because
-      it is the moment the machine asks for something.
-- [ ] **Two real mock agents.** `MockProvider` hardcodes `readonly name = 'mock'`
-      and its only option is a step delay, so the roster's `mock.analyst` and
-      `mock.editor` do not exist. Give it a name and a behaviour, fold the name
-      into the session seed so two agents in one context stop colliding.
-- [ ] **An end-to-end test where the hop actually happens**: A writes a brief,
-      proposes a relay, the user approves, B reads it under its own `files.read`,
-      and a second hop is refused. No credentials, no network — this is the proof
-      the pivot works, and it must run in CI.
+- [x] **An approval view for `agent.relay`** — destination, artifact, size and
+      the full digest, rendered from broker state rather than from the document
+      (`Handover.tsx`). The default is now `ask`; it shipped as `deny` precisely
+      because approving what you cannot see is theatre.
+- [x] **Two real mock agents.** `mock.analyst` writes a brief and offers to hand
+      it on; `mock.editor` reads one it has been handed. The role is folded into
+      the session seed, so two agents in one context no longer collide.
+- [x] **An end-to-end test where the hop actually happens**
+      (`tests/e2e.relay-loop.test.ts`): the analyst writes, the handover is
+      approved and its digest verified, the context is tainted, a second hop is
+      refused, and the editor gets the analyst's actual bytes through its own
+      `files.read`. No credentials, no network.
+- [ ] **Watch it happen.** The loop is proven in CI but nobody has seen it on
+      screen: the mock agents are not yet reachable from the shell, so the
+      handover panel has never rendered against a live run.
 
 ## Milestone B — the second mouse
 
