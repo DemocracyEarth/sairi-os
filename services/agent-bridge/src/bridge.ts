@@ -30,6 +30,8 @@ export type BridgeEvent =
 
 export interface BridgeOptions {
   provider: AgentProvider;
+  /** Additional agents a run may name. Closed set; see AgentBridge#others. */
+  agents?: readonly AgentProvider[];
   broker: BrokerClient;
   contexts: ContextClient;
   logger?: Logger;
@@ -37,12 +39,27 @@ export interface BridgeOptions {
 
 export class AgentBridge {
   readonly #provider: AgentProvider;
+  /**
+   * Other agents this bridge can run, by name.
+   *
+   * The first sliver of a registry. Until now the bridge held exactly one
+   * provider chosen by an env var, which is the single largest structural gap
+   * between what exists and an orchestrator: you cannot hand work between
+   * agents when there is only ever one.
+   *
+   * A CLOSED map, resolved here. A run that names an agent this machine does
+   * not know is refused rather than falling back to the default — the same
+   * rule the relay applies to its destination, and for the same reason: a name
+   * that arrives from outside must never select what runs.
+   */
+  readonly #others: ReadonlyMap<string, AgentProvider>;
   readonly #broker: BrokerClient;
   readonly #contexts: ContextClient;
   readonly #log: Logger;
 
   constructor(options: BridgeOptions) {
     this.#provider = options.provider;
+    this.#others = new Map((options.agents ?? []).map((p) => [p.name, p]));
     this.#broker = options.broker;
     this.#contexts = options.contexts;
     this.#log = options.logger ?? createLogger('agent-bridge');
@@ -50,6 +67,11 @@ export class AgentBridge {
 
   get providerName(): string {
     return this.#provider.name;
+  }
+
+  /** Every agent a run may name, the default first. */
+  get agentNames(): string[] {
+    return [this.#provider.name, ...this.#others.keys()];
   }
 
   status() {
@@ -61,8 +83,26 @@ export class AgentBridge {
    * failure becomes an `error` event followed by `done`, so a caller streaming
    * to the UI always sees a terminated stream.
    */
-  async *run(input: IntentionInput): AsyncIterable<BridgeEvent> {
-    const session = await this.#provider.createSession(input.contextId);
+  async *run(input: IntentionInput & { agent?: string }): AsyncIterable<BridgeEvent> {
+    // The default provider unless a known agent is named. Unknown is an error,
+    // never a silent fallback: a handover that quietly ran the wrong agent
+    // would still look like it worked.
+    let provider = this.#provider;
+    if (input.agent && input.agent !== this.#provider.name) {
+      const named = this.#others.get(input.agent);
+      if (!named) {
+        yield {
+          type: 'error',
+          message: `"${input.agent}" is not an agent this machine knows.`,
+          recoverable: false,
+        };
+        yield { type: 'done' };
+        return;
+      }
+      provider = named;
+    }
+
+    const session = await provider.createSession(input.contextId);
     if (!session.ok) {
       yield { type: 'error', message: session.error.message, recoverable: false };
       yield { type: 'done' };
@@ -76,7 +116,7 @@ export class AgentBridge {
     );
 
     try {
-      for await (const event of this.#provider.run(session.value, input)) {
+      for await (const event of provider.run(session.value, input)) {
         switch (event.type) {
           case 'permission-request': {
             // A provider that supplies an externalId is BLOCKING on our answer
@@ -87,8 +127,8 @@ export class AgentBridge {
             // The relay is deliberately stricter than a local grant: OpenClaw
             // performs the action in its own process, outside the sandbox the
             // broker would otherwise contain it in. See approval-relay.ts.
-            if (event.externalId && this.#provider.resolveApproval) {
-              const resolveApproval = this.#provider.resolveApproval.bind(this.#provider);
+            if (event.externalId && provider.resolveApproval) {
+              const resolveApproval = provider.resolveApproval.bind(this.#provider);
               const externalId = event.externalId;
               const policy = await this.#broker.policy(event.capability);
 
@@ -219,7 +259,7 @@ export class AgentBridge {
       };
       yield { type: 'done' };
     } finally {
-      await this.#provider.closeSession(session.value);
+      await provider.closeSession(session.value);
     }
   }
 }

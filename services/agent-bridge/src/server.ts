@@ -78,6 +78,11 @@ export function createAgentBridgeServer(deps: ServerDeps): Server {
           // the only thing a caller needs, and the only thing on offer.
           return sendJson(res, 200, {
             ...(await deps.setup.status()),
+            // Which agents a run may name. The shell offers the handover demo
+            // only when the two mock agents are genuinely present, rather than
+            // inferring it from "no model configured" — those correlate today
+            // and are not the same fact.
+            agents: deps.bridge.agentNames,
             providers: providerCatalogue(),
           });
         }
@@ -128,6 +133,9 @@ export function createAgentBridgeServer(deps: ServerDeps): Server {
                 ? 'crystallized'
                 : 'ephemeral',
           contextName: String(input['contextName'] ?? 'Untitled context').slice(0, 200),
+          // Optional. Resolved against the bridge's closed registry, which
+          // refuses an unknown name rather than falling back to the default.
+          ...(typeof input['agent'] === 'string' ? { agent: input['agent'].slice(0, 64) } : {}),
         });
 
         const wantsStream = (req.headers.accept ?? '').includes('application/x-ndjson');

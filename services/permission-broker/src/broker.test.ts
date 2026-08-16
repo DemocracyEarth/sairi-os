@@ -37,7 +37,7 @@ describe('default policy table', () => {
       'notifications.send': 'ask',
       'system.settings.read': 'allow',
       'audio.capture': 'ask',
-      'agent.relay': 'deny',
+      'agent.relay': 'ask',
     });
   });
 

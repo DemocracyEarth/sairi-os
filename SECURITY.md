@@ -155,11 +155,11 @@ Four properties, none of which is a matter of prompting:
 performed in OpenClaw's process, which would skip every control above while the
 audit trail said the user approved a relay.
 
-It is **denied by default**, and not because the machinery is unfinished. A hop
-is not recoverable, and the approval surface renders capability, risk and reason
-but not the artifact, the digest or the destination. Approving what you cannot
-see is theatre. The default becomes `ask` when `agent.relay` has an approval view
-that shows what actually crosses.
+It is `ask`, never `allow`, and it has an approval view of its own: the shell
+renders the destination, the artifact, its size and its full digest before the
+question is answerable. It shipped as `deny` until that view existed, because an
+approval that cannot show what crosses is theatre. `allow` stays out of reach
+because a remembered allow is exactly what the taint exists to prevent.
 
 Default policies:
 
@@ -174,7 +174,7 @@ capability's _scope_ is what let a wrong count into three documents.
 | `files.delete`         | **deny** | **real**      | deletes a real file, sandbox only, non-recursive            |
 | `system.settings.read` | allow    | **real**      | returns live SairiOS settings. No env, no host, no secrets  |
 | `audio.capture`        | ask      | **real**      | authorises one dictation; the browser captures, not SairiOS |
-| `agent.relay`          | **deny** | **real**      | verifies an artifact and records a hop; delivers nothing    |
+| `agent.relay`          | ask      | **real**      | verifies an artifact and records a hop; delivers nothing    |
 | `process.list`         | allow    | simulated     | SairiOS services only — host processes are never enumerated |
 | `network.fetch`        | ask      | simulated     | no socket is opened                                         |
 | `browser.open`         | ask      | simulated     | nothing is launched                                         |
