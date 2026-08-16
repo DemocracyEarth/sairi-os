@@ -182,6 +182,16 @@ export function buildCommands(input: {
   onSwitch: (id: string) => void;
   onOpenSetup: () => void;
   onToggleTheme: () => void;
+  /**
+   * Runs the two mock agents through a handover, so it can be watched.
+   *
+   * Offered only when the bridge is in mock mode, because that is the only
+   * configuration where these two agents exist. Explicitly labelled a demo:
+   * the loop is real — a real file, a real digest, real approvals — but the
+   * agents are deterministic fixtures, and calling that a capability would be
+   * the kind of claim this project keeps out of its own documentation.
+   */
+  onHandoverDemo?: (() => void) | undefined;
   theme: 'light' | 'dark';
   proposal?: { title: string; verb: string };
   onProposal?: () => void;
@@ -221,6 +231,17 @@ export function buildCommands(input: {
     keywords: ['theme', 'appearance', 'dark', 'light', 'contrast'],
     run: input.onToggleTheme,
   });
+
+  if (input.onHandoverDemo) {
+    commands.push({
+      id: 'handover',
+      title: 'Watch two agents hand work over',
+      hint: 'demo',
+      kind: 'system',
+      keywords: ['handover', 'relay', 'agents', 'demo', 'orchestrate'],
+      run: input.onHandoverDemo,
+    });
+  }
 
   commands.push({
     id: 'setup',

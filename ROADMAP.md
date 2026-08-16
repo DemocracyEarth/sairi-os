@@ -88,9 +88,12 @@ credentials.
       approved and its digest verified, the context is tainted, a second hop is
       refused, and the editor gets the analyst's actual bytes through its own
       `files.read`. No credentials, no network.
-- [ ] **Watch it happen.** The loop is proven in CI but nobody has seen it on
-      screen: the mock agents are not yet reachable from the shell, so the
-      handover panel has never rendered against a live run.
+- [x] **Watch it happen.** The bridge holds a closed registry of named agents —
+      the first sliver of Milestone C — a run may name one, and the shell
+      continues the work with the destination agent once a hop actually
+      executes. Verified on the VM console: the handover panel rendered against
+      a live run, both approvals executed, the editor received the analyst's
+      bytes through its own `files.read`, and a second hop was refused.
 
 ## Milestone B — the second mouse
 

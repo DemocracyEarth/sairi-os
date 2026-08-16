@@ -36,8 +36,24 @@ const provider: AgentProvider =
         })
       : new MockAgentProvider({ stepDelayMs: 220 });
 
+/**
+ * The agents a run may name, beyond the default one.
+ *
+ * Mock only, and deliberately: these two exist so a handover can be WATCHED
+ * without a credential, a network or an external process. They are the same
+ * pair the relay roster names, so a hop between them resolves.
+ */
+const agents =
+  env.agentProvider === 'mock'
+    ? [
+        new MockAgentProvider({ stepDelayMs: 220, role: 'analyst' }),
+        new MockAgentProvider({ stepDelayMs: 220, role: 'editor' }),
+      ]
+    : [];
+
 const bridge = new AgentBridge({
   provider,
+  agents,
   broker: new HttpBrokerClient(env.permissionBrokerUrl),
   contexts: new HttpContextClient(env.contextServiceUrl),
   logger: log,

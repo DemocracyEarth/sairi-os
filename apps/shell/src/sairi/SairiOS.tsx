@@ -179,6 +179,13 @@ export function SairiOS(): JSX.Element {
         /* Toggling turns "auto" into a decision, which is the point: someone who
            reaches for this wants a specific appearance, not a rule. */
         onToggleTheme: () => setPreference(theme === 'dark' ? 'light' : 'dark'),
+        /* Mock only — the analyst and the editor do not exist otherwise. */
+        ...(setup && !setup.configured
+          ? {
+              onHandoverDemo: () =>
+                void sairi.begin('Compare the vendor proposals', 'mock.analyst'),
+            }
+          : {}),
         theme,
       }),
     [contexts, activeId, select, theme, setPreference],

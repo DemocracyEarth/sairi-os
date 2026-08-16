@@ -39,7 +39,7 @@ export interface SairiState {
 export interface SairiActions {
   select: (id: string) => void;
   /** Creates a context from an intention and runs the agent against it. */
-  begin: (intention: string) => Promise<void>;
+  begin: (intention: string, agent?: string) => Promise<void>;
   decide: (
     requestId: string,
     decision: 'allow' | 'deny',
@@ -104,39 +104,22 @@ export function useSairi(): SairiState & SairiActions {
     setRun(IDLE_RUN);
   }, []);
 
-  const begin = useCallback(
-    async (intention: string) => {
-      const text = intention.trim();
-      if (!text) return;
-
+  /**
+   * One agent run, streamed into the surface.
+   *
+   * Extracted so that both entry points share it: a human stating an intention,
+   * and a handover continuing the work with the agent it was handed to. Those
+   * must behave identically — the second is not a lesser kind of run.
+   */
+  const stream = useCallback(
+    async (context: Context, text: string, agent?: string) => {
       setRun({ status: 'thinking', trail: [] });
-
-      // A context first, because everything the run produces has to be
-      // attributable to one — the permission broker refuses a request that is
-      // not, and an unattributed grant cannot be scoped or revoked.
-      const created = await contextApi.create({
-        // The intention IS the name. A context called "Untitled 3" is the
-        // folder metaphor this system exists to avoid.
-        name: text.slice(0, 120),
-        type: 'ephemeral',
-        objective: text,
-      });
-      if (!alive.current) return;
-      if (!created.ok) {
-        setRun({ status: 'idle', trail: [], error: created.message });
-        return;
-      }
-
-      const context = created.value;
-      setContexts((list) => [context, ...list]);
-      setActiveId(context.id);
-      await contextApi.submitIntention(context.id, text);
-
       for await (const event of bridgeApi.runIntention({
         contextId: context.id,
         intention: text,
         contextType: context.type,
         contextName: context.name,
+        ...(agent ? { agent } : {}),
       })) {
         if (!alive.current) return;
 
@@ -185,6 +168,37 @@ export function useSairi(): SairiState & SairiActions {
     [loadPermissions, refresh],
   );
 
+  const begin = useCallback(
+    async (intention: string, agent?: string) => {
+      const text = intention.trim();
+      if (!text) return;
+
+      // A context first, because everything the run produces has to be
+      // attributable to one — the permission broker refuses a request that is
+      // not, and an unattributed grant cannot be scoped or revoked.
+      const created = await contextApi.create({
+        // The intention IS the name. A context called "Untitled 3" is the
+        // folder metaphor this system exists to avoid.
+        name: text.slice(0, 120),
+        type: 'ephemeral',
+        objective: text,
+      });
+      if (!alive.current) return;
+      if (!created.ok) {
+        setRun({ status: 'idle', trail: [], error: created.message });
+        return;
+      }
+
+      const context = created.value;
+      setContexts((list) => [context, ...list]);
+      setActiveId(context.id);
+      await contextApi.submitIntention(context.id, text);
+
+      await stream(context, text, agent);
+    },
+    [stream],
+  );
+
   const decide = useCallback(
     async (
       requestId: string,
@@ -195,12 +209,35 @@ export function useSairi(): SairiState & SairiActions {
       if (!alive.current || !decided.ok) return;
       // Deciding does not run it. The three phases stay separate here exactly
       // as they do in the broker: an allow still needs an execute.
-      if (decision === 'allow') await brokerApi.execute(requestId);
+      const ran = decision === 'allow' ? await brokerApi.execute(requestId) : undefined;
       if (!alive.current) return;
       await loadPermissions(activeId);
       await refresh();
+
+      /*
+       * A handover that actually ran continues the work with the agent it was
+       * handed to. This is the loop automating itself, and it is the whole
+       * point of the product — without it a person is still the transport
+       * between two agents, which is the copy-pasting this exists to remove.
+       *
+       * The SHELL does this rather than the bridge, because the bridge never
+       * watches the broker: it streams a run and forgets. The decision lands
+       * here, so the continuation belongs here too.
+       *
+       * Only on a genuinely executed hop. A denial, a digest mismatch or a
+       * failed execution must not start anything — `status` is checked rather
+       * than the call's success, because the broker reports a refused action as
+       * a FAILED request rather than a failed call.
+       */
+      if (ran?.ok && ran.value.capability === 'agent.relay' && ran.value.status === 'executed') {
+        const to = (ran.value.payload as Record<string, unknown> | undefined)?.['to'];
+        const context = contexts.find((c) => c.id === ran.value.contextId);
+        if (typeof to === 'string' && context) {
+          await stream(context, context.objective ?? context.name, to);
+        }
+      }
     },
-    [activeId, loadPermissions, refresh],
+    [activeId, contexts, loadPermissions, refresh, stream],
   );
 
   return {

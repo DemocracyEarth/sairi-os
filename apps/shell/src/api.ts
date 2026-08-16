@@ -238,6 +238,8 @@ export interface SetupStatusRecord {
   gatewayUrl: string;
   keyPresent: boolean;
   providers: SetupProviderRecord[];
+  /** Agent names a run may address. The default provider is first. */
+  agents?: string[];
 }
 
 export const bridgeApi = {
@@ -266,6 +268,8 @@ export const bridgeApi = {
     intention: string;
     contextType: ContextType;
     contextName: string;
+    /** Which agent should do it. Omitted means the bridge's default. */
+    agent?: string;
   }): AsyncGenerator<BridgeEventRecord> {
     let response: Response;
     try {
