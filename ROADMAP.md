@@ -10,9 +10,122 @@ A claim moves out of "not verified" only when somebody has run the thing and
 said so, with the date. "It should work" is not a verification, and neither is a
 passing unit test against a fake.
 
-_Last reconciled against the tree: 2026-08-04._
+_Last reconciled against the tree: 2026-08-15._
 
-## Milestone 0 — vertical slice (current)
+## The pivot, and what it changes
+
+**SairiOS is a companion layer that orchestrates other agents, not an operating
+system.** Decided 2026-08-15.
+
+The pain it targets is the one everybody actually has: copy-pasting between chat
+UIs. You ask one agent for an analysis, paste it into another to be checked,
+paste that into a third to be written up. The product automates that loop and
+governs it, and the surface is a mascot that behaves like a **second mouse
+cursor** — something you can watch working beside you, poke at any moment, and
+talk to.
+
+Two consequences, and they cut deep enough to be worth stating plainly:
+
+**Most of what was built stays, and gets more valuable.** The permission broker,
+contexts as a durable unit, the roster's cross-boundary allow-list, the validated
+UI protocol, the provider seam — these are exactly what an orchestrator needs,
+and they are the parts that take years. The differentiator is not "we connect
+agents", which is a for-loop. It is that the connection is **governed and
+audited**.
+
+**The desktop shell is over-built for it.** Three regions, a window manager and a
+compositor were the right shape for an OS. For a companion, the mascot, the
+intention field and the activity log are the product. That is a simplification,
+and future milestones should shrink the shell rather than grow it.
+
+### Companion, not fleet
+
+The alternative was a hosted fleet: many VMs, one WhatsApp line each, sold as
+instances. Rejected for now, and the reason is sequencing rather than distaste —
+almost all of the fleet's cost is infrastructure that proves nothing about
+whether the idea works. Per-instance isolation, quotas, abuse controls and a
+gateway server that does not exist are a lot of machinery to build before the
+first person has felt the loop close.
+
+So: one machine, the user's own agents, the mascot on their desktop. What the
+fleet needs is deferred, not deleted, and it is listed under Milestone 4.
+
+**What this defers:** WhatsApp as a transport (also gated on Meta's verification
+queue, so it should start early whenever it starts), multi-tenancy, quotas, and
+the hosted inference gateway's SERVER — the client exists and is scaffolding that
+has never contacted anything.
+
+**What it promotes:** the relay's approval view, two real mock agents, the agent
+registry, and the mascot.
+
+### One thing not to build
+
+Orchestration by driving consumer chat UIs. It violates WhatsApp's terms and gets
+numbers banned, it is brittle against every redesign, and it is the unrestricted
+computer-use agent this project refuses on principle. Agents are reached at
+endpoints — model APIs, MCP servers, the OpenClaw gateway — or not at all. The
+honest consequence is that this does not automate copy-paste between apps you
+keep using; it replaces the reason to open them.
+
+## Milestone A — the loop closes (next)
+
+**Goal:** watch one agent hand work to another, on your own machine, with no
+credentials.
+
+- [x] `agent.relay` — the governed hop. A reference crosses, never text; the
+      digest is checked at execution; a relayed context stops honouring
+      remembered grants; one hop, structurally. Denied by default.
+      ([SECURITY.md](SECURITY.md), "Agent-to-agent handover")
+- [ ] **An approval view for `agent.relay`**, showing the destination, the
+      artifact, its digest and its size. This is what flips the default from
+      `deny` to `ask`; until it exists, approving a relay means approving what
+      you cannot see. It is also the natural first home for the mascot, because
+      it is the moment the machine asks for something.
+- [ ] **Two real mock agents.** `MockProvider` hardcodes `readonly name = 'mock'`
+      and its only option is a step delay, so the roster's `mock.analyst` and
+      `mock.editor` do not exist. Give it a name and a behaviour, fold the name
+      into the session seed so two agents in one context stop colliding.
+- [ ] **An end-to-end test where the hop actually happens**: A writes a brief,
+      proposes a relay, the user approves, B reads it under its own `files.read`,
+      and a second hop is refused. No credentials, no network — this is the proof
+      the pivot works, and it must run in CI.
+
+## Milestone B — the second mouse
+
+**Goal:** the machine feels alive beside you.
+
+- [ ] The mascot as a **cursor with a position**, not an avatar in a corner: it
+      moves to what it is touching, waits where it needs you, rests when done.
+      `StatusOrb` is its larval form.
+- [ ] Its expressions are the activity log compressed to one glyph — working,
+      needs you, blocked, done. **It never speaks in sentences**
+      ([invariant 2](CLAUDE.md), [ADR 0012](docs/adr/0012-voice-as-input-transport.md));
+      a cursor that points is not a cursor that talks, and a spoken "done, I sent
+      it" leaves no artifact to check.
+- [ ] Poke-to-talk from anywhere, which is push-to-talk dictation and already
+      sanctioned.
+
+## Milestone C — more than one brain
+
+**Goal:** the work actually moves, to agents that are not mocks.
+
+- [ ] An **agent registry**: several named endpoints addressable at once. Today
+      the bridge selects one provider from an env var, which is the single
+      largest structural gap between what exists and an orchestrator.
+- [ ] Delivery: the receiving agent runs, with the artifact, under its own
+      grants.
+- [ ] A real OpenClaw turn producing a SairiUI document — still blocked on the
+      prompt→document contract, which is why the hosted gateway put it
+      server-side.
+
+---
+
+_Everything below predates the pivot. Milestone 0 is delivered and is kept as the
+record of what was actually verified, with dates. Milestones 1 and 2 are still
+live — an unverified claim and a context that buckles under use are debts
+whichever product this becomes._
+
+## Milestone 0 — vertical slice (delivered)
 
 **Goal:** one working path through every layer, rather than many half-built
 subsystems.
@@ -160,6 +273,9 @@ Not bugs to be discovered later; they are listed because they are already known.
 - Real network fetching. `network.fetch` is simulated.
 
 ## Milestone 1 — make the unverified list empty
+
+_Still live, and orthogonal to the pivot: an unverified claim is a debt whichever
+product this becomes._
 
 **Goal:** turn what is written into what is demonstrated. Nothing new until what
 exists is real.
@@ -342,7 +458,11 @@ exit criterion also asks that every claim in the README has been demonstrated.
 - Retire the remaining simulated capabilities, or state per capability why one
   stays simulated.
 
-## Milestone 3 — isolation worth the name
+## Milestone D — isolation worth the name
+
+_Promoted from a prerequisite for unattended running to a prerequisite for the
+FLEET. A companion on one machine does not need per-tenant isolation; the day
+SairiOS runs someone else's agents next to yours, it does._
 
 **Goal:** make the sandbox a boundary rather than a convention. This is the
 prerequisite for anything running unattended.
@@ -364,7 +484,14 @@ prerequisite for anything running unattended.
     ([ADR 0010](docs/adr/0010-provider-credential-custody.md)) — the only place
     SairiOS takes custody of a secret.
 
-## Milestone 4 — contexts that move
+## Milestone E — the fleet, if it happens
+
+Everything the companion decision deferred, kept here so the decision stays
+reversible rather than forgotten: multi-tenancy, per-instance quotas and abuse
+controls, a WhatsApp Business Cloud API line per instance, and a hosted inference
+gateway SERVER for the client that already exists.
+
+## Milestone F — contexts that move
 
 **Goal:** a context that starts on a desktop and continues elsewhere.
 
@@ -378,7 +505,7 @@ prerequisite for anything running unattended.
   the same permission broker.
 - A mobile viewer. Read and approve, not author.
 
-## Milestone 5 — the environment becomes the product
+## Milestone G — the environment becomes the product
 
 - A richer compositor, or a real Wayland shell, once there is evidence about
   what context windows actually need.
